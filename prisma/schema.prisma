@@ -1,0 +1,149 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  MOVER
+  ADMIN
+}
+
+enum LeadStatus {
+  NEW
+  NOTIFIED
+  VIEWED
+  PURCHASED
+  CONTACTED
+  WON
+  LOST
+  ARCHIVED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  passwordHash  String
+  role          UserRole  @default(MOVER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  moverCompany  MoverCompany?
+}
+
+model MoverCompany {
+  id                 String          @id @default(cuid())
+  userId             String          @unique
+  companyName        String
+  nzbn               String?
+  yearsOperating     Int?
+  logoUrl            String?
+  serviceAreas       String[]
+  status             String          @default("ACTIVE")
+  contactPerson      String?
+  phone              String?
+  baseLeadPrice      Int             @default(4900)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  user               User            @relation(fields: [userId], references: [id])
+  documents          MoverDocument[]
+  leads              Lead[]
+}
+
+model MoverDocument {
+  id             String       @id @default(cuid())
+  moverCompanyId String
+  type           String
+  fileUrl        String
+  createdAt      DateTime     @default(now())
+  moverCompany   MoverCompany @relation(fields: [moverCompanyId], references: [id])
+}
+
+model QuoteRequest {
+  id                 String    @id @default(cuid())
+  name               String
+  email              String
+  phone              String
+  movingWhat         String?
+  fromPropertyType   String
+  toPropertyType     String
+  bedrooms           String
+  fromAddress        String
+  fromCity           String
+  fromRegion         String
+  fromPostcode       String
+  fromCountry        String
+  toAddress          String
+  toCity             String
+  toRegion           String
+  toPostcode         String
+  toCountry          String
+  moveDate           DateTime?
+  dateFlexible       Boolean   @default(false)
+  transcriptRaw      Json?
+  transcriptFields   Json?
+  transcriptionState String?
+  createdAt          DateTime  @default(now())
+  leads              Lead[]
+}
+
+model Lead {
+  id             String       @id @default(cuid())
+  quoteRequestId String
+  moverCompanyId String
+  status         LeadStatus   @default(NEW)
+  price          Int
+  purchasedAt    DateTime?
+  createdAt      DateTime     @default(now())
+  quoteRequest   QuoteRequest @relation(fields: [quoteRequestId], references: [id])
+  moverCompany   MoverCompany @relation(fields: [moverCompanyId], references: [id])
+  payment        Payment?
+  auditLogs      AuditLog[]
+}
+
+model PricingRule {
+  id             String  @id @default(cuid())
+  name           String
+  baseLeadPrice  Int
+  bedroomModifier Int    @default(0)
+  urgentModifier Int     @default(0)
+  distanceModifier Int   @default(0)
+}
+
+model Payment {
+  id                    String        @id @default(cuid())
+  leadId                String        @unique
+  stripePaymentIntentId String?
+  stripeCheckoutId      String?
+  amount                Int
+  status                PaymentStatus @default(PENDING)
+  createdAt             DateTime      @default(now())
+  lead                  Lead          @relation(fields: [leadId], references: [id])
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  message   String
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  leadId    String
+  action    String
+  meta      Json?
+  createdAt DateTime @default(now())
+  lead      Lead     @relation(fields: [leadId], references: [id])
+}
+
