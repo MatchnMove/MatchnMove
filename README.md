@@ -91,3 +91,21 @@ Default seeded mover login:
 - No watermark references are included in the UI.
 - Stripe unlock endpoint gracefully simulates unlock if Stripe key is absent.
 - n8n transcription webhook endpoint stores transcript payload on quote requests.
+
+## Google Workspace Email
+The app sends transactional email through Nodemailer using the `SMTP_*` variables.
+
+Your domain MX records route inbound mail to Google Workspace. For outbound app mail, use one of these Google Workspace options:
+
+- SMTP relay: keep `SMTP_HOST=smtp-relay.gmail.com`, `SMTP_PORT=587`, and `SMTP_SECURE=false`. In Google Admin, allow the deployed app/server to use SMTP relay, either by IP allowlisting or SMTP authentication.
+- Mailbox SMTP: use `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=587`, `SMTP_SECURE=false`, `SMTP_USER=your-workspace-address`, and `SMTP_PASS` set to an app password or approved SMTP credential.
+
+Run this before deploying email changes:
+```bash
+npm run email:verify
+```
+
+To send a real test email as well:
+```bash
+$env:SEND_TEST_EMAIL="true"; $env:TEST_EMAIL="you@example.com"; npm run email:verify
+```
