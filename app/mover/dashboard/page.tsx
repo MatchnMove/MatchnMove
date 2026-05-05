@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
 
 export default async function MoverDashboardPage() {
-  const session = auth();
+  const session = await auth();
   if (!session?.user?.email) redirect("/mover/login");
   const mover = await prisma.moverCompany.findFirst({ where: { user: { email: session.user.email } }, include: { leads: { include: { quoteRequest: true } } } });
   if (!mover) return <div>No mover profile.</div>;

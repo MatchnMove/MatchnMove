@@ -24,16 +24,16 @@ export function parseSessionToken(token?: string): SessionPayload | null {
   return parsed;
 }
 
-export function setSessionCookie(token: string) {
-  cookies().set(SESSION_COOKIE, token, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/" });
+export async function setSessionCookie(token: string) {
+  (await cookies()).set(SESSION_COOKIE, token, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/" });
 }
 
-export function clearSessionCookie() {
-  cookies().delete(SESSION_COOKIE);
+export async function clearSessionCookie() {
+  (await cookies()).delete(SESSION_COOKIE);
 }
 
-export function auth() {
-  const token = cookies().get(SESSION_COOKIE)?.value;
+export async function auth() {
+  const token = (await cookies()).get(SESSION_COOKIE)?.value;
   const session = parseSessionToken(token);
   if (!session) return null;
   return { user: { id: session.userId, email: session.email, role: session.role } };
