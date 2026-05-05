@@ -40,7 +40,7 @@ const storyCards = [
   }
 ] as const;
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 export default async function AboutPage() {
   const [movers, successfulMoves] = await getAboutPageStats();
