@@ -3,12 +3,15 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { prisma } from "@/lib/db";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", { apiVersion: "2025-02-24.acacia" });
+function getStripe() {
+  return process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2025-02-24.acacia" }) : null;
+}
 
 export async function POST(req: NextRequest) {
   const body = await req.text();
   const signature = (await headers()).get("stripe-signature");
-  if (!signature || !process.env.STRIPE_WEBHOOK_SECRET) return NextResponse.json({ error: "Missing webhook signature" }, { status: 400 });
+  const stripe = getStripe();
+  if (!stripe || !signature || !process.env.STRIPE_WEBHOOK_SECRET) return NextResponse.json({ error: "Missing Stripe configuration" }, { status: 400 });
 
   const event = stripe.webhooks.constructEvent(body, signature, process.env.STRIPE_WEBHOOK_SECRET);
   if (event.type === "checkout.session.completed") {
