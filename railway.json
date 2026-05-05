@@ -5,6 +5,7 @@
     "buildCommand": "npm run build"
   },
   "deploy": {
+    "preDeployCommand": "npm run prisma:migrate:deploy",
     "startCommand": "npm run start",
     "restartPolicyType": "ON_FAILURE"
   }
