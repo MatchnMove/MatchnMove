@@ -1,31 +1,58 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import Stripe from "stripe";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", { apiVersion: "2025-02-24.acacia" });
+import { revalidateAboutPage } from "@/lib/public-cache";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const session = await auth();
-  if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const lead = await prisma.lead.findUnique({ where: { id } });
-  if (!lead) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const lead = await prisma.lead.findFirst({
+    where: {
+      id,
+      moverCompany: {
+        userId: session.user.id,
+      },
+    },
+  });
+  if (!lead) return NextResponse.json({ error: "Lead not found" }, { status: 404 });
 
-  if (!process.env.STRIPE_SECRET_KEY) {
-    await prisma.lead.update({ where: { id: lead.id }, data: { status: "PURCHASED", purchasedAt: new Date() } });
-    return NextResponse.redirect(new URL("/mover/dashboard", req.url));
+  if (["PURCHASED", "CONTACTED", "WON"].includes(lead.status)) {
+    return NextResponse.json({ ok: true, unlockedAt: lead.purchasedAt?.toISOString() ?? null });
   }
 
-  const checkout = await stripe.checkout.sessions.create({
-    mode: "payment",
-    success_url: `${process.env.NEXTAUTH_URL}/mover/dashboard`,
-    cancel_url: `${process.env.NEXTAUTH_URL}/mover/dashboard`,
-    line_items: [{ quantity: 1, price_data: { currency: "nzd", unit_amount: lead.price, product_data: { name: "Lead unlock" } } }],
-    metadata: { leadId: lead.id }
+  const unlockedAt = new Date();
+
+  await prisma.lead.update({
+    where: { id: lead.id },
+    data: { status: "PURCHASED", purchasedAt: unlockedAt },
+  });
+  await prisma.payment.upsert({
+    where: { leadId: lead.id },
+    update: {
+      amount: lead.price,
+      status: "PENDING",
+      stripeCheckoutId: null,
+      stripePaymentIntentId: null,
+      stripeChargeId: null,
+      receiptUrl: null,
+    },
+    create: {
+      leadId: lead.id,
+      amount: lead.price,
+      status: "PENDING",
+    },
+  });
+  await prisma.auditLog.create({
+    data: {
+      leadId: lead.id,
+      action: "lead_unlocked_for_invoice",
+      meta: { unlockedAt: unlockedAt.toISOString(), moverCompanyId: lead.moverCompanyId, amount: lead.price },
+    },
   });
 
-  await prisma.payment.create({ data: { leadId: lead.id, amount: lead.price, stripeCheckoutId: checkout.id } });
-  return NextResponse.redirect(checkout.url!);
+  revalidateAboutPage();
+
+  return NextResponse.json({ ok: true, unlockedAt: unlockedAt.toISOString() });
 }

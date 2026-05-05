@@ -1,10 +1,10 @@
 import { PrismaClient } from "@prisma/client";
-import bcrypt from "bcryptjs";
+import { hashPassword } from "@/lib/password";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  const pwd = await bcrypt.hash("Password123!", 10);
+  const pwd = await hashPassword("Password123!");
   const mover = await prisma.user.upsert({
     where: { email: "mover@matchnmove.co.nz" },
     update: {},
@@ -33,10 +33,10 @@ async function main() {
     create: {
       id: "default-rule",
       name: "Default lead pricing",
-      baseLeadPrice: 4900,
-      bedroomModifier: 300,
-      urgentModifier: 1200,
-      distanceModifier: 500
+      baseLeadPrice: 2000,
+      bedroomModifier: 1000,
+      urgentModifier: 2000,
+      distanceModifier: 2000
     }
   });
 

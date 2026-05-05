@@ -32,7 +32,7 @@ Default seeded mover login:
 
 ## Railway deployment
 1. Create a new Railway project and attach a Postgres service.
-2. Add environment variables listed below.
+2. Add environment variables from `.env.example`.
 3. Deploy this repo (Railway auto-detects `railway.json`).
 4. Run once in Railway shell:
    ```bash
@@ -40,19 +40,52 @@ Default seeded mover login:
    npm run prisma:seed
    ```
 
-## Required environment variables
+## Minimum variables for a first live preview
 - `DATABASE_URL`
+  Railway Postgres can supply this directly, for example `${{Postgres.DATABASE_URL}}`.
 - `NEXTAUTH_URL`
+  Set this to your Railway public URL or custom domain, for example `https://your-service.up.railway.app`.
+- `NEXT_PUBLIC_APP_URL`
+  Set this to the same public URL as `NEXTAUTH_URL`.
 - `NEXTAUTH_SECRET`
+  Generate a long random secret before deploying.
+- `CONTACT_TO_EMAIL`
+- `CONTACT_FROM_EMAIL`
+- `SUPPORT_EMAIL`
+- `DEFAULT_FROM_EMAIL`
+- `INFO_FROM_EMAIL`
+- `NO_REPLY_FROM_EMAIL`
+- `AUTH_FROM_EMAIL`
+- `FEEDBACK_FROM_EMAIL`
+- `REVIEW_FROM_EMAIL`
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_USER`
+- `SMTP_PASS`
+- `SMTP_SECURE`
+- `NEXT_PUBLIC_SUPPORT_EMAIL`
+- `NEXT_PUBLIC_INFO_EMAIL`
+- `NEXT_PUBLIC_CONTACT_EMAIL`
+- `NEXT_PUBLIC_PARTNERS_EMAIL`
+- `NEXT_PUBLIC_FEEDBACK_EMAIL`
+- `NEXT_PUBLIC_PRIVACY_EMAIL`
+- `NEXT_PUBLIC_NO_REPLY_EMAIL`
+
+## Optional integrations
+- `NEXT_PUBLIC_GOOGLE_CLIENT_ID`
+  Enables Google sign-in for movers.
 - `STRIPE_SECRET_KEY`
 - `STRIPE_WEBHOOK_SECRET`
+  Required only if you want live Stripe billing flows.
 - `ELEVENLABS_API_KEY`
 - `N8N_WEBHOOK_URL`
+  Required only if you want the voice/transcription workflow.
 - `STORAGE_ACCESS_KEY`
 - `STORAGE_SECRET_KEY`
 - `STORAGE_BUCKET`
 - `STORAGE_REGION`
 - `STORAGE_PUBLIC_URL`
+  Required only if you want uploads backed by real object storage.
 
 ## Notes
 - No watermark references are included in the UI.

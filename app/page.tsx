@@ -1,25 +1,108 @@
+import Image from "next/image";
 import Link from "next/link";
 import { SiteShell } from "@/components/site-shell";
+import { Hero } from "@/src/components/hero/Hero";
+import { ScrollJourneySection } from "@/src/components/home/ScrollJourneySection";
 
 export default function Home() {
   return (
     <SiteShell>
-      <section className="bg-white">
-        <div className="container-shell grid lg:grid-cols-2 gap-6 py-8 items-center">
-          <div className="card p-6">
-            <span className="inline-block rounded-full bg-slateBlue text-white px-4 py-2 font-semibold">Get free quotes</span>
-            <div className="grid gap-3 mt-4">
-              <select className="border p-2 rounded"><option>I want to move</option></select>
-              <div className="grid grid-cols-2 gap-2"><select className="border p-2 rounded"><option>Move from</option></select><select className="border p-2 rounded"><option>Move to</option></select></div>
-              <Link href="/quote" className="bg-brandBlue text-white px-5 py-2 rounded w-fit">Next</Link>
+      <Hero />
+      <ScrollJourneySection />
+      <section className="relative overflow-hidden bg-white py-14 sm:py-16 lg:py-20">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute left-[8%] top-8 h-32 w-32 rounded-full bg-emerald-100 blur-3xl sm:h-48 sm:w-48" />
+          <div className="absolute right-[10%] top-10 h-40 w-40 rounded-full bg-sky-100/80 blur-3xl sm:h-56 sm:w-56" />
+          <div className="absolute inset-x-0 bottom-0 h-32 bg-[linear-gradient(180deg,transparent,rgba(248,250,252,0.85))]" />
+        </div>
+
+        <div className="container-shell relative">
+          <div className="overflow-hidden rounded-[32px] border border-slate-200/80 bg-[linear-gradient(135deg,#ffffff_0%,#f8fbff_58%,#f2fbf7_100%)] shadow-[0_30px_90px_-48px_rgba(15,23,42,0.3)]">
+            <div className="grid gap-10 px-5 py-6 sm:px-8 sm:py-8 lg:grid-cols-[minmax(0,1fr)_minmax(420px,0.92fr)] lg:items-center lg:gap-12 lg:px-12 lg:py-12">
+              <div className="max-w-[36rem]">
+                <p className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-emerald-700 sm:text-sm">
+                  For moving companies
+                </p>
+
+                <h3 className="mt-5 max-w-[12ch] text-[clamp(2.2rem,7vw,4.4rem)] font-black leading-[0.94] tracking-[-0.05em] text-slate-950">
+                  Turn more quote requests into booked jobs.
+                </h3>
+
+                <p className="mt-5 max-w-[34rem] text-[1rem] leading-7 text-slate-600 sm:text-[1.05rem]">
+                  Get in front of homeowners already planning a move, respond faster, and only pay for verified leads that match your service area.
+                </p>
+
+                <div className="mt-7 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-2xl border border-slate-200 bg-white/80 px-4 py-4 shadow-sm">
+                    <p className="text-sm font-semibold text-slate-900">High-intent customers</p>
+                    <p className="mt-1 text-sm leading-6 text-slate-500">Reach movers-ready customers instead of cold traffic.</p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-white/80 px-4 py-4 shadow-sm">
+                    <p className="text-sm font-semibold text-slate-900">Flexible lead spend</p>
+                    <p className="mt-1 text-sm leading-6 text-slate-500">No long contracts, just verified opportunities.</p>
+                  </div>
+                </div>
+
+                <div className="mt-7 flex flex-col gap-4 sm:flex-row sm:items-center">
+                  <Link
+                    href="/about"
+                    className="inline-flex min-h-[52px] items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#0f172a,#1e293b)] px-7 py-3 text-base font-semibold text-white shadow-[0_18px_40px_-24px_rgba(15,23,42,0.45)] transition duration-200 hover:translate-y-[-1px] hover:shadow-[0_24px_48px_-24px_rgba(15,23,42,0.55)]"
+                  >
+                    Learn more
+                  </Link>
+                  <p className="max-w-[22rem] text-sm leading-6 text-slate-500">
+                    Learn how Match &apos;n Move helps movers grow, then join when you&apos;re ready.
+                  </p>
+                </div>
+
+                <div className="mt-8 grid grid-cols-3 gap-3 border-t border-slate-200/80 pt-6">
+                  <div>
+                    <p className="text-2xl font-black tracking-[-0.04em] text-slate-950 sm:text-3xl">24/7</p>
+                    <p className="mt-1 text-xs uppercase tracking-[0.18em] text-slate-400 sm:text-[0.72rem]">Lead flow</p>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-black tracking-[-0.04em] text-slate-950 sm:text-3xl">0</p>
+                    <p className="mt-1 text-xs uppercase tracking-[0.18em] text-slate-400 sm:text-[0.72rem]">Lock-in contracts</p>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-black tracking-[-0.04em] text-slate-950 sm:text-3xl">1</p>
+                    <p className="mt-1 text-xs uppercase tracking-[0.18em] text-slate-400 sm:text-[0.72rem]">Simple dashboard</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="relative">
+                <div className="relative overflow-hidden rounded-[28px] border border-slate-200 bg-slate-950 shadow-[0_32px_70px_-36px_rgba(15,23,42,0.8)]">
+                  <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between border-b border-white/10 bg-slate-950/80 px-4 py-3 backdrop-blur">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.18em] text-emerald-300/80">Mover partner preview</p>
+                      <p className="mt-1 text-sm font-semibold text-white">Live lead dashboard</p>
+                    </div>
+                    <div className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-200">
+                      Verified
+                    </div>
+                  </div>
+
+                  <Image
+                    src="/images/movers/mover-partner-preview.svg"
+                    alt="Illustration of a moving company dashboard with incoming leads and scheduled jobs."
+                    width={960}
+                    height={760}
+                    className="h-auto w-full pt-[74px]"
+                    priority={false}
+                  />
+
+                  <div className="absolute bottom-4 left-4 rounded-2xl border border-white/10 bg-slate-900/88 px-4 py-3 shadow-xl backdrop-blur">
+                    <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-slate-400">This week</p>
+                    <p className="mt-1 text-2xl font-black tracking-[-0.04em] text-white">12 new leads</p>
+                    <p className="mt-1 text-sm text-emerald-300">Qualified requests in your area</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-          <div className="h-72 rounded-xl bg-[url('https://images.unsplash.com/photo-1616161610002-c6df88888cc4?q=80&w=1470')] bg-cover bg-center" />
         </div>
       </section>
-      <section className="bg-slateBlue text-white"><div className="container-shell py-8 grid md:grid-cols-3 gap-4 text-center">{["Tell Us About Your Move", "Compare Quotes", "Choose & Save"].map((t,i)=><div key={t} className="card text-slate-900 p-4"><p className="font-bold">{i+1} {t}</p></div>)}</div></section>
-      <section className="bg-slateBlue text-white py-10"><div className="container-shell"><h2 className="text-5xl font-bold text-center mb-8">Why choose us?</h2><div className="grid md:grid-cols-3 gap-4">{["Trusted movers","Quick and easy","No obligation"].map(t=><div className="card p-8 text-slate-900 text-3xl font-semibold" key={t}>{t}</div>)}</div></div></section>
-      <section className="bg-white"><div className="container-shell grid md:grid-cols-2 gap-5 py-10"><div><h3 className="text-5xl font-bold">Thinking about advertising your moving business?</h3><ul className="list-disc ml-5 mt-4 space-y-1"><li>Get high-intent leads</li><li>No contracts, pay only for verified leads.</li></ul><Link href="/mover/login" className="mt-4 inline-block rounded bg-green-500 text-white px-6 py-3">Join as a mover</Link></div><div className="h-80 rounded-xl bg-[url('https://images.unsplash.com/photo-1600518464441-9154a4dea21b?q=80&w=1469')] bg-cover bg-center"/></div></section>
     </SiteShell>
   );
 }

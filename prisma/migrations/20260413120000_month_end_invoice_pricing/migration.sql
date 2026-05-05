@@ -1,0 +1,7 @@
+ALTER TABLE "MoverCompany"
+ALTER COLUMN "baseLeadPrice" SET DEFAULT 2000;
+
+ALTER TABLE "PricingRule"
+ALTER COLUMN "bedroomModifier" SET DEFAULT 1000,
+ALTER COLUMN "urgentModifier" SET DEFAULT 2000,
+ALTER COLUMN "distanceModifier" SET DEFAULT 2000;

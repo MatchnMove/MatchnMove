@@ -1,0 +1,2 @@
+ALTER TABLE "Review"
+ADD COLUMN "showReviewerName" BOOLEAN NOT NULL DEFAULT true;

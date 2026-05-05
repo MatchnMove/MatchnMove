@@ -1,27 +1,175 @@
+import { redirect } from "next/navigation";
+import { MoverDashboardExperience } from "@/components/mover-dashboard-experience";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { redirect } from "next/navigation";
+import { LEAD_PRICING } from "@/lib/lead-pricing";
+import { calculateMoverProfileReadiness } from "@/lib/mover-profile";
+import { canonicaliseServiceArea, sanitiseNzServiceAreas } from "@/lib/nz-regions";
+import { getMoverCompetitionSnapshot, getMoverLeaderboard, getMoverRatingsDashboardData } from "@/lib/reviews";
 
-export default async function MoverDashboardPage() {
+function formatDate(value: Date | null) {
+  if (!value) return "Flexible timing";
+
+  return new Intl.DateTimeFormat("en-NZ", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(value);
+}
+
+function matchesServiceArea(serviceAreas: string[], lead: { fromCity: string; fromRegion: string; toCity: string; toRegion: string }) {
+  if (!serviceAreas.length) return false;
+
+  const coverage = new Set(sanitiseNzServiceAreas(serviceAreas));
+  const leadRegions = [lead.fromRegion, lead.toRegion]
+    .map((region) => canonicaliseServiceArea(region))
+    .filter((region): region is NonNullable<typeof region> => Boolean(region));
+
+  return leadRegions.some((region) => coverage.has(region));
+}
+
+export default async function MoverDashboardPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ tab?: string; billing?: string }>;
+}) {
   const session = await auth();
-  if (!session?.user?.email) redirect("/mover/login");
-  const mover = await prisma.moverCompany.findFirst({ where: { user: { email: session.user.email } }, include: { leads: { include: { quoteRequest: true } } } });
-  if (!mover) return <div>No mover profile.</div>;
-  return (
-    <section className="min-h-screen bg-slate-100 p-6">
-      <div className="container-shell grid lg:grid-cols-[260px_1fr] gap-6">
-        <aside className="bg-slateBlue text-white rounded-xl p-4 space-y-4"><div className="card text-slate-900 p-4"><p className="text-2xl font-bold">{mover.companyName}</p><p className="text-green-600">Active</p></div><ul className="space-y-2 text-lg"><li>Overview</li><li>Company Profile</li><li>Documents</li><li>Pricing</li><li>Reviews</li><li>Settings</li><li className="font-semibold">Leads</li></ul></aside>
-        <main className="space-y-4">
-          <div className="card p-6"><h1 className="text-6xl font-black">Set up your mover profile</h1><p>Complete your profile to start receiving moving leads.</p><div className="h-4 rounded-full bg-slate-200 mt-4"><div className="h-full w-1/2 rounded-full bg-brandBlue"/></div></div>
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="card p-5"><h2 className="text-3xl font-bold">Company details</h2><p>{mover.companyName}</p><p>NZBN: {mover.nzbn}</p><p>Years operating: {mover.yearsOperating}</p></div>
-            <div className="card p-5"><h2 className="text-3xl font-bold">Contact details</h2><p>{mover.contactPerson}</p><p>{mover.phone}</p></div>
-            <div className="card p-5"><h2 className="text-3xl font-bold">Add company profile picture</h2><input type="file" /></div>
-            <div className="card p-5"><h2 className="text-3xl font-bold">Insurance document</h2><button className="rounded bg-brandBlue text-white px-4 py-2">Upload document</button></div>
+  if (!session?.user?.id) redirect("/mover/login");
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+
+  const mover = await prisma.moverCompany.findUnique({
+    where: { userId: session.user.id },
+    include: {
+      user: true,
+      documents: true,
+      leads: {
+        orderBy: { createdAt: "desc" },
+        include: {
+          payment: true,
+          auditLogs: {
+            orderBy: { createdAt: "desc" },
+            take: 1,
+          },
+          quoteRequest: true,
+        },
+      },
+    },
+  });
+
+  if (!mover) {
+    return (
+      <section className="min-h-screen bg-slate-100 px-4 py-16">
+        <div className="container-shell">
+          <div className="rounded-[32px] border border-slate-200 bg-white p-8 shadow-sm">
+            <h1 className="text-3xl font-black tracking-[-0.04em] text-slate-950">No mover profile found</h1>
+            <p className="mt-3 max-w-xl text-base leading-7 text-slate-600">
+              Your account is signed in, but there is no mover company linked to it yet. Finish registration to unlock the
+              full dashboard.
+            </p>
           </div>
-          <div className="card p-5"><h2 className="text-4xl font-bold">Leads</h2><div className="space-y-3 mt-4">{mover.leads.map((l)=><div key={l.id} className="border rounded p-3"><p className="font-semibold">{l.quoteRequest.fromCity} → {l.quoteRequest.toCity}</p><p>Status: {l.status}</p><p>Price: ${(l.price/100).toFixed(2)}</p>{l.status !== "PURCHASED" && <form action={`/api/mover/leads/${l.id}/unlock`} method="post"><button className="bg-accentOrange text-white px-4 py-1 rounded mt-2">Unlock lead</button></form>}</div>)}</div></div>
-        </main>
-      </div>
-    </section>
-  );
+        </div>
+      </section>
+    );
+  }
+
+  const [ratingsData, leaderboard] = await Promise.all([
+    getMoverRatingsDashboardData(mover.id),
+    getMoverLeaderboard(mover.id),
+  ]);
+  const competition = getMoverCompetitionSnapshot(mover.id, ratingsData.summary, leaderboard);
+  const moverServiceAreas = sanitiseNzServiceAreas(mover.serviceAreas);
+
+  const completionChecks = [
+    Boolean(mover.companyName),
+    Boolean(mover.nzbn),
+    Boolean(mover.yearsOperating),
+    Boolean(mover.contactPerson),
+    Boolean(mover.phone),
+    moverServiceAreas.length > 0,
+    Boolean(mover.logoUrl),
+    mover.documents.length > 0,
+    Boolean(mover.user.emailVerifiedAt),
+  ];
+
+  const profileCompletion = Math.round((completionChecks.filter(Boolean).length / completionChecks.length) * 100);
+  const activePipelineStatuses = ["NEW", "NOTIFIED", "VIEWED"] as const;
+  const wonStatuses = ["WON"] as const;
+  const purchasedStatuses = ["PURCHASED", "CONTACTED", "WON"] as const;
+  const totalLeadValue = mover.leads.reduce((sum, lead) => sum + lead.price, 0);
+  const unlockedValue = mover.leads
+    .filter((lead) => purchasedStatuses.includes(lead.status as (typeof purchasedStatuses)[number]))
+    .reduce((sum, lead) => sum + lead.price, 0);
+
+  const dashboardData = {
+    companyName: mover.companyName,
+    businessDescription: mover.businessDescription ?? "",
+    status: mover.status,
+    email: mover.user.email,
+    emailVerified: Boolean(mover.user.emailVerifiedAt),
+    contactPerson: mover.contactPerson ?? "Add your lead contact",
+    phone: mover.phone ?? "Add your phone number",
+    nzbn: mover.nzbn ?? "Add your NZBN",
+    yearsOperating: mover.yearsOperating,
+    serviceAreas: moverServiceAreas,
+    documentsCount: mover.documents.length,
+    documents: mover.documents.map((document) => ({
+      id: document.id,
+      type: document.type,
+      fileName: document.fileName ?? "Document",
+      mimeType: document.mimeType ?? null,
+      fileSize: document.fileSize ?? null,
+      viewUrl: `/api/mover/profile/documents/${document.id}/file`,
+      createdAt: document.createdAt.toISOString(),
+    })),
+    logoUrl: mover.logoUrl,
+    baseLeadPrice: LEAD_PRICING.basePrice,
+    profileCompletion,
+    readiness: calculateMoverProfileReadiness(mover),
+    stats: {
+      activeLeads: mover.leads.filter((lead) => activePipelineStatuses.includes(lead.status as (typeof activePipelineStatuses)[number])).length,
+      purchasedLeads: mover.leads.filter((lead) => purchasedStatuses.includes(lead.status as (typeof purchasedStatuses)[number])).length,
+      wonLeads: mover.leads.filter((lead) => wonStatuses.includes(lead.status as (typeof wonStatuses)[number])).length,
+      totalLeadValue,
+      unlockedValue,
+      averageLeadPrice: mover.leads.length ? Math.round(totalLeadValue / mover.leads.length) : LEAD_PRICING.basePrice,
+    },
+    ratings: {
+      ...ratingsData,
+      competition,
+      leaderboard,
+    },
+    leads: mover.leads.map((lead) => ({
+      id: lead.id,
+      status: lead.status,
+      price: lead.price,
+      createdAt: lead.createdAt.toISOString(),
+      purchasedAt: lead.purchasedAt?.toISOString() ?? null,
+      paymentStatus: lead.payment?.status ?? "PENDING",
+      paymentReference: lead.payment?.stripeCheckoutId ?? null,
+      lastAction: lead.auditLogs[0]?.action ?? null,
+      routeMatch: matchesServiceArea(moverServiceAreas, lead.quoteRequest),
+      quoteRequest: {
+        id: lead.quoteRequest.id,
+        name: lead.quoteRequest.name,
+        email: lead.quoteRequest.email,
+        phone: lead.quoteRequest.phone,
+        movingWhat: lead.quoteRequest.movingWhat,
+        bedrooms: lead.quoteRequest.bedrooms,
+        fromAddress: lead.quoteRequest.fromAddress,
+        fromCity: lead.quoteRequest.fromCity,
+        fromRegion: lead.quoteRequest.fromRegion,
+        fromPostcode: lead.quoteRequest.fromPostcode,
+        toAddress: lead.quoteRequest.toAddress,
+        toCity: lead.quoteRequest.toCity,
+        toRegion: lead.quoteRequest.toRegion,
+        toPostcode: lead.quoteRequest.toPostcode,
+        fromPropertyType: lead.quoteRequest.fromPropertyType,
+        toPropertyType: lead.quoteRequest.toPropertyType,
+        moveDateLabel: formatDate(lead.quoteRequest.moveDate),
+        dateFlexible: lead.quoteRequest.dateFlexible,
+      },
+    })),
+  };
+
+  return <MoverDashboardExperience mover={dashboardData} initialTab={resolvedSearchParams?.tab} billingState={resolvedSearchParams?.billing} />;
 }

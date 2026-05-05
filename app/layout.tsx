@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { ReactNode } from "react";
 
 export const metadata: Metadata = {
-  title: "Match'nMove",
+  title: "Match 'n Move",
   description: "Quote marketplace for moving"
 };
 
