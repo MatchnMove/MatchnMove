@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-labelledby="title desc">
+  <title id="title">Summit Shift Movers logo</title>
+  <desc id="desc">A green and slate moving company mark with mountain peaks and a delivery arrow.</desc>
+  <rect width="240" height="240" rx="48" fill="#10221d"/>
+  <path d="M38 158 91 78l34 52 24-32 53 60H38z" fill="#f8fafc"/>
+  <path d="M91 78l34 52 24-32 53 60h-47L126 126l-21 32H38z" fill="#22c55e"/>
+  <path d="M61 181h96" stroke="#f8fafc" stroke-width="12" stroke-linecap="round"/>
+  <path d="M145 166l28 15-28 15" fill="none" stroke="#f8fafc" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="76" cy="188" r="9" fill="#f97316"/>
+  <circle cx="130" cy="188" r="9" fill="#f97316"/>
+</svg>

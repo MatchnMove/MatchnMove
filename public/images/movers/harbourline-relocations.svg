@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-labelledby="title desc">
+  <title id="title">Harbourline Relocations logo</title>
+  <desc id="desc">A navy and teal moving company mark with a bridge and moving box.</desc>
+  <rect width="240" height="240" rx="48" fill="#0f2438"/>
+  <path d="M44 142c24-42 48-62 76-62s52 20 76 62" fill="none" stroke="#8dd7cf" stroke-width="12" stroke-linecap="round"/>
+  <path d="M62 143h116v46H62z" fill="#f8fafc"/>
+  <path d="M62 143l58 28 58-28" fill="none" stroke="#0f2438" stroke-width="8" stroke-linejoin="round"/>
+  <circle cx="84" cy="191" r="10" fill="#f59e0b"/>
+  <circle cx="156" cy="191" r="10" fill="#f59e0b"/>
+  <path d="M78 103h84" stroke="#f8fafc" stroke-width="10" stroke-linecap="round"/>
+  <path d="M98 86v42M142 86v42" stroke="#8dd7cf" stroke-width="9" stroke-linecap="round"/>
+</svg>

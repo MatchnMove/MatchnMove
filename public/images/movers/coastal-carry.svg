@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-labelledby="title desc">
+  <title id="title">Coastal Carry Co logo</title>
+  <desc id="desc">A blue and coral moving company mark with a wave, sun, and moving van.</desc>
+  <rect width="240" height="240" rx="48" fill="#12304a"/>
+  <circle cx="172" cy="68" r="24" fill="#fb923c"/>
+  <path d="M38 112c20-18 40-18 60 0s40 18 60 0 34-18 44-8" fill="none" stroke="#7dd3fc" stroke-width="12" stroke-linecap="round"/>
+  <path d="M54 132h96l26 26v28H54z" fill="#f8fafc"/>
+  <path d="M150 132v26h26" fill="none" stroke="#12304a" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M72 150h44" stroke="#fb923c" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="84" cy="188" r="11" fill="#0f172a"/>
+  <circle cx="152" cy="188" r="11" fill="#0f172a"/>
+</svg>
