@@ -28,8 +28,9 @@ const port = Number(process.env.SMTP_PORT ?? "0");
 const secure = process.env.SMTP_SECURE === "true" || port === 465;
 const user = process.env.SMTP_USER?.trim();
 const pass = process.env.SMTP_PASS?.trim();
-const from = process.env.CONTACT_FROM_EMAIL || process.env.DEFAULT_FROM_EMAIL || user;
+const from = process.env.TEST_FROM || process.env.CONTACT_FROM_EMAIL || process.env.DEFAULT_FROM_EMAIL || user;
 const to = process.env.TEST_EMAIL || process.env.CONTACT_TO_EMAIL;
+const subject = process.env.TEST_SUBJECT || "Match 'n Move email test";
 
 if (!host || !Number.isFinite(port) || port <= 0) {
   console.error("SMTP_HOST and SMTP_PORT must be set before email can send.");
@@ -57,8 +58,8 @@ try {
     const result = await transporter.sendMail({
       from,
       to,
-      subject: "Match 'n Move email test",
-      text: "Your Match 'n Move app can send email through the configured Google Workspace SMTP route.",
+      subject,
+      text: `Your Match 'n Move app can send email from ${from} through the configured Google Workspace SMTP route.`,
     });
 
     console.log(`Test email queued: ${result.messageId}`);

@@ -57,7 +57,7 @@ function getContactNotificationConfig() {
     process.env.CONTACT_FROM_EMAIL,
     process.env.INFO_FROM_EMAIL,
     process.env.DEFAULT_FROM_EMAIL,
-    SITE_EMAILS.info,
+    SITE_EMAILS.contact,
   );
 
   return {

@@ -138,7 +138,7 @@ export default function ContactPage() {
                   </Link>
 
                   <Link
-                    href={toMailto(SITE_EMAILS.info)}
+                    href={toMailto(SITE_EMAILS.contact)}
                     className="flex min-w-0 items-start gap-4 rounded-2xl border border-slate-200 bg-white/80 px-4 py-4 transition hover:border-slate-300 hover:bg-white"
                   >
                     <div className="rounded-2xl bg-emerald-50 p-3 text-emerald-700">
@@ -146,7 +146,7 @@ export default function ContactPage() {
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-400">Email</p>
-                      <p className="mt-1 break-all text-lg font-semibold text-slate-950">{SITE_EMAILS.info}</p>
+                      <p className="mt-1 break-all text-lg font-semibold text-slate-950">{SITE_EMAILS.contact}</p>
                       <p className="mt-1 text-sm leading-6 text-slate-500">Best for general help, updates, and follow-up.</p>
                     </div>
                   </Link>
