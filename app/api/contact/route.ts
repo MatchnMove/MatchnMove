@@ -11,11 +11,25 @@ export async function POST(req: NextRequest) {
   const parsed = contactSchema.safeParse(await req.json());
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
-  await prisma.contactMessage.create({ data: parsed.data });
-  const emailResult = await sendContactNotification(parsed.data);
+  let messageSaved = true;
+  try {
+    await prisma.contactMessage.create({ data: parsed.data });
+  } catch (error) {
+    messageSaved = false;
+    console.error("Could not save contact message", error);
+  }
+
+  let emailResult: Awaited<ReturnType<typeof sendContactNotification>>;
+  try {
+    emailResult = await sendContactNotification(parsed.data);
+  } catch (error) {
+    console.error("Could not send contact notification", error);
+    return NextResponse.json({ error: "Could not send your message. Please try again." }, { status: 502 });
+  }
 
   return NextResponse.json({
     ok: true,
+    messageSaved,
     emailSent: emailResult.sent,
     emailConfigured: !emailResult.skipped,
   });
