@@ -78,9 +78,13 @@ export function HeroQuoteCard() {
   return (
     <form
       onSubmit={submit}
-      className="relative z-20 w-full overflow-visible rounded-[28px] border border-white/80 bg-white/92 p-4 text-left text-slate-900 shadow-[0_30px_80px_-42px_rgba(15,23,42,0.42)] backdrop-blur-xl sm:p-5 lg:p-6"
+      className="relative z-20 w-full overflow-visible rounded-[28px] border border-white/10 bg-[linear-gradient(145deg,#101b34_0%,#172857_64%,#1f3f86_100%)] p-4 text-left text-white shadow-[0_30px_80px_-42px_rgba(15,23,42,0.85)] sm:p-5 lg:p-6"
     >
-      <h2 className="text-center text-[1.45rem] font-black leading-tight tracking-[-0.03em] text-slate-950 sm:text-[1.75rem]">
+      <p className="max-w-[38rem] text-[0.98rem] leading-[1.7] text-slate-200 sm:text-[1.05rem]">
+        Tell us about your move once, review transparent options, and choose the best mover for your timeline.
+      </p>
+
+      <h2 className="mt-4 text-[1.45rem] font-black leading-tight tracking-[-0.03em] text-white sm:text-[1.75rem]">
         Moving soon? Let&apos;s get you sorted.
       </h2>
 
@@ -95,6 +99,7 @@ export function HeroQuoteCard() {
             setErrors((current) => ({ ...current, from: undefined }));
           }}
           error={errors.from}
+          labelClassName="mb-1.5 block text-sm font-semibold text-slate-100"
         />
         <AddressAutocomplete
           label="Moving to"
@@ -106,6 +111,7 @@ export function HeroQuoteCard() {
             setErrors((current) => ({ ...current, to: undefined }));
           }}
           error={errors.to}
+          labelClassName="mb-1.5 block text-sm font-semibold text-slate-100"
         />
         <button
           type="submit"
