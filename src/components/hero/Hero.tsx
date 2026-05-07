@@ -26,7 +26,7 @@ export function Hero() {
         </div>
       </div>
 
-      <div className="pointer-events-none absolute inset-x-0 -bottom-px z-10 md:relative md:mt-4 md:bottom-auto xl:absolute xl:inset-x-0 xl:-bottom-px xl:mt-0">
+      <div className="pointer-events-none absolute inset-x-0 -bottom-px z-10 md:relative md:mt-4 md:bottom-auto xl:absolute xl:inset-x-0 xl:bottom-[clamp(3rem,8vh,5.5rem)] xl:mt-0">
         <RiveHeroAnimation />
       </div>
     </section>
