@@ -1,16 +1,16 @@
-import Link from "next/link";
+import { HeroQuoteCard } from "@/src/components/hero/HeroQuoteCard";
 import { RiveHeroAnimation } from "@/src/components/hero/RiveHeroAnimation";
 
 export function Hero() {
   return (
-    <section className="relative -mb-px h-[calc(100svh-55px)] min-h-[560px] overflow-hidden bg-white md:min-h-0 md:h-auto xl:h-[calc(100dvh-82px)] xl:min-h-[640px]">
+    <section className="relative -mb-px min-h-[calc(100svh-55px)] overflow-hidden bg-white xl:min-h-[calc(100dvh-82px)]">
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute left-[-8%] top-10 h-40 w-40 rounded-full bg-blue-100/70 blur-[90px] sm:h-56 sm:w-56" />
         <div className="absolute right-[6%] top-24 h-48 w-48 rounded-full bg-sky-100/55 blur-[120px] sm:h-72 sm:w-72" />
         <div className="absolute inset-x-0 top-0 h-32 bg-[linear-gradient(180deg,rgba(241,245,249,0.55),transparent)]" />
       </div>
 
-      <div className="mx-auto flex h-full max-w-[1280px] items-start px-4 pb-[148px] pt-6 sm:px-6 sm:pb-[168px] sm:pt-8 md:h-auto md:pb-10 lg:items-center lg:pb-12 xl:h-full xl:pb-[clamp(10rem,26vh,17rem)] xl:pt-[clamp(2.75rem,6vh,5rem)]">
+      <div className="mx-auto grid max-w-[1280px] gap-8 px-4 pb-[150px] pt-6 sm:px-6 sm:pb-[170px] sm:pt-8 md:pb-[190px] lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,440px)] lg:items-center lg:gap-10 lg:pb-[190px] xl:min-h-[calc(100dvh-82px)] xl:pb-[clamp(10rem,24vh,16rem)] xl:pt-[clamp(2.75rem,6vh,5rem)]">
         <div className="relative flex max-w-[760px] flex-col opacity-100 transition duration-700 ease-out">
           <p className="inline-flex w-fit rounded-full border border-slate-200 bg-white px-4 py-2 text-[0.92rem] font-semibold text-blue-600 sm:px-5 sm:py-2.5 sm:text-sm">
             Plan your move with confidence
@@ -28,17 +28,14 @@ export function Hero() {
             Tell us about your move once, review transparent options, and choose the best mover for your timeline.
           </p>
 
-          <div className="mt-8 flex flex-col gap-4 sm:mt-10 sm:flex-row sm:items-center sm:gap-5">
-            <Link
-              href="/quote"
-              className="inline-flex min-w-[214px] self-start items-center justify-center rounded-[18px] bg-[linear-gradient(135deg,#5468ee,#6171f3)] px-6 py-3 text-[0.98rem] font-semibold text-white shadow-[0_14px_30px_-20px_rgba(79,100,235,0.42)] transition duration-200 hover:bg-blue-700 hover:shadow-[0_16px_34px_-20px_rgba(79,100,235,0.5)] active:translate-y-px sm:min-w-0 sm:rounded-2xl sm:px-8 sm:py-4 sm:text-lg"
-            >
-              Get Free Quotes
-            </Link>
-            <p className="max-w-[250px] text-[0.95rem] leading-7 text-slate-400 sm:max-w-[270px] sm:text-base">
-              Compare quotes from local movers with no obligation.
-            </p>
+          <div className="mt-7 flex flex-wrap gap-3 text-sm font-semibold text-slate-500 sm:mt-8">
+            <span className="rounded-full border border-slate-200 bg-white/80 px-3 py-2">Free to compare</span>
+            <span className="rounded-full border border-slate-200 bg-white/80 px-3 py-2">Trusted local movers</span>
           </div>
+        </div>
+
+        <div className="relative z-20 w-full justify-self-center lg:justify-self-end">
+          <HeroQuoteCard />
         </div>
       </div>
 

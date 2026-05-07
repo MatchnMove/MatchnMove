@@ -21,6 +21,12 @@ import {
   UtensilsCrossed,
   WashingMachine
 } from "lucide-react";
+import {
+  AddressAutocomplete,
+  AddressSuggestion,
+  addressSuggestionToValue,
+  parseNominatimAddress
+} from "@/components/address-autocomplete";
 
 type Form = {
   name: string;
@@ -59,36 +65,6 @@ type FieldKey =
   | "toStorageSize";
 
 type Errors = Partial<Record<FieldKey, string>>;
-
-type AddressSuggestion = {
-  label: string;
-  street: string;
-  suburb: string;
-  city: string;
-  region: string;
-  postcode: string;
-  country: string;
-};
-
-type NominatimAddress = {
-  house_number?: string;
-  road?: string;
-  suburb?: string;
-  neighbourhood?: string;
-  city?: string;
-  town?: string;
-  village?: string;
-  county?: string;
-  state?: string;
-  region?: string;
-  postcode?: string;
-  country?: string;
-};
-
-type NominatimResult = {
-  display_name?: string;
-  address?: NominatimAddress;
-};
 
 type ExtraDetails = {
   fromFloor: string;
@@ -223,10 +199,6 @@ export function QuoteForm() {
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [voiceState, setVoiceState] = useState<"idle" | "listening" | "transcribing" | "complete">("idle");
-  const [fromSuggestions, setFromSuggestions] = useState<AddressSuggestion[]>([]);
-  const [toSuggestions, setToSuggestions] = useState<AddressSuggestion[]>([]);
-  const [fromLoading, setFromLoading] = useState(false);
-  const [toLoading, setToLoading] = useState(false);
   const [locating, setLocating] = useState(false);
   const [showItemsPicker, setShowItemsPicker] = useState(false);
   const [itemQuantities, setItemQuantities] = useState<Record<string, number>>({});
@@ -239,6 +211,7 @@ export function QuoteForm() {
   const [calendarYear, setCalendarYear] = useState(now.getFullYear());
   const datePickerRef = useRef<HTMLDivElement | null>(null);
   const formCardRef = useRef<HTMLDivElement | null>(null);
+  const prefillAppliedRef = useRef(false);
   const router = useRouter();
 
   const update = <K extends keyof Form>(k: K, v: Form[K]) => {
@@ -251,47 +224,37 @@ export function QuoteForm() {
     setErrors((prev) => ({ ...prev, [k]: undefined }));
   };
 
-  const parseNominatim = (x: NominatimResult): AddressSuggestion => {
-    const addr = x.address ?? {};
-    const streetParts = [addr.house_number, addr.road].filter((part): part is string => Boolean(part));
-    return {
-      label: x.display_name ?? "",
-      street: streetParts.join(" ").trim(),
-      suburb: addr.suburb || addr.neighbourhood || "",
-      city: addr.city || addr.town || addr.village || addr.county || "",
-      region: addr.state || addr.region || "",
-      postcode: addr.postcode || "",
-      country: addr.country || "New Zealand"
-    };
-  };
+  useEffect(() => {
+    if (prefillAppliedRef.current || typeof window === "undefined") return;
+    prefillAppliedRef.current = true;
 
-  const fetchAddressSuggestions = async (query: string, kind: "from" | "to") => {
-    if (query.trim().length < 3) {
-      if (kind === "from") setFromSuggestions([]);
-      if (kind === "to") setToSuggestions([]);
-      return;
-    }
+    const params = new URLSearchParams(window.location.search);
+    const keys = [
+      "fromAddress",
+      "fromCity",
+      "fromRegion",
+      "fromPostcode",
+      "fromCountry",
+      "toAddress",
+      "toCity",
+      "toRegion",
+      "toPostcode",
+      "toCountry"
+    ] as const;
 
-    if (kind === "from") setFromLoading(true);
-    if (kind === "to") setToLoading(true);
-    try {
-      const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&countrycodes=nz&limit=5&q=${encodeURIComponent(query)}`;
-      const res = await fetch(url, { headers: { "Accept-Language": "en-NZ" } });
-      const data = await res.json();
-      const parsed = Array.isArray(data) ? data.map(parseNominatim) : [];
-      if (kind === "from") setFromSuggestions(parsed);
-      if (kind === "to") setToSuggestions(parsed);
-    } catch {
-      if (kind === "from") setFromSuggestions([]);
-      if (kind === "to") setToSuggestions([]);
-    } finally {
-      if (kind === "from") setFromLoading(false);
-      if (kind === "to") setToLoading(false);
+    const prefill = keys.reduce<Partial<Form>>((acc, key) => {
+      const value = params.get(key);
+      if (value) acc[key] = value;
+      return acc;
+    }, {});
+
+    if (Object.keys(prefill).length > 0) {
+      setForm((current) => ({ ...current, ...prefill }));
     }
-  };
+  }, []);
 
   const applyAddressSuggestion = (kind: "from" | "to", suggestion: AddressSuggestion) => {
-    const address = suggestion.street || suggestion.label;
+    const address = addressSuggestionToValue(suggestion);
     setForm((prev) =>
       kind === "from"
         ? {
@@ -330,8 +293,6 @@ export function QuoteForm() {
             toCountry: undefined
           }
     );
-    if (kind === "from") setFromSuggestions([]);
-    if (kind === "to") setToSuggestions([]);
   };
 
   const shareLocation = () => {
@@ -348,7 +309,7 @@ export function QuoteForm() {
             `https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&lat=${coords.latitude}&lon=${coords.longitude}`
           );
           const data = await res.json();
-          applyAddressSuggestion("from", parseNominatim(data));
+          applyAddressSuggestion("from", parseNominatimAddress(data));
         } catch {
           setSubmitError("Could not convert your location to an address.");
         } finally {
@@ -839,35 +800,15 @@ export function QuoteForm() {
                   {errors.fromStorageSize && <span className="mt-1 block text-sm text-red-600">{errors.fromStorageSize}</span>}
                 </label>
               )}
-              <label className="block">
-                <span className="mb-1 block text-sm font-medium">{fieldMeta.fromAddress.label}</span>
-                <input
-                  className={`${fieldClass} ${errors.fromAddress ? "border-red-500 focus:border-red-400 focus:ring-red-100" : ""}`}
-                  placeholder={fieldMeta.fromAddress.placeholder}
-                  value={form.fromAddress}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    update("fromAddress", v);
-                    void fetchAddressSuggestions(v, "from");
-                  }}
-                />
-                {fromLoading && <span className="mt-1 block text-xs text-slate-500">Searching addresses...</span>}
-                {fromSuggestions.length > 0 && (
-                  <div className="mt-2 max-h-52 overflow-auto rounded border border-slate-300 bg-white">
-                    {fromSuggestions.map((s, idx) => (
-                      <button
-                        key={`${s.label}-${idx}`}
-                        type="button"
-                        className="block w-full border-b border-slate-200 px-3 py-2 text-left text-sm hover:bg-slate-100 last:border-0"
-                        onClick={() => applyAddressSuggestion("from", s)}
-                      >
-                        {s.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {errors.fromAddress && <span className="mt-1 block text-sm text-red-600">{errors.fromAddress}</span>}
-              </label>
+              <AddressAutocomplete
+                label={fieldMeta.fromAddress.label}
+                placeholder={fieldMeta.fromAddress.placeholder}
+                value={form.fromAddress}
+                onChange={(value) => update("fromAddress", value)}
+                onSelect={(suggestion) => applyAddressSuggestion("from", suggestion)}
+                error={errors.fromAddress}
+                labelClassName="mb-1 block text-sm font-medium"
+              />
               <button
                 type="button"
                 onClick={shareLocation}
@@ -980,35 +921,15 @@ export function QuoteForm() {
                   )}
                 </>
               )}
-              <label className="block">
-                <span className="mb-1 block text-sm font-medium">{fieldMeta.toAddress.label}</span>
-                <input
-                  className={`${fieldClass} ${errors.toAddress ? "border-red-500 focus:border-red-400 focus:ring-red-100" : ""}`}
-                  placeholder={fieldMeta.toAddress.placeholder}
-                  value={form.toAddress}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    update("toAddress", v);
-                    void fetchAddressSuggestions(v, "to");
-                  }}
-                />
-                {toLoading && <span className="mt-1 block text-xs text-slate-500">Searching addresses...</span>}
-                {toSuggestions.length > 0 && (
-                  <div className="mt-2 max-h-52 overflow-auto rounded border border-slate-300 bg-white">
-                    {toSuggestions.map((s, idx) => (
-                      <button
-                        key={`${s.label}-${idx}`}
-                        type="button"
-                        className="block w-full border-b border-slate-200 px-3 py-2 text-left text-sm hover:bg-slate-100 last:border-0"
-                        onClick={() => applyAddressSuggestion("to", s)}
-                      >
-                        {s.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {errors.toAddress && <span className="mt-1 block text-sm text-red-600">{errors.toAddress}</span>}
-              </label>
+              <AddressAutocomplete
+                label={fieldMeta.toAddress.label}
+                placeholder={fieldMeta.toAddress.placeholder}
+                value={form.toAddress}
+                onChange={(value) => update("toAddress", value)}
+                onSelect={(suggestion) => applyAddressSuggestion("to", suggestion)}
+                error={errors.toAddress}
+                labelClassName="mb-1 block text-sm font-medium"
+              />
               {(["toCity", "toRegion", "toPostcode", "toCountry"] as const).map((k) => (
                 <label key={k} className="block">
                   <span className="mb-1 block text-sm font-medium">{fieldMeta[k].label}</span>
