@@ -39,58 +39,66 @@ function comparePublicMoversByRating(left: PublicMoverCandidate, right: PublicMo
 }
 
 const loadPublicMovers = cacheTaggedData(async () => {
-  const movers = await prisma.moverCompany.findMany({
-    where: {
-      status: "ACTIVE",
-    },
-    select: publicMoverSelect,
-    orderBy: [{ averageRating: "desc" }, { totalReviewCount: "desc" }, { updatedAt: "desc" }],
-  });
+  try {
+    const movers = await prisma.moverCompany.findMany({
+      where: {
+        status: "ACTIVE",
+      },
+      select: publicMoverSelect,
+      orderBy: [{ averageRating: "desc" }, { totalReviewCount: "desc" }, { updatedAt: "desc" }],
+    });
 
-  return movers.filter(isMoverPubliclyVisible).sort(comparePublicMoversByRating);
+    return movers.filter(isMoverPubliclyVisible).sort(comparePublicMoversByRating);
+  } catch {
+    return [];
+  }
 }, ["public-movers-directory"], [PUBLIC_MOVERS_TAG]);
 
 const loadPublicMoverProfile = cacheTaggedData(async (moverId: string) => {
-  const mover = await prisma.moverCompany.findUnique({
-    where: {
-      id: moverId,
-    },
-    select: {
-      ...publicMoverSelect,
-      status: true,
-      communicationAverage: true,
-      punctualityAverage: true,
-      careOfBelongingsAverage: true,
-      professionalismAverage: true,
-      valueForMoneyAverage: true,
-      recommendationRate: true,
-      fiveStarCount: true,
-      fourStarCount: true,
-      threeStarCount: true,
-      twoStarCount: true,
-      oneStarCount: true,
-      contactPerson: true,
-    },
-  });
+  try {
+    const mover = await prisma.moverCompany.findUnique({
+      where: {
+        id: moverId,
+      },
+      select: {
+        ...publicMoverSelect,
+        status: true,
+        communicationAverage: true,
+        punctualityAverage: true,
+        careOfBelongingsAverage: true,
+        professionalismAverage: true,
+        valueForMoneyAverage: true,
+        recommendationRate: true,
+        fiveStarCount: true,
+        fourStarCount: true,
+        threeStarCount: true,
+        twoStarCount: true,
+        oneStarCount: true,
+        contactPerson: true,
+      },
+    });
 
-  if (!mover || mover.status !== "ACTIVE" || !isMoverPubliclyVisible(mover)) {
+    if (!mover || mover.status !== "ACTIVE" || !isMoverPubliclyVisible(mover)) {
+      return null;
+    }
+
+    const approvedReviews = await getPublicReviewsForMover(mover.id, 8);
+
+    return {
+      ...mover,
+      approvedReviews: approvedReviews.map((review) => ({
+        id: review.id,
+        overallRating: review.overallRating,
+        writtenReview: review.writtenReview,
+        recommendMover: review.recommendMover,
+        submittedAt: review.submittedAt.toISOString(),
+        customerName: getDisplayedReviewerName(review.lead.quoteRequest.name, review.showReviewerName),
+        routeLabel: `${review.lead.quoteRequest.fromCity} to ${review.lead.quoteRequest.toCity}`,
+      })),
+    };
+  } catch {
     return null;
   }
-
-  const approvedReviews = await getPublicReviewsForMover(mover.id, 8);
-
-  return {
-    ...mover,
-    approvedReviews: approvedReviews.map((review) => ({
-      id: review.id,
-      overallRating: review.overallRating,
-      writtenReview: review.writtenReview,
-      recommendMover: review.recommendMover,
-      submittedAt: review.submittedAt.toISOString(),
-      customerName: getDisplayedReviewerName(review.lead.quoteRequest.name, review.showReviewerName),
-      routeLabel: `${review.lead.quoteRequest.fromCity} to ${review.lead.quoteRequest.toCity}`,
-    })),
-  };
 }, ["public-mover-profile"], [PUBLIC_MOVERS_TAG]);
 
 export async function getPublicMovers() {
