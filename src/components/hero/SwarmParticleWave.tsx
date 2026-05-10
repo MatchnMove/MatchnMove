@@ -12,6 +12,17 @@ type Particle = {
   amplitude: number;
   alpha: number;
   color: string;
+  lane: number;
+  depth: number;
+};
+
+type LeadParticle = {
+  progress: number;
+  speed: number;
+  lane: number;
+  phase: number;
+  size: number;
+  color: string;
 };
 
 const colors = [
@@ -24,27 +35,55 @@ function createParticles(width: number, height: number) {
   const isMobile = width < 640;
   const isTablet = width < 1024;
 
-  // Tuning: lower these counts first if performance ever feels too busy.
-  const particleCount = isMobile ? 24 : isTablet ? 34 : 48;
+  // Tuning: particle count controls density. Keep mobile lower for smooth scrolling.
+  const particleCount = isMobile ? 36 : isTablet ? 58 : 86;
 
   return Array.from({ length: particleCount }, (_, index) => {
-    const lane = index / Math.max(1, particleCount - 1);
+    const lane = index % 4;
+    const laneOffset = (lane - 1.5) * height * 0.055;
+    const depth = 0.65 + Math.random() * 0.75;
     const color = colors[index % colors.length];
 
     return {
       x: Math.random() * width,
-      y: height * (0.18 + lane * 0.62),
-      baseY: height * (0.18 + lane * 0.62),
-      size: Math.random() * 1.7 + 0.9,
-      // Tuning: increase speed for a more active wave, decrease for calmer motion.
-      speed: (isMobile ? 20 : 32) + Math.random() * 30,
+      y: height * 0.48 + laneOffset,
+      baseY: height * 0.48 + laneOffset,
+      size: (Math.random() * 2.2 + 1.15) * depth,
+      // Tuning: speed controls the left-to-right flow.
+      speed: ((isMobile ? 22 : 40) + Math.random() * (isMobile ? 34 : 58)) * depth,
       phase: Math.random() * Math.PI * 2,
-      amplitude: (isMobile ? 8 : 13) + Math.random() * 18,
-      // Tuning: keep opacity low so the CTA remains the visual priority.
-      alpha: 0.16 + Math.random() * 0.18,
+      amplitude: (isMobile ? 14 : 20) + Math.random() * (isMobile ? 18 : 28),
+      // Tuning: opacity controls visual strength. Keep below 0.55 behind the CTA.
+      alpha: (0.2 + Math.random() * 0.26) * depth,
       color,
+      lane,
+      depth,
     };
   });
+}
+
+function createLeadParticles(width: number) {
+  const isMobile = width < 640;
+  const leadCount = isMobile ? 3 : 6;
+
+  return Array.from({ length: leadCount }, (_, index) => ({
+    progress: index / leadCount + Math.random() * 0.08,
+    // Tuning: lead speed makes the route-matching motion more/less obvious.
+    speed: (isMobile ? 0.045 : 0.062) + Math.random() * 0.032,
+    lane: index % 3,
+    phase: Math.random() * Math.PI * 2,
+    size: (isMobile ? 2.5 : 3.3) + Math.random() * 1.6,
+    color: colors[index % colors.length],
+  }));
+}
+
+function getRouteY(x: number, width: number, height: number, lane: number, offset: number) {
+  const progress = x / Math.max(1, width);
+  const laneBase = height * (0.36 + lane * 0.095);
+  const broadCurve = Math.sin((progress * Math.PI * 2.1) + lane * 0.72 + offset * 0.005) * height * 0.035;
+  const routeLift = Math.sin(progress * Math.PI) * height * 0.085;
+
+  return laneBase + broadCurve - routeLift;
 }
 
 export function SwarmParticleWave() {
@@ -56,6 +95,7 @@ export function SwarmParticleWave() {
   const frameRef = useRef<number | null>(null);
   const lastFrameRef = useRef<number | null>(null);
   const waveOffsetRef = useRef(0);
+  const leadParticlesRef = useRef<LeadParticle[]>([]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -87,6 +127,7 @@ export function SwarmParticleWave() {
 
       sizeRef.current = { width, height, dpr };
       particlesRef.current = createParticles(width, height);
+      leadParticlesRef.current = createLeadParticles(width);
     };
 
     const draw = (timestamp: number) => {
@@ -106,26 +147,20 @@ export function SwarmParticleWave() {
 
       context.lineWidth = 1;
       context.globalCompositeOperation = "source-over";
-      waveOffsetRef.current += delta * 46; // Tuning: higher values move the dotted wave faster.
+      waveOffsetRef.current += delta * 58; // Tuning: higher values move the dotted wave faster.
 
       const particles = particlesRef.current;
 
-      for (let waveIndex = 0; waveIndex < 3; waveIndex += 1) {
-        const color = colors[waveIndex];
-        const baseY = height * (0.34 + waveIndex * 0.14);
-        const amplitude = height * (waveIndex === 1 ? 0.035 : 0.025);
-
+      for (let waveIndex = 0; waveIndex < 4; waveIndex += 1) {
         context.save();
-        context.setLineDash([2.5, 24]);
-        context.lineDashOffset = -waveOffsetRef.current - waveIndex * 28;
-        context.strokeStyle = `rgba(${color}, ${0.18 - waveIndex * 0.026})`; // Tuning: wave opacity.
+        context.setLineDash([3.5, 18]);
+        context.lineDashOffset = -waveOffsetRef.current - waveIndex * 34;
+        context.lineWidth = waveIndex === 1 ? 1.45 : 1.1;
+        context.strokeStyle = `rgba(${colors[waveIndex % colors.length]}, ${0.22 - waveIndex * 0.025})`; // Tuning: wave opacity.
         context.beginPath();
 
         for (let x = -40; x <= width + 40; x += 12) {
-          const y =
-            baseY +
-            Math.sin((x + waveOffsetRef.current * 1.6 + waveIndex * 90) * 0.009) * amplitude +
-            Math.cos((x + waveIndex * 140) * 0.004) * amplitude * 0.8;
+          const y = getRouteY(x, width, height, waveIndex % 4, waveOffsetRef.current);
 
           if (x === -40) {
             context.moveTo(x, y);
@@ -140,17 +175,25 @@ export function SwarmParticleWave() {
 
       for (const particle of particles) {
         particle.x += particle.speed * delta;
-        particle.phase += delta * 0.7;
-        particle.y = particle.baseY + Math.sin(particle.phase + particle.x * 0.01) * particle.amplitude;
+        particle.phase += delta * (0.8 + particle.depth * 0.4);
+        particle.y =
+          getRouteY(particle.x, width, height, particle.lane, waveOffsetRef.current) +
+          Math.sin(particle.phase + particle.x * 0.012) * particle.amplitude;
 
         if (particle.x > width + 24) {
           particle.x = -24;
-          particle.baseY = height * (0.18 + Math.random() * 0.62);
+          particle.lane = Math.floor(Math.random() * 4);
+          particle.depth = 0.65 + Math.random() * 0.75;
         }
 
         context.beginPath();
         context.fillStyle = `rgba(${particle.color}, ${particle.alpha})`;
         context.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+        context.fill();
+
+        context.beginPath();
+        context.fillStyle = `rgba(${particle.color}, ${particle.alpha * 0.16})`;
+        context.arc(particle.x - particle.speed * 0.035, particle.y, particle.size * 2.6, 0, Math.PI * 2);
         context.fill();
       }
 
@@ -161,17 +204,17 @@ export function SwarmParticleWave() {
           const nextParticle = particles[nextIndex];
           const xDistance = nextParticle.x - particle.x;
 
-          if (xDistance < 0 || xDistance > 135) {
+          if (xDistance < 0 || xDistance > 115) {
             continue;
           }
 
           const yDistance = Math.abs(nextParticle.y - particle.y);
 
-          if (yDistance > 70) {
+          if (yDistance > 56) {
             continue;
           }
 
-          const strength = (1 - xDistance / 135) * (1 - yDistance / 70) * 0.055;
+          const strength = (1 - xDistance / 115) * (1 - yDistance / 56) * 0.1;
 
           context.beginPath();
           context.strokeStyle = `rgba(${particle.color}, ${strength})`;
@@ -179,6 +222,43 @@ export function SwarmParticleWave() {
           context.lineTo(nextParticle.x, nextParticle.y);
           context.stroke();
         }
+      }
+
+      for (const lead of leadParticlesRef.current) {
+        lead.progress += lead.speed * delta;
+        lead.phase += delta;
+
+        if (lead.progress > 1.08) {
+          lead.progress = -0.08;
+          lead.lane = Math.floor(Math.random() * 3);
+          lead.color = colors[Math.floor(Math.random() * colors.length)];
+        }
+
+        const x = lead.progress * width;
+        const y = getRouteY(x, width, height, lead.lane + 1, waveOffsetRef.current) + Math.sin(lead.phase * 1.8) * 7;
+
+        for (let trail = 5; trail >= 1; trail -= 1) {
+          const trailX = x - trail * (width < 640 ? 12 : 18);
+          const trailY = getRouteY(trailX, width, height, lead.lane + 1, waveOffsetRef.current);
+          const trailAlpha = (6 - trail) * 0.035;
+
+          context.beginPath();
+          context.fillStyle = `rgba(${lead.color}, ${trailAlpha})`;
+          context.arc(trailX, trailY, lead.size * (1 - trail * 0.09), 0, Math.PI * 2);
+          context.fill();
+        }
+
+        context.beginPath();
+        context.fillStyle = `rgba(${lead.color}, ${width < 640 ? 0.36 : 0.46})`;
+        context.arc(x, y, lead.size, 0, Math.PI * 2);
+        context.fill();
+
+        context.beginPath();
+        context.strokeStyle = `rgba(${lead.color}, ${width < 640 ? 0.16 : 0.22})`;
+        context.lineWidth = 1.2;
+        context.moveTo(x - (width < 640 ? 34 : 48), y);
+        context.lineTo(x + 10, y);
+        context.stroke();
       }
 
       frameRef.current = window.requestAnimationFrame(draw);
