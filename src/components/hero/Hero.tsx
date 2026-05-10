@@ -21,12 +21,12 @@ export function Hero() {
           </h1>
         </div>
 
-        <div className="relative z-20 mt-7 w-full max-w-[880px] sm:mt-8">
+        <div className="relative z-20 mt-6 w-full max-w-[720px] sm:mt-7">
           <HeroQuoteCard />
         </div>
       </div>
 
-      <div className="pointer-events-none absolute inset-x-0 -bottom-px z-10 md:relative md:mt-4 md:bottom-auto xl:absolute xl:inset-x-0 xl:bottom-[clamp(3rem,8vh,5.5rem)] xl:mt-0">
+      <div className="pointer-events-none absolute inset-x-0 -bottom-px z-10 md:relative md:mt-4 md:bottom-auto xl:absolute xl:inset-x-0 xl:bottom-[clamp(1.5rem,4vh,3rem)] xl:mt-0">
         <RiveHeroAnimation />
       </div>
     </section>
