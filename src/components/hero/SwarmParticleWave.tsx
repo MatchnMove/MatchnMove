@@ -25,10 +25,12 @@ type LeadParticle = {
   color: string;
 };
 
-const colors = [
+const streamColors = [
   "66, 133, 244", // brand blue
   "47, 184, 122", // fresh green
-  "222, 122, 58", // warm orange
+  "66, 133, 244",
+  "47, 184, 122",
+  "222, 122, 58", // warm orange accent
 ];
 
 function createParticles(width: number, height: number) {
@@ -36,25 +38,25 @@ function createParticles(width: number, height: number) {
   const isTablet = width < 1024;
 
   // Tuning: particle count controls density. Keep mobile lower for smooth scrolling.
-  const particleCount = isMobile ? 36 : isTablet ? 58 : 86;
+  const particleCount = isMobile ? 18 : isTablet ? 28 : 38;
+  const streamStart = width * (isMobile ? 0.12 : 0.34);
 
   return Array.from({ length: particleCount }, (_, index) => {
-    const lane = index % 4;
-    const laneOffset = (lane - 1.5) * height * 0.055;
-    const depth = 0.65 + Math.random() * 0.75;
-    const color = colors[index % colors.length];
+    const lane = index % 2;
+    const depth = 0.72 + Math.random() * 0.48;
+    const color = streamColors[index % streamColors.length];
 
     return {
-      x: Math.random() * width,
-      y: height * 0.48 + laneOffset,
-      baseY: height * 0.48 + laneOffset,
-      size: (Math.random() * 2.2 + 1.15) * depth,
+      x: streamStart + Math.random() * (width - streamStart + 40),
+      y: height * 0.5,
+      baseY: height * 0.5,
+      size: (Math.random() * 0.9 + 1.55) * depth,
       // Tuning: speed controls the left-to-right flow.
-      speed: ((isMobile ? 22 : 40) + Math.random() * (isMobile ? 34 : 58)) * depth,
+      speed: ((isMobile ? 16 : 26) + Math.random() * (isMobile ? 18 : 28)) * depth,
       phase: Math.random() * Math.PI * 2,
-      amplitude: (isMobile ? 14 : 20) + Math.random() * (isMobile ? 18 : 28),
+      amplitude: (isMobile ? 6 : 10) + Math.random() * (isMobile ? 8 : 12),
       // Tuning: opacity controls visual strength. Keep below 0.55 behind the CTA.
-      alpha: (0.2 + Math.random() * 0.26) * depth,
+      alpha: (0.18 + Math.random() * 0.18) * depth,
       color,
       lane,
       depth,
@@ -64,26 +66,37 @@ function createParticles(width: number, height: number) {
 
 function createLeadParticles(width: number) {
   const isMobile = width < 640;
-  const leadCount = isMobile ? 3 : 6;
+  const leadCount = isMobile ? 2 : 4;
 
   return Array.from({ length: leadCount }, (_, index) => ({
-    progress: index / leadCount + Math.random() * 0.08,
+    progress: 0.22 + index / leadCount * 0.66 + Math.random() * 0.04,
     // Tuning: lead speed makes the route-matching motion more/less obvious.
-    speed: (isMobile ? 0.045 : 0.062) + Math.random() * 0.032,
-    lane: index % 3,
+    speed: (isMobile ? 0.032 : 0.044) + Math.random() * 0.02,
+    lane: index % 2,
     phase: Math.random() * Math.PI * 2,
-    size: (isMobile ? 2.5 : 3.3) + Math.random() * 1.6,
-    color: colors[index % colors.length],
+    size: (isMobile ? 2.25 : 2.9) + Math.random() * 0.9,
+    color: streamColors[index % streamColors.length],
   }));
 }
 
 function getRouteY(x: number, width: number, height: number, lane: number, offset: number) {
+  const isMobile = width < 640;
   const progress = x / Math.max(1, width);
-  const laneBase = height * (0.36 + lane * 0.095);
-  const broadCurve = Math.sin((progress * Math.PI * 2.1) + lane * 0.72 + offset * 0.005) * height * 0.035;
-  const routeLift = Math.sin(progress * Math.PI) * height * 0.085;
+  const laneBase = height * (isMobile ? 0.72 + lane * 0.045 : 0.43 + lane * 0.085);
+  const broadCurve =
+    Math.sin((progress * Math.PI * 1.8) + lane * 0.55 + offset * 0.003) * height * (isMobile ? 0.018 : 0.026);
+  const routeLift = Math.sin(progress * Math.PI) * height * (isMobile ? 0.035 : 0.052);
 
   return laneBase + broadCurve - routeLift;
+}
+
+function getStreamAlpha(x: number, width: number) {
+  const isMobile = width < 640;
+  const streamStart = width * (isMobile ? 0.08 : 0.32);
+  const fadeIn = Math.min(1, Math.max(0, (x - streamStart) / (width * (isMobile ? 0.22 : 0.14))));
+  const fadeOut = Math.min(1, Math.max(0, (width * 0.98 - x) / (width * 0.12)));
+
+  return fadeIn * fadeOut;
 }
 
 export function SwarmParticleWave() {
@@ -147,22 +160,22 @@ export function SwarmParticleWave() {
 
       context.lineWidth = 1;
       context.globalCompositeOperation = "source-over";
-      waveOffsetRef.current += delta * 58; // Tuning: higher values move the dotted wave faster.
+      waveOffsetRef.current += delta * 38; // Tuning: higher values move the dotted wave faster.
 
       const particles = particlesRef.current;
 
-      for (let waveIndex = 0; waveIndex < 4; waveIndex += 1) {
+      for (let waveIndex = 0; waveIndex < 2; waveIndex += 1) {
         context.save();
-        context.setLineDash([3.5, 18]);
-        context.lineDashOffset = -waveOffsetRef.current - waveIndex * 34;
-        context.lineWidth = waveIndex === 1 ? 1.45 : 1.1;
-        context.strokeStyle = `rgba(${colors[waveIndex % colors.length]}, ${0.22 - waveIndex * 0.025})`; // Tuning: wave opacity.
+        context.setLineDash([3, 22]);
+        context.lineDashOffset = -waveOffsetRef.current - waveIndex * 28;
+        context.lineWidth = waveIndex === 1 ? 1.15 : 1;
+        context.strokeStyle = `rgba(${streamColors[waveIndex]}, ${0.13 - waveIndex * 0.02})`; // Tuning: route-line opacity.
         context.beginPath();
 
-        for (let x = -40; x <= width + 40; x += 12) {
-          const y = getRouteY(x, width, height, waveIndex % 4, waveOffsetRef.current);
+        for (let x = width * (width < 640 ? 0.08 : 0.3); x <= width + 28; x += 14) {
+          const y = getRouteY(x, width, height, waveIndex, waveOffsetRef.current);
 
-          if (x === -40) {
+          if (x === width * 0.3) {
             context.moveTo(x, y);
           } else {
             context.lineTo(x, y);
@@ -181,19 +194,21 @@ export function SwarmParticleWave() {
           Math.sin(particle.phase + particle.x * 0.012) * particle.amplitude;
 
         if (particle.x > width + 24) {
-          particle.x = -24;
-          particle.lane = Math.floor(Math.random() * 4);
-          particle.depth = 0.65 + Math.random() * 0.75;
+          particle.x = width * (width < 640 ? 0.44 : 0.32) - Math.random() * 28;
+          particle.lane = Math.floor(Math.random() * 2);
+          particle.depth = 0.72 + Math.random() * 0.48;
         }
 
+        const streamAlpha = getStreamAlpha(particle.x, width);
+
         context.beginPath();
-        context.fillStyle = `rgba(${particle.color}, ${particle.alpha})`;
+        context.fillStyle = `rgba(${particle.color}, ${particle.alpha * streamAlpha})`;
         context.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
         context.fill();
 
         context.beginPath();
-        context.fillStyle = `rgba(${particle.color}, ${particle.alpha * 0.16})`;
-        context.arc(particle.x - particle.speed * 0.035, particle.y, particle.size * 2.6, 0, Math.PI * 2);
+        context.fillStyle = `rgba(${particle.color}, ${particle.alpha * streamAlpha * 0.1})`;
+        context.arc(particle.x - particle.speed * 0.028, particle.y, particle.size * 2.1, 0, Math.PI * 2);
         context.fill();
       }
 
@@ -204,17 +219,17 @@ export function SwarmParticleWave() {
           const nextParticle = particles[nextIndex];
           const xDistance = nextParticle.x - particle.x;
 
-          if (xDistance < 0 || xDistance > 115) {
+          if (particle.x < width * 0.34 || xDistance < 0 || xDistance > 96) {
             continue;
           }
 
           const yDistance = Math.abs(nextParticle.y - particle.y);
 
-          if (yDistance > 56) {
+          if (yDistance > 42) {
             continue;
           }
 
-          const strength = (1 - xDistance / 115) * (1 - yDistance / 56) * 0.1;
+          const strength = (1 - xDistance / 96) * (1 - yDistance / 42) * 0.055 * getStreamAlpha(particle.x, width);
 
           context.beginPath();
           context.strokeStyle = `rgba(${particle.color}, ${strength})`;
@@ -229,18 +244,19 @@ export function SwarmParticleWave() {
         lead.phase += delta;
 
         if (lead.progress > 1.08) {
-          lead.progress = -0.08;
-          lead.lane = Math.floor(Math.random() * 3);
-          lead.color = colors[Math.floor(Math.random() * colors.length)];
+          lead.progress = width < 640 ? 0.08 : 0.24;
+          lead.lane = Math.floor(Math.random() * 2);
+          lead.color = streamColors[Math.floor(Math.random() * streamColors.length)];
         }
 
         const x = lead.progress * width;
-        const y = getRouteY(x, width, height, lead.lane + 1, waveOffsetRef.current) + Math.sin(lead.phase * 1.8) * 7;
+        const y = getRouteY(x, width, height, lead.lane, waveOffsetRef.current) + Math.sin(lead.phase * 1.4) * 4;
+        const leadAlpha = getStreamAlpha(x, width);
 
-        for (let trail = 5; trail >= 1; trail -= 1) {
-          const trailX = x - trail * (width < 640 ? 12 : 18);
-          const trailY = getRouteY(trailX, width, height, lead.lane + 1, waveOffsetRef.current);
-          const trailAlpha = (6 - trail) * 0.035;
+        for (let trail = 4; trail >= 1; trail -= 1) {
+          const trailX = x - trail * (width < 640 ? 10 : 15);
+          const trailY = getRouteY(trailX, width, height, lead.lane, waveOffsetRef.current);
+          const trailAlpha = (5 - trail) * 0.026 * leadAlpha;
 
           context.beginPath();
           context.fillStyle = `rgba(${lead.color}, ${trailAlpha})`;
@@ -249,14 +265,14 @@ export function SwarmParticleWave() {
         }
 
         context.beginPath();
-        context.fillStyle = `rgba(${lead.color}, ${width < 640 ? 0.36 : 0.46})`;
+        context.fillStyle = `rgba(${lead.color}, ${(width < 640 ? 0.32 : 0.4) * leadAlpha})`;
         context.arc(x, y, lead.size, 0, Math.PI * 2);
         context.fill();
 
         context.beginPath();
-        context.strokeStyle = `rgba(${lead.color}, ${width < 640 ? 0.16 : 0.22})`;
-        context.lineWidth = 1.2;
-        context.moveTo(x - (width < 640 ? 34 : 48), y);
+        context.strokeStyle = `rgba(${lead.color}, ${(width < 640 ? 0.11 : 0.16) * leadAlpha})`;
+        context.lineWidth = 1;
+        context.moveTo(x - (width < 640 ? 28 : 40), y);
         context.lineTo(x + 10, y);
         context.stroke();
       }
