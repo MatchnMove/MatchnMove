@@ -29,7 +29,7 @@ export function RiveHeroAnimation() {
 
   return (
     <div
-      className="relative left-1/2 h-[160px] w-screen min-w-full -translate-x-1/2 sm:h-[clamp(190px,25vh,280px)]"
+      className="relative left-1/2 h-[150px] w-screen min-w-full -translate-x-1/2 sm:h-[clamp(170px,22vh,240px)]"
       aria-label="Match N Move hero animation"
     >
       <RiveComponent className="relative z-10 h-full w-full" />
