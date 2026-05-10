@@ -61,11 +61,11 @@ function getFlowPosition(particle: Particle, width: number, height: number, offs
   const progress = particle.progress;
   const x = progress * width;
   const bandCenter = height * (isMobile ? 0.72 : 0.5);
-  const laneSpread = height * (isMobile ? 0.038 : 0.055);
+  const laneSpread = height * (isMobile ? 0.06 : 0.09);
   const laneOffset = (particle.lane - (isMobile ? 1 : 1.5)) * laneSpread;
-  const broadWave = Math.sin(progress * Math.PI * 2.35 + offset * 0.004 + particle.phase) * height * (isMobile ? 0.03 : 0.052);
-  const secondaryWave = Math.sin(progress * Math.PI * 5.1 + particle.phase * 0.7) * height * (isMobile ? 0.012 : 0.018);
-  const liftedArc = Math.sin(easeInOutSine(Math.max(0, Math.min(1, progress))) * Math.PI) * height * (isMobile ? 0.035 : 0.055);
+  const broadWave = Math.sin(progress * Math.PI * 2.35 + offset * 0.004 + particle.phase) * height * (isMobile ? 0.046 : 0.09);
+  const secondaryWave = Math.sin(progress * Math.PI * 5.1 + particle.phase * 0.7) * height * (isMobile ? 0.018 : 0.034);
+  const liftedArc = Math.sin(easeInOutSine(Math.max(0, Math.min(1, progress))) * Math.PI) * height * (isMobile ? 0.052 : 0.088);
   const y = bandCenter + laneOffset + broadWave + secondaryWave - liftedArc * particle.drift;
 
   return { x, y };
@@ -75,10 +75,10 @@ function getVisibility(x: number, y: number, width: number, height: number) {
   const isMobile = width < 640;
   const horizontalFadeIn = Math.min(1, Math.max(0, (x + width * 0.06) / (width * 0.18)));
   const horizontalFadeOut = Math.min(1, Math.max(0, (width * 1.02 - x) / (width * 0.16)));
-  const topBoundary = height * (isMobile ? 0.61 : 0.32);
-  const bottomBoundary = height * (isMobile ? 0.92 : 0.72);
-  const verticalFadeIn = Math.min(1, Math.max(0, (y - topBoundary) / (height * 0.08)));
-  const verticalFadeOut = Math.min(1, Math.max(0, (bottomBoundary - y) / (height * 0.08)));
+  const topBoundary = height * (isMobile ? 0.55 : 0.2);
+  const bottomBoundary = height * (isMobile ? 0.96 : 0.82);
+  const verticalFadeIn = Math.min(1, Math.max(0, (y - topBoundary) / (height * 0.1)));
+  const verticalFadeOut = Math.min(1, Math.max(0, (bottomBoundary - y) / (height * 0.1)));
 
   // Keep the heading/form zone calm while allowing the wave to pass through the hero.
   const contentCalm =
