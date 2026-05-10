@@ -36,12 +36,12 @@ function createParticles(width: number, height: number) {
       y: height * (0.18 + lane * 0.62),
       baseY: height * (0.18 + lane * 0.62),
       size: Math.random() * 1.7 + 0.9,
-      // Tuning: increase speed very slightly for a more active wave.
-      speed: (isMobile ? 8 : 12) + Math.random() * 16,
+      // Tuning: increase speed for a more active wave, decrease for calmer motion.
+      speed: (isMobile ? 20 : 32) + Math.random() * 30,
       phase: Math.random() * Math.PI * 2,
       amplitude: (isMobile ? 8 : 13) + Math.random() * 18,
       // Tuning: keep opacity low so the CTA remains the visual priority.
-      alpha: 0.1 + Math.random() * 0.14,
+      alpha: 0.16 + Math.random() * 0.18,
       color,
     };
   });
@@ -55,6 +55,7 @@ export function SwarmParticleWave() {
   const sizeRef = useRef({ width: 0, height: 0, dpr: 1 });
   const frameRef = useRef<number | null>(null);
   const lastFrameRef = useRef<number | null>(null);
+  const waveOffsetRef = useRef(0);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -105,8 +106,37 @@ export function SwarmParticleWave() {
 
       context.lineWidth = 1;
       context.globalCompositeOperation = "source-over";
+      waveOffsetRef.current += delta * 46; // Tuning: higher values move the dotted wave faster.
 
       const particles = particlesRef.current;
+
+      for (let waveIndex = 0; waveIndex < 3; waveIndex += 1) {
+        const color = colors[waveIndex];
+        const baseY = height * (0.34 + waveIndex * 0.14);
+        const amplitude = height * (waveIndex === 1 ? 0.035 : 0.025);
+
+        context.save();
+        context.setLineDash([2.5, 24]);
+        context.lineDashOffset = -waveOffsetRef.current - waveIndex * 28;
+        context.strokeStyle = `rgba(${color}, ${0.18 - waveIndex * 0.026})`; // Tuning: wave opacity.
+        context.beginPath();
+
+        for (let x = -40; x <= width + 40; x += 12) {
+          const y =
+            baseY +
+            Math.sin((x + waveOffsetRef.current * 1.6 + waveIndex * 90) * 0.009) * amplitude +
+            Math.cos((x + waveIndex * 140) * 0.004) * amplitude * 0.8;
+
+          if (x === -40) {
+            context.moveTo(x, y);
+          } else {
+            context.lineTo(x, y);
+          }
+        }
+
+        context.stroke();
+        context.restore();
+      }
 
       for (const particle of particles) {
         particle.x += particle.speed * delta;

@@ -30,7 +30,7 @@ export function Hero() {
         </div>
       </div>
 
-      <div className="pointer-events-none relative z-10 -mb-8 sm:-mb-9">
+      <div className="pointer-events-none relative z-10 -mb-px">
         <RiveHeroAnimation />
       </div>
     </section>
