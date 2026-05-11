@@ -80,6 +80,60 @@ body { @apply overflow-x-hidden bg-slate-100 text-slate-900; }
   will-change: transform;
 }
 
+@keyframes hero-static-glow {
+  0%, 100% {
+    opacity: 0.72;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.025);
+  }
+}
+
+@keyframes hero-static-pin {
+  0%, 100% {
+    opacity: 0.68;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.78;
+    transform: scale(1.025);
+  }
+}
+
+@keyframes hero-static-dots {
+  0%, 100% {
+    opacity: 0.28;
+  }
+  50% {
+    opacity: 0.42;
+  }
+}
+
+.hero-static-glow {
+  animation: hero-static-glow 11s ease-in-out infinite;
+  transform-origin: center;
+}
+
+.hero-static-pin {
+  animation: hero-static-pin 8s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.hero-static-dots {
+  animation: hero-static-dots 9.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-static-glow,
+  .hero-static-pin,
+  .hero-static-dots {
+    animation: none;
+  }
+}
+
 .faq-reveal-scroll {
   scrollbar-width: thin;
   scrollbar-color: rgba(125, 211, 252, 0.45) rgba(255, 255, 255, 0.06);
