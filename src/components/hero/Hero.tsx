@@ -22,7 +22,7 @@ export function Hero() {
             </h1>
           </div>
 
-          <div className="relative z-20 mt-5 w-full max-w-[600px] sm:mt-6">
+          <div className="relative z-20 mt-5 w-full max-w-[660px] sm:mt-6">
             <HeroQuoteCard />
           </div>
         </div>
