@@ -80,59 +80,6 @@ body { @apply overflow-x-hidden bg-slate-100 text-slate-900; }
   will-change: transform;
 }
 
-@keyframes hero-ambient-glow {
-  0%, 100% {
-    opacity: 0.72;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.96;
-    transform: scale(1.035);
-  }
-}
-
-@keyframes hero-ambient-pin {
-  0%, 100% {
-    opacity: 0.9;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.68;
-    transform: scale(1.045);
-  }
-}
-
-@keyframes hero-ambient-dots {
-  0%, 100% {
-    opacity: 0.24;
-  }
-  50% {
-    opacity: 0.46;
-  }
-}
-
-.hero-ambient-glow {
-  animation: hero-ambient-glow 10s ease-in-out infinite;
-  transform-origin: center;
-}
-
-.hero-ambient-pin {
-  animation: hero-ambient-pin 7.5s ease-in-out infinite;
-  transform-origin: 312px 291px;
-}
-
-.hero-ambient-dots {
-  animation: hero-ambient-dots 8.5s ease-in-out infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .hero-ambient-glow,
-  .hero-ambient-pin,
-  .hero-ambient-dots {
-    animation: none;
-  }
-}
-
 .faq-reveal-scroll {
   scrollbar-width: thin;
   scrollbar-color: rgba(125, 211, 252, 0.45) rgba(255, 255, 255, 0.06);
