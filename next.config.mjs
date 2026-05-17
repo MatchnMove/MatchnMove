@@ -10,6 +10,16 @@ const nextConfig = {
       { protocol: "https", hostname: "images.unsplash.com" }
     ]
   },
+  async redirects() {
+    return [
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "matchnmove.co.nz" }],
+        destination: "https://www.matchnmove.co.nz/:path*",
+        permanent: true
+      }
+    ];
+  },
   turbopack: {
     root: __dirname
   }
