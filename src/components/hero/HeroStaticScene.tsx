@@ -32,13 +32,13 @@ export function HeroStaticScene() {
       >
         <defs>
           <linearGradient id="heroSceneHillBlue" x1="0" x2="1" y1="0" y2="1">
-            <stop offset="0%" stopColor="#d9e7ff" stopOpacity="0.44" />
-            <stop offset="68%" stopColor="#ecf4ff" stopOpacity="0.16" />
+            <stop offset="0%" stopColor="#d9e7ff" stopOpacity="0.52" />
+            <stop offset="68%" stopColor="#ecf4ff" stopOpacity="0.2" />
             <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
           </linearGradient>
           <linearGradient id="heroSceneHillGreen" x1="0" x2="1" y1="0" y2="1">
-            <stop offset="0%" stopColor="#d9f6e1" stopOpacity="0.42" />
-            <stop offset="74%" stopColor="#edfdf3" stopOpacity="0.16" />
+            <stop offset="0%" stopColor="#d9f6e1" stopOpacity="0.54" />
+            <stop offset="74%" stopColor="#edfdf3" stopOpacity="0.2" />
             <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
           </linearGradient>
           <linearGradient id="heroScenePin" x1="0" x2="1" y1="0" y2="1">
@@ -57,9 +57,9 @@ export function HeroStaticScene() {
 
         <rect x="80" y="22" width="760" height="515" fill="url(#heroSceneGroundGlow)" opacity="0.68" />
 
-        <g opacity="0.55">
-          <image href="/house.svg" x="338" y="80" width="244" height="244" opacity="0.34" />
-          <image href="/house.svg" x="618" y="272" width="194" height="194" opacity="0.24" />
+        <g opacity="0.52">
+          <image href="/house.svg" x="392" y="190" width="218" height="218" opacity="0.3" />
+          <image href="/house.svg" x="632" y="310" width="172" height="172" opacity="0.22" />
         </g>
 
         <g opacity="0.28">
@@ -68,13 +68,13 @@ export function HeroStaticScene() {
           <image href="/cloud.svg" x="788" y="280" width="66" height="42" opacity="0.3" />
         </g>
 
-        <g opacity="0.56">
+        <g opacity="0.68">
           <path
-            d="M0 500 C119 444 247 451 371 480 C493 509 554 407 689 412 C762 415 816 450 860 480 V560 H0 Z"
+            d="M0 498 C112 456 240 457 364 482 C480 506 545 405 680 409 C759 412 817 446 860 474 V560 H0 Z"
             fill="url(#heroSceneHillBlue)"
           />
           <path
-            d="M276 560 C385 451 498 419 625 422 C727 425 795 463 860 506 V560 H276 Z"
+            d="M242 560 C352 457 471 414 607 412 C715 410 792 456 860 500 V560 H242 Z"
             fill="url(#heroSceneHillGreen)"
           />
         </g>
@@ -82,10 +82,10 @@ export function HeroStaticScene() {
         <g className="hero-static-pin" filter="url(#heroScenePinShadow)" opacity="0.7">
           <circle cx="334" cy="365" r="79" fill="none" stroke="#5f6ee8" strokeOpacity="0.1" strokeWidth="1.15" />
           <path
-            d="M334 301 C308 301 287 322 287 348 C287 384 334 430 334 430 C334 430 381 384 381 348 C381 322 360 301 334 301 Z"
+            d="M334 318 C313 318 296 335 296 356 C296 385 334 421 334 421 C334 421 372 385 372 356 C372 335 355 318 334 318 Z"
             fill="url(#heroScenePin)"
           />
-          <circle cx="334" cy="348" r="18" fill="#ffffff" opacity="0.9" />
+          <circle cx="334" cy="356" r="15" fill="#ffffff" opacity="0.9" />
         </g>
 
         <g className="hero-static-dots" opacity="0.36">
@@ -95,8 +95,8 @@ export function HeroStaticScene() {
         </g>
 
         <g opacity="0.38">
-          <image href="/tree.svg" x="690" y="426" width="82" height="112" opacity="0.5" />
-          <image href="/tree.svg" x="736" y="392" width="118" height="154" opacity="0.46" />
+          <image href="/tree.svg" x="675" y="425" width="76" height="106" opacity="0.5" />
+          <image href="/tree.svg" x="742" y="392" width="112" height="150" opacity="0.46" />
         </g>
       </svg>
 
