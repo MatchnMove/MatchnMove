@@ -31,14 +31,6 @@ export function HeroStaticScene() {
         className="absolute right-[-14rem] top-[22%] hidden h-[68%] w-[82%] opacity-35 md:block lg:right-[-3.5rem] lg:top-[12%] lg:h-[76%] lg:w-[62%] lg:opacity-95 xl:right-10 xl:w-[65%]"
       >
         <defs>
-          <linearGradient id="heroSceneHousePrimary" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="#dfe8ff" stopOpacity="0.58" />
-            <stop offset="100%" stopColor="#fbfdff" stopOpacity="0.16" />
-          </linearGradient>
-          <linearGradient id="heroSceneHouseSecondary" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="#d8e3ff" stopOpacity="0.5" />
-            <stop offset="100%" stopColor="#ffffff" stopOpacity="0.12" />
-          </linearGradient>
           <linearGradient id="heroSceneHillBlue" x1="0" x2="1" y1="0" y2="1">
             <stop offset="0%" stopColor="#d9e7ff" stopOpacity="0.44" />
             <stop offset="68%" stopColor="#ecf4ff" stopOpacity="0.16" />
@@ -65,29 +57,15 @@ export function HeroStaticScene() {
 
         <rect x="80" y="22" width="760" height="515" fill="url(#heroSceneGroundGlow)" opacity="0.68" />
 
-        <g opacity="0.5">
-          <path
-            d="M327 193 L449 60 C458 51 471 51 480 60 L602 193 C610 202 604 216 591 216 H568 V414 H359 V216 H338 C325 216 319 202 327 193 Z"
-            fill="url(#heroSceneHousePrimary)"
-          />
-          <rect x="371" y="211" width="186" height="206" rx="2" fill="url(#heroSceneHousePrimary)" opacity="0.72" />
-
-          <path
-            d="M585 344 L687 236 C696 227 709 227 718 236 L819 344 C828 354 821 368 807 368 H785 V454 H618 V368 H597 C583 368 576 354 585 344 Z"
-            fill="url(#heroSceneHouseSecondary)"
-          />
-          <rect x="628" y="361" width="147" height="94" rx="2" fill="url(#heroSceneHouseSecondary)" opacity="0.78" />
-          <path
-            d="M671 454 V409 C671 385 691 365 715 365 C740 365 760 385 760 409 V454"
-            fill="#ffffff"
-            opacity="0.38"
-          />
+        <g opacity="0.55">
+          <image href="/house.svg" x="338" y="80" width="244" height="244" opacity="0.34" />
+          <image href="/house.svg" x="618" y="272" width="194" height="194" opacity="0.24" />
         </g>
 
         <g opacity="0.28">
-          <path d="M246 281 C256 255 291 255 302 281 H246 Z" fill="#dfe8ff" />
-          <path d="M644 186 C656 158 695 158 706 186 H644 Z" fill="#dfe8ff" />
-          <path d="M790 297 C799 276 831 276 840 297 H790 Z" fill="#dfe8ff" />
+          <image href="/cloud.svg" x="242" y="262" width="70" height="46" opacity="0.36" />
+          <image href="/cloud.svg" x="642" y="168" width="76" height="50" opacity="0.32" />
+          <image href="/cloud.svg" x="788" y="280" width="66" height="42" opacity="0.3" />
         </g>
 
         <g opacity="0.56">
@@ -102,7 +80,7 @@ export function HeroStaticScene() {
         </g>
 
         <g className="hero-static-pin" filter="url(#heroScenePinShadow)" opacity="0.7">
-          <circle cx="334" cy="344" r="79" fill="none" stroke="#5f6ee8" strokeOpacity="0.1" strokeWidth="1.15" />
+          <circle cx="334" cy="365" r="79" fill="none" stroke="#5f6ee8" strokeOpacity="0.1" strokeWidth="1.15" />
           <path
             d="M334 301 C308 301 287 322 287 348 C287 384 334 430 334 430 C334 430 381 384 381 348 C381 322 360 301 334 301 Z"
             fill="url(#heroScenePin)"
@@ -117,17 +95,8 @@ export function HeroStaticScene() {
         </g>
 
         <g opacity="0.38">
-          <path d="M701 522 V468" stroke="#6ecb96" strokeWidth="5" strokeLinecap="round" />
-          <path d="M701 496 L679 476" stroke="#6ecb96" strokeWidth="3" strokeLinecap="round" />
-          <path d="M701 498 L723 478" stroke="#6ecb96" strokeWidth="3" strokeLinecap="round" />
-          <ellipse cx="701" cy="458" rx="21" ry="34" fill="#99ddb1" />
-
-          <path d="M772 524 V438" stroke="#67c98f" strokeWidth="6" strokeLinecap="round" />
-          <path d="M772 487 L746 462" stroke="#67c98f" strokeWidth="3.5" strokeLinecap="round" />
-          <path d="M772 488 L800 462" stroke="#67c98f" strokeWidth="3.5" strokeLinecap="round" />
-          <ellipse cx="772" cy="431" rx="25" ry="44" fill="#8cdaad" />
-          <ellipse cx="800" cy="419" rx="22" ry="34" fill="#83cdbf" opacity="0.58" />
-          <ellipse cx="744" cy="457" rx="19" ry="31" fill="#a3e4bb" opacity="0.7" />
+          <image href="/tree.svg" x="690" y="426" width="82" height="112" opacity="0.5" />
+          <image href="/tree.svg" x="736" y="392" width="118" height="154" opacity="0.46" />
         </g>
       </svg>
 
