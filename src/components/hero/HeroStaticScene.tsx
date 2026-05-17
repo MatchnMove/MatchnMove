@@ -23,7 +23,7 @@ export function HeroStaticScene() {
       aria-hidden="true"
       className="pointer-events-none absolute inset-0 z-0 overflow-hidden"
     >
-      <div className="hero-static-glow absolute right-[-14%] top-[12%] hidden h-[34rem] w-[46rem] rounded-full bg-[radial-gradient(circle_at_48%_45%,rgba(95,110,232,0.12),rgba(125,201,184,0.11)_42%,rgba(255,255,255,0)_72%)] md:block lg:right-[-6%]" />
+      <div className="hero-static-glow absolute right-[-12%] top-[13%] hidden h-[31rem] w-[43rem] rounded-full bg-[radial-gradient(circle_at_48%_45%,rgba(95,110,232,0.09),rgba(125,201,184,0.08)_42%,rgba(255,255,255,0)_72%)] md:block lg:right-[-5%]" />
 
       <svg
         viewBox="0 0 860 560"
@@ -32,13 +32,13 @@ export function HeroStaticScene() {
       >
         <defs>
           <linearGradient id="heroSceneHillBlue" x1="0" x2="1" y1="0" y2="1">
-            <stop offset="0%" stopColor="#d9e7ff" stopOpacity="0.52" />
-            <stop offset="68%" stopColor="#ecf4ff" stopOpacity="0.2" />
+            <stop offset="0%" stopColor="#d4e4ff" stopOpacity="0.66" />
+            <stop offset="68%" stopColor="#e6f0ff" stopOpacity="0.28" />
             <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
           </linearGradient>
           <linearGradient id="heroSceneHillGreen" x1="0" x2="1" y1="0" y2="1">
-            <stop offset="0%" stopColor="#d9f6e1" stopOpacity="0.54" />
-            <stop offset="74%" stopColor="#edfdf3" stopOpacity="0.2" />
+            <stop offset="0%" stopColor="#cdf1d9" stopOpacity="0.68" />
+            <stop offset="74%" stopColor="#e6faef" stopOpacity="0.3" />
             <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
           </linearGradient>
           <linearGradient id="heroScenePin" x1="0" x2="1" y1="0" y2="1">
@@ -46,8 +46,8 @@ export function HeroStaticScene() {
             <stop offset="100%" stopColor="#9bb7ff" stopOpacity="0.44" />
           </linearGradient>
           <radialGradient id="heroSceneGroundGlow" cx="56%" cy="50%" r="66%">
-            <stop offset="0%" stopColor="#e5fbf1" stopOpacity="0.3" />
-            <stop offset="48%" stopColor="#eef6ff" stopOpacity="0.18" />
+            <stop offset="0%" stopColor="#e5fbf1" stopOpacity="0.2" />
+            <stop offset="48%" stopColor="#eef6ff" stopOpacity="0.11" />
             <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
           </radialGradient>
           <filter id="heroScenePinShadow" x="-45%" y="-45%" width="190%" height="190%">
@@ -55,20 +55,20 @@ export function HeroStaticScene() {
           </filter>
         </defs>
 
-        <rect x="80" y="22" width="760" height="515" fill="url(#heroSceneGroundGlow)" opacity="0.68" />
+        <rect x="80" y="22" width="760" height="515" fill="url(#heroSceneGroundGlow)" opacity="0.52" />
 
-        <g opacity="0.52">
-          <image href="/house.svg" x="392" y="190" width="218" height="218" opacity="0.3" />
-          <image href="/house.svg" x="632" y="310" width="172" height="172" opacity="0.22" />
+        <g opacity="0.72">
+          <image href="/house.svg" x="392" y="190" width="218" height="218" opacity="0.42" />
+          <image href="/house.svg" x="632" y="310" width="172" height="172" opacity="0.34" />
         </g>
 
-        <g opacity="0.28">
-          <image href="/cloud.svg" x="242" y="262" width="70" height="46" opacity="0.36" />
-          <image href="/cloud.svg" x="642" y="168" width="76" height="50" opacity="0.32" />
-          <image href="/cloud.svg" x="788" y="280" width="66" height="42" opacity="0.3" />
+        <g opacity="0.38">
+          <image href="/cloud.svg" x="242" y="262" width="70" height="46" opacity="0.42" />
+          <image href="/cloud.svg" x="642" y="168" width="76" height="50" opacity="0.38" />
+          <image href="/cloud.svg" x="788" y="280" width="66" height="42" opacity="0.36" />
         </g>
 
-        <g opacity="0.68">
+        <g opacity="0.82">
           <path
             d="M0 498 C112 456 240 457 364 482 C480 506 545 405 680 409 C759 412 817 446 860 474 V560 H0 Z"
             fill="url(#heroSceneHillBlue)"
@@ -88,7 +88,7 @@ export function HeroStaticScene() {
           <circle cx="334" cy="356" r="15" fill="#ffffff" opacity="0.9" />
         </g>
 
-        <g className="hero-static-dots" opacity="0.36">
+        <g className="hero-static-dots" opacity="0.46">
           {dotPoints.map(([cx, cy]) => (
             <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="2.55" fill="#8ea5ee" />
           ))}
