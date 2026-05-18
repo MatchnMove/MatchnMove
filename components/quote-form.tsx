@@ -23,10 +23,9 @@ import {
 } from "lucide-react";
 import {
   AddressAutocomplete,
-  AddressSuggestion,
-  addressSuggestionToValue,
-  parseNominatimAddress
+  AddressSuggestion
 } from "@/components/address-autocomplete";
+import { addressSuggestionToValue, parseNominatimAddress } from "@/lib/address-search";
 
 type Form = {
   name: string;

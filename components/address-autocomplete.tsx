@@ -1,37 +1,10 @@
 "use client";
 
-import { KeyboardEvent, useId, useRef, useState } from "react";
+import { KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 import { MapPin } from "lucide-react";
+import type { AddressSuggestion } from "@/lib/address-search";
 
-export type AddressSuggestion = {
-  label: string;
-  street: string;
-  suburb: string;
-  city: string;
-  region: string;
-  postcode: string;
-  country: string;
-};
-
-type NominatimAddress = {
-  house_number?: string;
-  road?: string;
-  suburb?: string;
-  neighbourhood?: string;
-  city?: string;
-  town?: string;
-  village?: string;
-  county?: string;
-  state?: string;
-  region?: string;
-  postcode?: string;
-  country?: string;
-};
-
-type NominatimResult = {
-  display_name?: string;
-  address?: NominatimAddress;
-};
+export type { AddressSuggestion } from "@/lib/address-search";
 
 type AddressAutocompleteProps = {
   label: string;
@@ -46,25 +19,6 @@ type AddressAutocompleteProps = {
   dropdownClassName?: string;
   showIcon?: boolean;
 };
-
-export const parseNominatimAddress = (x: NominatimResult): AddressSuggestion => {
-  const addr = x.address ?? {};
-  const streetParts = [addr.house_number, addr.road].filter((part): part is string => Boolean(part));
-
-  return {
-    label: x.display_name ?? "",
-    street: streetParts.join(" ").trim(),
-    suburb: addr.suburb || addr.neighbourhood || "",
-    city: addr.city || addr.town || addr.village || addr.county || "",
-    region: addr.state || addr.region || "",
-    postcode: addr.postcode || "",
-    country: addr.country || "New Zealand"
-  };
-};
-
-export function addressSuggestionToValue(suggestion: AddressSuggestion) {
-  return suggestion.street || suggestion.label;
-}
 
 export function AddressAutocomplete({
   label,
@@ -83,8 +37,13 @@ export function AddressAutocomplete({
   const listboxId = useId();
   const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+  const [searchError, setSearchError] = useState("");
   const [activeIndex, setActiveIndex] = useState(-1);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchSeqRef = useRef(0);
 
   const clearBlurTimer = () => {
     if (blurTimerRef.current) {
@@ -93,36 +52,84 @@ export function AddressAutocomplete({
     }
   };
 
-  const fetchSuggestions = async (query: string) => {
-    if (query.trim().length < 3) {
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const query = value.trim();
+    abortControllerRef.current?.abort();
+
+    if (query.length < 3) {
+      setLoading(false);
+      setHasSearched(false);
+      setSearchError("");
       setSuggestions([]);
       setActiveIndex(-1);
       return;
     }
 
-    setLoading(true);
-    try {
-      const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&countrycodes=nz&limit=5&q=${encodeURIComponent(query)}`;
-      const res = await fetch(url, { headers: { "Accept-Language": "en-NZ" } });
-      const data: unknown = await res.json();
-      const parsed = Array.isArray(data) ? data.map(parseNominatimAddress).filter((item) => item.label) : [];
-      setSuggestions(parsed);
-      setActiveIndex(parsed.length > 0 ? 0 : -1);
-    } catch {
-      setSuggestions([]);
-      setActiveIndex(-1);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    const searchSeq = searchSeqRef.current + 1;
+    searchSeqRef.current = searchSeq;
+    const debounceTimer = setTimeout(async () => {
+      setLoading(true);
+      setHasSearched(false);
+      setSearchError("");
+
+      try {
+        const response = await fetch(`/api/address-search?q=${encodeURIComponent(query)}`, {
+          signal: controller.signal
+        });
+        const data: unknown = await response.json().catch(() => ({}));
+        if (controller.signal.aborted || searchSeq !== searchSeqRef.current) return;
+
+        const nextSuggestions =
+          typeof data === "object" &&
+          data !== null &&
+          "suggestions" in data &&
+          Array.isArray(data.suggestions)
+            ? data.suggestions.filter((item): item is AddressSuggestion => Boolean(item?.label))
+            : [];
+
+        setSuggestions(nextSuggestions);
+        setActiveIndex(nextSuggestions.length > 0 ? 0 : -1);
+        setSearchError(response.ok ? "" : "Address search is temporarily unavailable. You can still type the address manually.");
+      } catch {
+        if (controller.signal.aborted || searchSeq !== searchSeqRef.current) return;
+        setSuggestions([]);
+        setActiveIndex(-1);
+        setSearchError("Address search is temporarily unavailable. You can still type the address manually.");
+      } finally {
+        if (!controller.signal.aborted && searchSeq === searchSeqRef.current) {
+          setLoading(false);
+          setHasSearched(true);
+        }
+      }
+    }, 275);
+
+    return () => {
+      clearTimeout(debounceTimer);
+      controller.abort();
+    };
+  }, [isOpen, value]);
 
   const selectSuggestion = (suggestion: AddressSuggestion) => {
     onSelect(suggestion);
+    setIsOpen(false);
     setSuggestions([]);
     setActiveIndex(-1);
+    setHasSearched(false);
+    setSearchError("");
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Escape") {
+      setIsOpen(false);
+      setSuggestions([]);
+      setActiveIndex(-1);
+      return;
+    }
+
     if (suggestions.length === 0) return;
 
     if (event.key === "ArrowDown") {
@@ -139,12 +146,10 @@ export function AddressAutocomplete({
       event.preventDefault();
       selectSuggestion(suggestions[activeIndex]);
     }
-
-    if (event.key === "Escape") {
-      setSuggestions([]);
-      setActiveIndex(-1);
-    }
   };
+
+  const showDropdown =
+    isOpen && Boolean(loading || searchError || suggestions.length > 0 || (hasSearched && value.trim().length >= 3));
 
   return (
     <div className="relative block">
@@ -165,30 +170,30 @@ export function AddressAutocomplete({
           value={value}
           onBlur={() => {
             blurTimerRef.current = setTimeout(() => {
+              setIsOpen(false);
               setSuggestions([]);
               setActiveIndex(-1);
-            }, 140);
+              setHasSearched(false);
+            }, 180);
           }}
           onChange={(event) => {
-            const next = event.target.value;
-            onChange(next);
-            void fetchSuggestions(next);
+            onChange(event.target.value);
+            setIsOpen(true);
           }}
           onFocus={() => {
             clearBlurTimer();
-            if (value.trim().length >= 3 && suggestions.length === 0) void fetchSuggestions(value);
+            setIsOpen(true);
           }}
           onKeyDown={onKeyDown}
           role="combobox"
           aria-autocomplete="list"
           aria-controls={listboxId}
-          aria-expanded={suggestions.length > 0}
+          aria-expanded={showDropdown}
           aria-invalid={Boolean(error)}
         />
       </span>
 
-      {loading ? <span className="mt-1.5 block text-xs text-slate-500">Searching addresses...</span> : null}
-      {suggestions.length > 0 ? (
+      {showDropdown ? (
         <div
           id={listboxId}
           role="listbox"
@@ -198,6 +203,11 @@ export function AddressAutocomplete({
           }
           onMouseDown={(event) => event.preventDefault()}
         >
+          {loading ? <div className="px-3 py-2.5 text-sm text-slate-500">Searching addresses...</div> : null}
+          {searchError ? <div className="px-3 py-2.5 text-sm text-red-600">{searchError}</div> : null}
+          {!loading && !searchError && suggestions.length === 0 ? (
+            <div className="px-3 py-2.5 text-sm text-slate-500">No address matches found.</div>
+          ) : null}
           {suggestions.map((suggestion, index) => (
             <button
               key={`${suggestion.label}-${index}`}

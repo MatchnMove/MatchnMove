@@ -3,9 +3,9 @@
 import { FormEvent, useState } from "react";
 import {
   AddressAutocomplete,
-  AddressSuggestion,
-  addressSuggestionToValue
+  AddressSuggestion
 } from "@/components/address-autocomplete";
+import { addressSuggestionToValue } from "@/lib/address-search";
 
 type AddressState = {
   address: string;
