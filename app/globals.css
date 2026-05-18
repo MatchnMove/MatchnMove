@@ -102,15 +102,6 @@ body { @apply overflow-x-hidden bg-slate-100 text-slate-900; }
   }
 }
 
-@keyframes hero-static-dots {
-  0%, 100% {
-    opacity: 0.28;
-  }
-  50% {
-    opacity: 0.42;
-  }
-}
-
 .hero-static-glow {
   animation: hero-static-glow 11s ease-in-out infinite;
   transform-origin: center;
@@ -122,14 +113,9 @@ body { @apply overflow-x-hidden bg-slate-100 text-slate-900; }
   transform-origin: center;
 }
 
-.hero-static-dots {
-  animation: hero-static-dots 9.5s ease-in-out infinite;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .hero-static-glow,
-  .hero-static-pin,
-  .hero-static-dots {
+  .hero-static-pin {
     animation: none;
   }
 }

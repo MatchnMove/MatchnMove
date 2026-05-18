@@ -1,20 +1,17 @@
-const dotPoints = [
-  [724, 72],
-  [747, 72],
-  [770, 72],
-  [793, 72],
-  [724, 96],
-  [747, 96],
-  [770, 96],
-  [793, 96],
-  [724, 120],
-  [747, 120],
-  [770, 120],
-  [793, 120],
-  [724, 144],
-  [747, 144],
-  [770, 144],
-  [793, 144],
+const routeDots = [
+  "left-[18%] top-[63%]",
+  "left-[27%] top-[59%]",
+  "left-[36%] top-[55%]",
+  "left-[45%] top-[51%]",
+  "left-[54%] top-[48%]",
+  "left-[63%] top-[45%]",
+  "left-[72%] top-[42%]",
+];
+
+const quoteRows = [
+  "w-24 bg-brandBlue/18",
+  "w-32 bg-emerald-300/24",
+  "w-20 bg-accentOrange/14",
 ];
 
 export function HeroStaticScene() {
@@ -23,100 +20,68 @@ export function HeroStaticScene() {
       aria-hidden="true"
       className="pointer-events-none absolute inset-0 z-0 overflow-hidden"
     >
-      <div className="hero-static-glow absolute right-[-12%] top-[13%] hidden h-[31rem] w-[43rem] rounded-full bg-[radial-gradient(circle_at_48%_45%,rgba(95,110,232,0.09),rgba(125,201,184,0.08)_42%,rgba(255,255,255,0)_72%)] md:block lg:right-[-5%]" />
+      <div className="hero-static-glow absolute right-[-8%] top-[14%] hidden h-[30rem] w-[42rem] rounded-full bg-[radial-gradient(circle_at_50%_42%,rgba(95,110,232,0.1),rgba(125,201,184,0.085)_45%,rgba(255,255,255,0)_72%)] md:block" />
 
-      <svg
-        viewBox="0 0 860 560"
-        preserveAspectRatio="xMaxYMid meet"
-        className="absolute right-[-14rem] top-[22%] hidden h-[68%] w-[82%] opacity-35 md:block lg:right-[-3.5rem] lg:top-[12%] lg:h-[76%] lg:w-[62%] lg:opacity-95 xl:right-10 xl:w-[65%]"
-      >
-        <defs>
-          <linearGradient id="heroSceneHillBlue" x1="0" x2="1" y1="0" y2="1">
-            <stop offset="0%" stopColor="#d4e4ff" stopOpacity="0.66" />
-            <stop offset="68%" stopColor="#e6f0ff" stopOpacity="0.28" />
-            <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
-          </linearGradient>
-          <linearGradient id="heroSceneHillGreen" x1="0" x2="1" y1="0" y2="1">
-            <stop offset="0%" stopColor="#cdf1d9" stopOpacity="0.68" />
-            <stop offset="74%" stopColor="#e6faef" stopOpacity="0.3" />
-            <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
-          </linearGradient>
-          <linearGradient id="heroScenePin" x1="0" x2="1" y1="0" y2="1">
-            <stop offset="0%" stopColor="#5f6ee8" stopOpacity="0.66" />
-            <stop offset="100%" stopColor="#9bb7ff" stopOpacity="0.44" />
-          </linearGradient>
-          <radialGradient id="heroSceneGroundGlow" cx="56%" cy="50%" r="66%">
-            <stop offset="0%" stopColor="#e5fbf1" stopOpacity="0.2" />
-            <stop offset="48%" stopColor="#eef6ff" stopOpacity="0.11" />
-            <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
-          </radialGradient>
-          <filter id="heroScenePinShadow" x="-45%" y="-45%" width="190%" height="190%">
-            <feDropShadow dx="0" dy="15" stdDeviation="18" floodColor="#5f6ee8" floodOpacity="0.08" />
-          </filter>
-        </defs>
+      <div className="absolute right-[-5rem] top-[18%] hidden h-[66%] w-[66%] max-w-[850px] opacity-45 md:block lg:right-0 lg:w-[48%] lg:opacity-100 xl:right-10 xl:w-[52%]">
+        <div className="absolute inset-0 rounded-[42%] bg-[radial-gradient(circle_at_62%_35%,rgba(95,110,232,0.055),rgba(125,201,184,0.05)_42%,transparent_72%)]" />
 
-        <rect x="80" y="22" width="760" height="515" fill="url(#heroSceneGroundGlow)" opacity="0.52" />
+        <div className="absolute bottom-[5%] right-[5%] h-[34%] w-[82%] rounded-t-[55%] bg-[linear-gradient(140deg,rgba(219,234,254,0.34),rgba(255,255,255,0.08)_62%)]" />
+        <div className="absolute bottom-[4%] right-[0%] h-[40%] w-[68%] rounded-t-[58%] bg-[linear-gradient(145deg,rgba(187,247,208,0.36),rgba(255,255,255,0.08)_68%)]" />
 
-        <g opacity="0.72">
-          <image href="/house.svg" x="392" y="190" width="218" height="218" opacity="0.42" />
-          <image href="/house.svg" x="632" y="310" width="172" height="172" opacity="0.34" />
-        </g>
+        <div className="absolute left-[36%] top-[20%] h-[48%] w-[42%] rounded-[30px] border border-white/35 bg-white/16 shadow-[0_24px_90px_-70px_rgba(15,23,42,0.45)]">
+          <div className="absolute left-[12%] top-[15%] h-3 w-[62%] rounded-full bg-brandBlue/12" />
+          <div className="absolute left-[12%] top-[31%] h-3 w-[46%] rounded-full bg-emerald-300/18" />
+          <div className="absolute left-[12%] top-[47%] h-3 w-[55%] rounded-full bg-accentOrange/10" />
+          <div className="absolute bottom-[16%] left-[12%] h-10 w-10 rounded-2xl bg-brandBlue/10" />
+          <div className="absolute bottom-[17%] left-[31%] h-2.5 w-[42%] rounded-full bg-slate-300/18" />
+        </div>
 
-        <g opacity="0.38">
-          <image href="/cloud.svg" x="242" y="262" width="70" height="46" opacity="0.42" />
-          <image href="/cloud.svg" x="642" y="168" width="76" height="50" opacity="0.38" />
-          <image href="/cloud.svg" x="788" y="280" width="66" height="42" opacity="0.36" />
-        </g>
+        <div className="absolute right-[6%] top-[47%] h-[27%] w-[28%] rounded-[24px] border border-white/30 bg-white/13">
+          <div className="absolute left-[15%] top-[20%] h-2.5 w-[55%] rounded-full bg-brandBlue/12" />
+          <div className="absolute left-[15%] top-[42%] h-2.5 w-[42%] rounded-full bg-emerald-300/16" />
+          <div className="absolute bottom-[18%] left-[15%] h-7 w-7 rounded-xl bg-emerald-300/14" />
+        </div>
 
-        <g opacity="0.82">
-          <path
-            d="M0 498 C112 456 240 457 364 482 C480 506 545 405 680 409 C759 412 817 446 860 474 V560 H0 Z"
-            fill="url(#heroSceneHillBlue)"
+        <div className="absolute left-[18%] top-[51%] h-24 w-24 rounded-full border border-brandBlue/10 bg-white/8" />
+        <div className="hero-static-pin absolute left-[23%] top-[57%] h-10 w-10 -translate-x-1/2 -translate-y-1/2 rotate-45 rounded-[50%_50%_50%_8%] bg-[linear-gradient(135deg,rgba(95,110,232,0.46),rgba(147,197,253,0.34))]">
+          <div className="absolute left-1/2 top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/90" />
+        </div>
+
+        <div className="absolute right-[12%] bottom-[15%] h-16 w-12 rounded-full bg-emerald-300/24" />
+        <div className="absolute right-[15%] bottom-[9%] h-14 w-1 rounded-full bg-emerald-300/30" />
+        <div className="absolute right-[23%] bottom-[14%] h-11 w-9 rounded-full bg-emerald-300/20" />
+        <div className="absolute right-[25%] bottom-[9%] h-11 w-1 rounded-full bg-emerald-300/24" />
+
+        <div className="absolute left-[18%] top-[63%] h-px w-[54%] -rotate-[13deg] bg-[linear-gradient(90deg,rgba(95,110,232,0),rgba(95,110,232,0.14),rgba(34,197,94,0.14),rgba(95,110,232,0))]" />
+        {routeDots.map((position, index) => (
+          <span
+            key={position}
+            className={`absolute ${position} h-2 w-2 rounded-full ${
+              index === 0 || index === routeDots.length - 1 ? "bg-brandBlue/28" : "bg-emerald-300/24"
+            }`}
           />
-          <path
-            d="M242 560 C352 457 471 414 607 412 C715 410 792 456 860 500 V560 H242 Z"
-            fill="url(#heroSceneHillGreen)"
-          />
-        </g>
+        ))}
 
-        <g className="hero-static-pin" filter="url(#heroScenePinShadow)" opacity="0.7">
-          <circle cx="334" cy="365" r="79" fill="none" stroke="#5f6ee8" strokeOpacity="0.1" strokeWidth="1.15" />
-          <path
-            d="M334 318 C313 318 296 335 296 356 C296 385 334 421 334 421 C334 421 372 385 372 356 C372 335 355 318 334 318 Z"
-            fill="url(#heroScenePin)"
-          />
-          <circle cx="334" cy="356" r="15" fill="#ffffff" opacity="0.9" />
-        </g>
-
-        <g className="hero-static-dots" opacity="0.46">
-          {dotPoints.map(([cx, cy]) => (
-            <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="2.55" fill="#8ea5ee" />
+        <div className="absolute right-[4%] top-[13%] grid grid-cols-4 gap-3 opacity-55">
+          {Array.from({ length: 16 }, (_, index) => (
+            <span key={index} className="h-1.5 w-1.5 rounded-full bg-brandBlue/28" />
           ))}
-        </g>
+        </div>
 
-        <g opacity="0.38">
-          <image href="/tree.svg" x="675" y="425" width="76" height="106" opacity="0.5" />
-          <image href="/tree.svg" x="742" y="392" width="112" height="150" opacity="0.46" />
-        </g>
-      </svg>
+        <div className="absolute right-[12%] top-[27%] w-[13.5rem] rounded-[26px] border border-white/45 bg-white/18 p-4 shadow-[0_22px_80px_-64px_rgba(15,23,42,0.5)] backdrop-blur-[1px]">
+          <div className="mb-3 flex items-center gap-2">
+            <span className="h-7 w-7 rounded-full bg-brandBlue/12" />
+            <span className="h-2.5 w-24 rounded-full bg-slate-300/22" />
+          </div>
+          <div className="space-y-2.5">
+            {quoteRows.map((row) => (
+              <span key={row} className={`block h-2.5 rounded-full ${row}`} />
+            ))}
+          </div>
+        </div>
+      </div>
 
-      <svg
-        viewBox="0 0 390 260"
-        preserveAspectRatio="none"
-        className="absolute inset-x-0 bottom-0 h-[28%] w-full opacity-32 md:hidden"
-      >
-        <defs>
-          <linearGradient id="heroSceneMobileHill" x1="0" x2="1" y1="0" y2="1">
-            <stop offset="0%" stopColor="#eaf2ff" stopOpacity="0.58" />
-            <stop offset="100%" stopColor="#e8fbef" stopOpacity="0.24" />
-          </linearGradient>
-        </defs>
-        <path
-          d="M0 178 C78 138 151 149 214 174 C281 201 324 142 390 158 V260 H0 Z"
-          fill="url(#heroSceneMobileHill)"
-        />
-        <circle cx="306" cy="100" r="30" fill="#5f6ee8" opacity="0.055" />
-      </svg>
+      <div className="absolute inset-x-0 bottom-0 h-[26%] bg-[radial-gradient(ellipse_at_80%_100%,rgba(187,247,208,0.18),transparent_58%),radial-gradient(ellipse_at_28%_100%,rgba(219,234,254,0.2),transparent_55%)] md:hidden" />
     </div>
   );
 }
