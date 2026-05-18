@@ -21,7 +21,11 @@ export async function POST(req: NextRequest) {
   });
 
   if (user) {
-    await sendPasswordResetEmail(user);
+    try {
+      await sendPasswordResetEmail(user);
+    } catch (error) {
+      console.error("Could not queue password reset email", error);
+    }
   }
 
   return NextResponse.json({

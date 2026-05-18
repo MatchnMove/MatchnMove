@@ -109,3 +109,26 @@ To send a real test email as well:
 ```bash
 $env:SEND_TEST_EMAIL="true"; $env:TEST_EMAIL="you@example.com"; npm run email:verify
 ```
+
+## Production email queue
+Transactional emails are stored in the `EmailDelivery` table before delivery. This covers contact notifications,
+mover verification, password resets, and verified review surveys. Failed sends are retried with exponential backoff.
+
+Required production variables:
+```bash
+EMAIL_QUEUE_SECRET=replace-with-a-long-random-secret
+EMAIL_MAX_ATTEMPTS=5
+EMAIL_RETRY_BASE_MS=60000
+EMAIL_RETRY_MAX_MS=1800000
+EMAIL_SENDING_STALE_MS=600000
+EMAIL_FORCE_SMTP_USER_FROM=true
+```
+
+Use `EMAIL_FORCE_SMTP_USER_FROM=true` when sending through `smtp.gmail.com` unless every `*_FROM_EMAIL` address is
+configured as an approved Google Workspace send-as alias for `SMTP_USER`.
+
+Schedule a Railway cron or external uptime job to call this endpoint every minute:
+```bash
+POST https://www.matchnmove.co.nz/api/email/process?limit=50
+Authorization: Bearer $EMAIL_QUEUE_SECRET
+```

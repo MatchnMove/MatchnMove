@@ -40,6 +40,13 @@ enum ReviewModerationStatus {
   REJECTED
 }
 
+enum EmailDeliveryStatus {
+  QUEUED
+  SENDING
+  SENT
+  FAILED
+}
+
 model User {
   id              String      @id @default(cuid())
   name            String?
@@ -255,5 +262,29 @@ model AuthToken {
   user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, type])
+}
+
+model EmailDelivery {
+  id                String              @id @default(cuid())
+  kind              String
+  recipient         String
+  from              String
+  replyTo           String?
+  subject           String
+  text              String              @db.Text
+  html              String              @db.Text
+  status            EmailDeliveryStatus @default(QUEUED)
+  attempts          Int                 @default(0)
+  maxAttempts       Int                 @default(5)
+  nextAttemptAt     DateTime            @default(now())
+  sentAt            DateTime?
+  lastError         String?             @db.Text
+  providerMessageId String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@index([status, nextAttemptAt])
+  @@index([recipient, createdAt])
+  @@index([kind, status])
 }
 

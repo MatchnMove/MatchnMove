@@ -30,12 +30,23 @@ export async function POST(req: NextRequest) {
     serviceAreas: parsed.data.serviceAreas
   });
 
-  const verificationResult = await sendVerificationEmail(user);
+  let verificationResult: Awaited<ReturnType<typeof sendVerificationEmail>> = {
+    sent: false,
+    skipped: false,
+    queued: false,
+    error: "Verification email was not attempted.",
+  };
+  try {
+    verificationResult = await sendVerificationEmail(user);
+  } catch (error) {
+    console.error("Could not queue verification email", error);
+  }
   revalidatePublicSite();
 
   return NextResponse.json({
     ok: true,
     needsEmailVerification: true,
-    verificationEmailSent: verificationResult.sent
+    verificationEmailSent: verificationResult.sent,
+    verificationEmailQueued: verificationResult.queued,
   });
 }

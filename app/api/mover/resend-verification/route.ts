@@ -21,7 +21,11 @@ export async function POST(req: NextRequest) {
   });
 
   if (user && !user.emailVerifiedAt) {
-    await sendVerificationEmail(user);
+    try {
+      await sendVerificationEmail(user);
+    } catch (error) {
+      console.error("Could not queue verification email", error);
+    }
   }
 
   return NextResponse.json({
