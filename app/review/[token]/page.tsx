@@ -18,7 +18,9 @@ export default async function ReviewSurveyPage({
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
-  const surveyState = await getReviewSurveyState(token);
+  const surveyState: Awaited<ReturnType<typeof getReviewSurveyState>> | { status: "unavailable" } = await getReviewSurveyState(token).catch(
+    () => ({ status: "unavailable" }),
+  );
 
   return (
     <SiteShell>
@@ -72,21 +74,29 @@ export default async function ReviewSurveyPage({
           ) : (
             <div className="mx-auto max-w-3xl rounded-[30px] border border-slate-200 bg-white p-8 text-center shadow-[0_24px_60px_-38px_rgba(15,23,42,0.28)] sm:p-10">
               <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[22px] bg-slate-100 text-slate-700">
-                {surveyState.status === "expired" ? <Clock3 className="h-7 w-7" /> : <Star className="h-7 w-7" />}
+                {surveyState.status === "expired" || surveyState.status === "unavailable" ? (
+                  <Clock3 className="h-7 w-7" />
+                ) : (
+                  <Star className="h-7 w-7" />
+                )}
               </div>
               <h1 className="mt-5 text-3xl font-black tracking-[-0.05em] text-slate-950 sm:text-4xl">
                 {surveyState.status === "expired"
                   ? "This review link has expired"
-                  : surveyState.status === "reviewed"
-                    ? "This review has already been submitted"
-                    : "This review link isn't available"}
+                  : surveyState.status === "unavailable"
+                    ? "Review links are temporarily unavailable"
+                    : surveyState.status === "reviewed"
+                      ? "This review has already been submitted"
+                      : "This review link isn't available"}
               </h1>
               <p className="mt-4 text-sm leading-7 text-slate-600 sm:text-base">
                 {surveyState.status === "expired"
                   ? `Your secure review link for ${surveyState.moverCompanyName ?? "this move"} is no longer active.`
-                  : surveyState.status === "reviewed"
-                    ? `A verified review for ${surveyState.moverCompanyName ?? "this move"} has already been recorded.`
-                    : "The secure survey token is invalid or has already been used."}
+                  : surveyState.status === "unavailable"
+                    ? "The review database could not be reached. Please try again shortly."
+                    : surveyState.status === "reviewed"
+                      ? `A verified review for ${surveyState.moverCompanyName ?? "this move"} has already been recorded.`
+                      : "The secure survey token is invalid or has already been used."}
               </p>
               <div className="mt-8 flex justify-center">
                 <Link
