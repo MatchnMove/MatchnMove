@@ -47,6 +47,30 @@ type EmailSendResult = {
   error?: string;
 };
 
+type EmailTheme = {
+  accent: string;
+  accentDark: string;
+  background: string;
+  panel: string;
+  eyebrowBackground: string;
+  eyebrowText: string;
+  button: string;
+};
+
+type EmailShellInput = {
+  theme: EmailTheme;
+  preheader: string;
+  eyebrow: string;
+  title: string;
+  intro: string;
+  bodyHtml: string;
+  cta?: {
+    href: string;
+    label: string;
+  };
+  footerNote: string;
+};
+
 const DEFAULT_MAX_ATTEMPTS = 5;
 const DEFAULT_PROCESS_LIMIT = 50;
 
@@ -180,6 +204,121 @@ function getMaxAttempts() {
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Unknown email delivery error.";
+}
+
+function getPublicBaseUrl() {
+  return (process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || "https://www.matchnmove.co.nz").replace(/\/$/, "");
+}
+
+function getLogoUrl() {
+  return `${getPublicBaseUrl()}/logo.webp`;
+}
+
+function renderEmailShell(input: EmailShellInput) {
+  const ctaHtml = input.cta
+    ? `
+      <tr>
+        <td style="padding:8px 28px 24px;">
+          <a href="${escapeHtml(input.cta.href)}" style="display:inline-block;border-radius:14px;background:${input.theme.button};color:#ffffff;font-family:Arial,sans-serif;font-size:15px;font-weight:700;line-height:20px;padding:14px 22px;text-decoration:none;">
+            ${escapeHtml(input.cta.label)}
+          </a>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:0 28px 22px;color:#64748b;font-family:Arial,sans-serif;font-size:13px;line-height:21px;">
+          If the button does not work, copy and paste this link into your browser:<br />
+          <a href="${escapeHtml(input.cta.href)}" style="color:${input.theme.accentDark};word-break:break-all;">${escapeHtml(input.cta.href)}</a>
+        </td>
+      </tr>
+    `
+    : "";
+
+  return `<!doctype html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${escapeHtml(input.title)}</title>
+  </head>
+  <body style="margin:0;padding:0;background:${input.theme.background};">
+    <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">
+      ${escapeHtml(input.preheader)}
+    </div>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:${input.theme.background};border-collapse:collapse;width:100%;">
+      <tr>
+        <td align="center" style="padding:32px 16px;">
+          <table role="presentation" width="640" cellspacing="0" cellpadding="0" style="background:#ffffff;border:1px solid #e2e8f0;border-collapse:separate;border-radius:24px;box-shadow:0 24px 60px rgba(15,23,42,0.10);overflow:hidden;width:100%;max-width:640px;">
+            <tr>
+              <td style="background:${input.theme.panel};padding:26px 28px;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;width:100%;">
+                  <tr>
+                    <td align="left">
+                      <img src="${escapeHtml(getLogoUrl())}" width="186" alt="Match 'n Move" style="border:0;display:block;height:auto;max-width:186px;" />
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:30px 28px 8px;">
+                <span style="display:inline-block;border-radius:999px;background:${input.theme.eyebrowBackground};color:${input.theme.eyebrowText};font-family:Arial,sans-serif;font-size:12px;font-weight:700;letter-spacing:1.5px;line-height:16px;padding:8px 12px;text-transform:uppercase;">
+                  ${escapeHtml(input.eyebrow)}
+                </span>
+                <h1 style="color:#0f172a;font-family:Arial,sans-serif;font-size:30px;font-weight:800;line-height:36px;margin:18px 0 12px;">
+                  ${escapeHtml(input.title)}
+                </h1>
+                <p style="color:#475569;font-family:Arial,sans-serif;font-size:16px;line-height:26px;margin:0 0 20px;">
+                  ${escapeHtml(input.intro)}
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 28px;">
+                ${input.bodyHtml}
+              </td>
+            </tr>
+            ${ctaHtml}
+            <tr>
+              <td style="padding:0 28px 30px;">
+                <div style="border-top:1px solid #e2e8f0;color:#64748b;font-family:Arial,sans-serif;font-size:13px;line-height:21px;padding-top:18px;">
+                  ${escapeHtml(input.footerNote)}
+                </div>
+              </td>
+            </tr>
+          </table>
+          <p style="color:#94a3b8;font-family:Arial,sans-serif;font-size:12px;line-height:18px;margin:18px 0 0;">
+            Match 'n Move, New Zealand moving marketplace
+          </p>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+}
+
+function renderDetailRow(label: string, value: string) {
+  return `
+    <tr>
+      <td style="border-bottom:1px solid #e2e8f0;color:#64748b;font-family:Arial,sans-serif;font-size:13px;font-weight:700;padding:12px 0;text-transform:uppercase;width:34%;">
+        ${escapeHtml(label)}
+      </td>
+      <td style="border-bottom:1px solid #e2e8f0;color:#0f172a;font-family:Arial,sans-serif;font-size:15px;line-height:22px;padding:12px 0;">
+        ${escapeHtml(value)}
+      </td>
+    </tr>
+  `;
+}
+
+function renderNoteBox(content: string, tone = "#f8fafc") {
+  return `
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:${tone};border:1px solid #e2e8f0;border-collapse:separate;border-radius:18px;margin:0 0 24px;width:100%;">
+      <tr>
+        <td style="color:#334155;font-family:Arial,sans-serif;font-size:14px;line-height:23px;padding:16px 18px;">
+          ${content}
+        </td>
+      </tr>
+    </table>
+  `;
 }
 
 async function sendViaSmtp(message: EmailMessage) {
@@ -425,12 +564,20 @@ export async function getEmailDiagnostics(limit = 10) {
 
 export async function sendContactNotification(input: ContactEmailInput) {
   const config = getContactNotificationConfig();
+  const subject = `New Match 'n Move contact message from ${input.name}`;
+  const bodyHtml = `
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:0 0 22px;width:100%;">
+      ${renderDetailRow("Name", input.name)}
+      ${renderDetailRow("Email", input.email)}
+    </table>
+    ${renderNoteBox(`<strong style="color:#0f172a;">Message</strong><br />${escapeHtml(input.message).replace(/\n/g, "<br />")}`, "#f0f9ff")}
+  `;
   const message: EmailMessage = {
     kind: "contact_notification",
     from: config.from,
     to: config.to,
     replyTo: input.email,
-    subject: `New Match 'n Move contact message from ${input.name}`,
+    subject,
     text: [
       "A new contact form submission was received.",
       "",
@@ -440,15 +587,23 @@ export async function sendContactNotification(input: ContactEmailInput) {
       "Message:",
       input.message,
     ].join("\n"),
-    html: `
-      <div style="font-family:Arial,sans-serif;line-height:1.6;color:#0f172a">
-        <h2 style="margin-bottom:16px;">New Match 'n Move contact message</h2>
-        <p><strong>Name:</strong> ${escapeHtml(input.name)}</p>
-        <p><strong>Email:</strong> ${escapeHtml(input.email)}</p>
-        <p><strong>Message:</strong></p>
-        <p>${escapeHtml(input.message).replace(/\n/g, "<br />")}</p>
-      </div>
-    `,
+    html: renderEmailShell({
+      theme: {
+        accent: "#0284c7",
+        accentDark: "#0369a1",
+        background: "#eef7ff",
+        panel: "#eff8ff",
+        eyebrowBackground: "#dff3ff",
+        eyebrowText: "#075985",
+        button: "#0369a1",
+      },
+      preheader: `New contact message from ${input.name}.`,
+      eyebrow: "Contact request",
+      title: "New message for Match 'n Move",
+      intro: "A visitor submitted the contact form. Reply directly to the customer using the email address below.",
+      bodyHtml,
+      footerNote: "This notification was generated from the Match 'n Move contact page.",
+    }),
   };
 
   return queueAndTrySend(message, config.configured);
@@ -461,11 +616,22 @@ export async function sendMoverVerificationEmail(input: MoverAuthEmailInput) {
   }
 
   const friendlyName = input.name?.trim() || "there";
+  const subject = "Verify your Match 'n Move mover account";
+  const bodyHtml = `
+    ${renderNoteBox(
+      "Your mover account is almost ready. Confirming your email helps keep your dashboard, quote leads, and customer messages protected.",
+      "#eef2ff",
+    )}
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:0 0 22px;width:100%;">
+      ${renderDetailRow("Account", input.email)}
+      ${renderDetailRow("Link expires", "48 hours")}
+    </table>
+  `;
   const message: EmailMessage = {
     kind: "mover_verification",
     from: config.from,
     to: input.email,
-    subject: "Verify your Match 'n Move mover account",
+    subject,
     text: [
       `Hi ${friendlyName},`,
       "",
@@ -475,21 +641,27 @@ export async function sendMoverVerificationEmail(input: MoverAuthEmailInput) {
       "",
       "If you did not create this account, you can ignore this email.",
     ].join("\n"),
-    html: `
-      <div style="font-family:Arial,sans-serif;line-height:1.6;color:#0f172a">
-        <h2>Verify your Match &apos;n Move mover account</h2>
-        <p>Hi ${escapeHtml(friendlyName)},</p>
-        <p>Welcome to Match &apos;n Move. Please verify your email address to secure your mover account.</p>
-        <p style="margin:24px 0;">
-          <a href="${escapeHtml(input.verificationUrl)}" style="display:inline-block;padding:12px 20px;border-radius:14px;background:#5f6ee8;color:#ffffff;text-decoration:none;font-weight:600;">
-            Verify email
-          </a>
-        </p>
-        <p>If the button doesn&apos;t work, use this link:</p>
-        <p><a href="${escapeHtml(input.verificationUrl)}">${escapeHtml(input.verificationUrl)}</a></p>
-        <p>If you did not create this account, you can ignore this email.</p>
-      </div>
-    `,
+    html: renderEmailShell({
+      theme: {
+        accent: "#4f46e5",
+        accentDark: "#4338ca",
+        background: "#f4f6ff",
+        panel: "#eef2ff",
+        eyebrowBackground: "#e0e7ff",
+        eyebrowText: "#3730a3",
+        button: "#4f46e5",
+      },
+      preheader: "Verify your mover account to finish setting up your Match 'n Move dashboard.",
+      eyebrow: "Mover verification",
+      title: `Welcome, ${friendlyName}`,
+      intro: "Please verify your email address so we can keep your mover account secure and ready for customer leads.",
+      bodyHtml,
+      cta: {
+        href: input.verificationUrl,
+        label: "Verify email",
+      },
+      footerNote: "If you did not create a Match 'n Move mover account, you can safely ignore this email.",
+    }),
   };
 
   return queueAndTrySend(message, config.configured);
@@ -502,11 +674,22 @@ export async function sendMoverPasswordResetEmail(input: MoverAuthEmailInput) {
   }
 
   const friendlyName = input.name?.trim() || "there";
+  const subject = "Reset your Match 'n Move password";
+  const bodyHtml = `
+    ${renderNoteBox(
+      "Use the secure link below to choose a new password. For your protection, this reset link is short lived.",
+      "#fff7ed",
+    )}
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:0 0 22px;width:100%;">
+      ${renderDetailRow("Account", input.email)}
+      ${renderDetailRow("Link expires", "2 hours")}
+    </table>
+  `;
   const message: EmailMessage = {
     kind: "mover_password_reset",
     from: config.from,
     to: input.email,
-    subject: "Reset your Match 'n Move password",
+    subject,
     text: [
       `Hi ${friendlyName},`,
       "",
@@ -516,21 +699,27 @@ export async function sendMoverPasswordResetEmail(input: MoverAuthEmailInput) {
       "",
       "If you did not request this, you can ignore this email.",
     ].join("\n"),
-    html: `
-      <div style="font-family:Arial,sans-serif;line-height:1.6;color:#0f172a">
-        <h2>Reset your Match &apos;n Move password</h2>
-        <p>Hi ${escapeHtml(friendlyName)},</p>
-        <p>We received a request to reset your Match &apos;n Move password.</p>
-        <p style="margin:24px 0;">
-          <a href="${escapeHtml(input.resetUrl)}" style="display:inline-block;padding:12px 20px;border-radius:14px;background:#de7a3a;color:#ffffff;text-decoration:none;font-weight:600;">
-            Reset password
-          </a>
-        </p>
-        <p>If the button doesn&apos;t work, use this link:</p>
-        <p><a href="${escapeHtml(input.resetUrl)}">${escapeHtml(input.resetUrl)}</a></p>
-        <p>If you did not request this, you can ignore this email.</p>
-      </div>
-    `,
+    html: renderEmailShell({
+      theme: {
+        accent: "#ea580c",
+        accentDark: "#c2410c",
+        background: "#fff7ed",
+        panel: "#fff3e8",
+        eyebrowBackground: "#ffedd5",
+        eyebrowText: "#9a3412",
+        button: "#de7a3a",
+      },
+      preheader: "Use this secure link to reset your Match 'n Move mover password.",
+      eyebrow: "Account recovery",
+      title: "Reset your mover password",
+      intro: `Hi ${friendlyName}, we received a request to reset the password for your Match 'n Move mover account.`,
+      bodyHtml,
+      cta: {
+        href: input.resetUrl,
+        label: "Reset password",
+      },
+      footerNote: "If you did not request a password reset, no action is needed and your current password remains unchanged.",
+    }),
   };
 
   return queueAndTrySend(message, config.configured);
@@ -544,12 +733,24 @@ export async function sendReviewSurveyEmail(input: ReviewSurveyEmailInput) {
     month: "short",
     year: "numeric",
   }).format(input.expiresAt);
+  const subject = `How was your move with ${input.moverCompanyName}?`;
+  const bodyHtml = `
+    ${renderNoteBox(
+      `Your review is connected to a completed ${escapeHtml(input.moveRoute)} move, so future customers can trust that the feedback came from a real job.`,
+      "#ecfdf5",
+    )}
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:0 0 22px;width:100%;">
+      ${renderDetailRow("Mover", input.moverCompanyName)}
+      ${renderDetailRow("Move", input.moveRoute)}
+      ${renderDetailRow("Link expires", expiryLabel)}
+    </table>
+  `;
 
   const message: EmailMessage = {
     kind: "review_survey",
     from: config.from,
     to: input.email,
-    subject: `How was your move with ${input.moverCompanyName}?`,
+    subject,
     text: [
       `Hi ${friendlyName},`,
       "",
@@ -561,27 +762,27 @@ export async function sendReviewSurveyEmail(input: ReviewSurveyEmailInput) {
       `This secure review link expires on ${expiryLabel} and can only be used once.`,
       "If you've already shared feedback, you can ignore this email.",
     ].join("\n"),
-    html: `
-      <div style="font-family:Arial,sans-serif;line-height:1.6;color:#0f172a;background:#f8fafc;padding:24px;">
-        <div style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:24px;padding:32px;border:1px solid #e2e8f0;">
-          <div style="display:inline-block;padding:8px 14px;border-radius:999px;background:#e0f2fe;color:#075985;font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;">
-            Verified customer review
-          </div>
-          <h2 style="margin:20px 0 12px;font-size:30px;line-height:1.1;">How was your move with ${escapeHtml(input.moverCompanyName)}?</h2>
-          <p>Hi ${escapeHtml(friendlyName)},</p>
-          <p>Thanks for booking <strong>${escapeHtml(input.moverCompanyName)}</strong> through Match &apos;n Move for your ${escapeHtml(input.moveRoute)} move.</p>
-          <p>Your review helps keep ratings honest and gives future customers trustworthy feedback from real completed jobs.</p>
-          <p style="margin:28px 0;">
-            <a href="${escapeHtml(input.reviewUrl)}" style="display:inline-block;padding:14px 22px;border-radius:16px;background:#0f172a;color:#ffffff;text-decoration:none;font-weight:700;">
-              Leave your review
-            </a>
-          </p>
-          <p style="margin-bottom:0;">This secure link expires on <strong>${escapeHtml(expiryLabel)}</strong> and can only be used once.</p>
-          <p style="margin-top:12px;">If the button doesn&apos;t work, use this link:</p>
-          <p><a href="${escapeHtml(input.reviewUrl)}">${escapeHtml(input.reviewUrl)}</a></p>
-        </div>
-      </div>
-    `,
+    html: renderEmailShell({
+      theme: {
+        accent: "#059669",
+        accentDark: "#047857",
+        background: "#f0fdf4",
+        panel: "#083344",
+        eyebrowBackground: "#dcfce7",
+        eyebrowText: "#166534",
+        button: "#047857",
+      },
+      preheader: `Share a verified review for your ${input.moveRoute} move with ${input.moverCompanyName}.`,
+      eyebrow: "Verified customer review",
+      title: `How was ${input.moverCompanyName}?`,
+      intro: `Hi ${friendlyName}, thanks for booking through Match 'n Move. Your feedback helps keep mover ratings honest and useful.`,
+      bodyHtml,
+      cta: {
+        href: input.reviewUrl,
+        label: "Leave your review",
+      },
+      footerNote: "This secure review link can only be used once. If you have already shared feedback, you can ignore this email.",
+    }),
   };
 
   return queueAndTrySend(message, config.configured);
