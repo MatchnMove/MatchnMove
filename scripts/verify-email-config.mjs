@@ -28,6 +28,7 @@ const port = Number(process.env.SMTP_PORT ?? "0");
 const secure = process.env.SMTP_SECURE === "true" || port === 465;
 const user = process.env.SMTP_USER?.trim();
 const pass = process.env.SMTP_PASS?.trim();
+const name = process.env.SMTP_NAME?.trim() || "matchnmove.co.nz";
 const from = process.env.TEST_FROM || process.env.CONTACT_FROM_EMAIL || process.env.DEFAULT_FROM_EMAIL || user;
 const to = process.env.TEST_EMAIL || process.env.CONTACT_TO_EMAIL;
 const subject = process.env.TEST_SUBJECT || "Match 'n Move email test";
@@ -41,6 +42,7 @@ const transporter = nodemailer.createTransport({
   host,
   port,
   secure,
+  name,
   auth: user && pass ? { user, pass } : undefined,
 });
 

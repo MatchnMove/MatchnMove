@@ -148,6 +148,7 @@ function getTransporter() {
       host: config.host,
       port: config.port,
       secure: config.secure,
+      name: process.env.SMTP_NAME || "matchnmove.co.nz",
       auth: config.auth,
       maxConnections: getNumberEnv("EMAIL_SMTP_MAX_CONNECTIONS", 3),
       maxMessages: getNumberEnv("EMAIL_SMTP_MAX_MESSAGES", 100),
@@ -160,6 +161,7 @@ function getTransporter() {
     host: config.host,
     port: config.port,
     secure: config.secure,
+    name: process.env.SMTP_NAME || "matchnmove.co.nz",
     auth: config.auth,
   };
 
