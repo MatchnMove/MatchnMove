@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { processEmailQueue } from "@/lib/email";
+import { getEmailDiagnostics, processEmailQueue } from "@/lib/email";
 
 function isAuthorized(request: NextRequest) {
   const configuredSecret = process.env.EMAIL_QUEUE_SECRET || process.env.REVIEW_INVITE_CRON_SECRET;
@@ -25,5 +25,18 @@ export async function POST(request: NextRequest) {
   const limit = Number.isFinite(parsedLimit) ? parsedLimit : 50;
 
   const result = await processEmailQueue(limit);
+  return NextResponse.json(result);
+}
+
+export async function GET(request: NextRequest) {
+  if (!isAuthorized(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const limitParam = request.nextUrl.searchParams.get("limit");
+  const parsedLimit = limitParam ? Number(limitParam) : 10;
+  const limit = Number.isFinite(parsedLimit) ? parsedLimit : 10;
+
+  const result = await getEmailDiagnostics(limit);
   return NextResponse.json(result);
 }

@@ -195,10 +195,6 @@ async function sendViaSmtp(message: EmailMessage) {
 }
 
 async function queueAndTrySend(message: EmailMessage, configured: boolean): Promise<EmailSendResult> {
-  if (!configured) {
-    return { sent: false, skipped: true, queued: false };
-  }
-
   const emailDelivery = await prisma.emailDelivery.create({
     data: {
       kind: message.kind,
@@ -211,6 +207,24 @@ async function queueAndTrySend(message: EmailMessage, configured: boolean): Prom
       maxAttempts: getMaxAttempts(),
     },
   });
+
+  if (!configured) {
+    await prisma.emailDelivery.update({
+      where: { id: emailDelivery.id },
+      data: {
+        status: EmailDeliveryStatus.FAILED,
+        lastError: "SMTP email is not configured. Check SMTP_HOST, SMTP_PORT, SMTP_USER, and SMTP_PASS.",
+      },
+    });
+
+    return {
+      sent: false,
+      skipped: true,
+      queued: true,
+      emailDeliveryId: emailDelivery.id,
+      error: "SMTP email is not configured.",
+    };
+  }
 
   const deliveryResult = await deliverQueuedEmail(emailDelivery.id);
 
@@ -355,6 +369,57 @@ export async function processEmailQueue(limit = DEFAULT_PROCESS_LIMIT) {
     sent: results.filter((result) => result.sent).length,
     failed: results.filter((result) => result.error && !result.sent).length,
     results,
+  };
+}
+
+export async function getEmailDiagnostics(limit = 10) {
+  const smtp = getSmtpConfig();
+  const [statusCounts, recentDeliveries] = await Promise.all([
+    prisma.emailDelivery.groupBy({
+      by: ["status"],
+      _count: {
+        _all: true,
+      },
+    }),
+    prisma.emailDelivery.findMany({
+      orderBy: {
+        createdAt: "desc",
+      },
+      take: Math.min(Math.max(Math.floor(limit), 1), 50),
+      select: {
+        id: true,
+        kind: true,
+        recipient: true,
+        from: true,
+        subject: true,
+        status: true,
+        attempts: true,
+        maxAttempts: true,
+        lastError: true,
+        sentAt: true,
+        createdAt: true,
+      },
+    }),
+  ]);
+
+  return {
+    smtp: {
+      configured: isSmtpConfigured(),
+      host: smtp.host || null,
+      port: smtp.port || null,
+      secure: smtp.secure,
+      hasAuthUser: Boolean(smtp.user),
+      hasAuthPassword: Boolean(process.env.SMTP_PASS?.trim()),
+      smtpName: process.env.SMTP_NAME || "matchnmove.co.nz",
+      forceSmtpUserFrom: process.env.EMAIL_FORCE_SMTP_USER_FROM === "true",
+      contactFrom: getContactNotificationConfig().from || null,
+      authFrom: getAuthEmailConfig().from || null,
+      reviewFrom: getReviewEmailConfig().from || null,
+    },
+    queue: {
+      counts: Object.fromEntries(statusCounts.map((item) => [item.status, item._count._all])),
+      recentDeliveries,
+    },
   };
 }
 
