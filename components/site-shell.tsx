@@ -239,7 +239,7 @@ export function Footer() {
           </div>
 
           <div className="flex flex-col gap-3 border-t border-slate-300/70 pt-5 text-sm text-slate-500 lg:flex-row lg:items-center lg:justify-between">
-            <p>© 2026 Match &apos;n Move. Built to make moving simpler.</p>
+            <p>&copy; 2026 Match &apos;n Move. Built to make moving simpler.</p>
             <div className="flex flex-wrap gap-x-5 gap-y-2">
               <Link href="/terms" className="transition hover:text-slate-900">
                 Terms

@@ -30,24 +30,24 @@ export async function POST(request: NextRequest) {
 
   const results = await Promise.all([
     sendContactNotification({
-      name: "MatchnMove Layout Test",
+      name: "Match 'n Move Layout Test",
       email: recipient,
       message:
-        "Contact notification layout test. This sample shows how internal customer enquiries will look in the MatchnMove mailbox.",
+        "Contact notification layout test. This sample shows how internal customer enquiries will look in the Match 'n Move mailbox with the refreshed navy, teal, and orange theme.",
     }),
     sendMoverVerificationEmail({
       email: recipient,
-      name: "MatchnMove Layout Test",
+      name: "Mover Partner",
       verificationUrl: `https://www.matchnmove.co.nz/mover/verify-email?token=layout-verification-${now}`,
     }),
     sendMoverPasswordResetEmail({
       email: recipient,
-      name: "MatchnMove Layout Test",
+      name: "Mover Partner",
       resetUrl: `https://www.matchnmove.co.nz/mover/reset-password?token=layout-reset-${now}`,
     }),
     sendReviewSurveyEmail({
       email: recipient,
-      customerName: "MatchnMove Layout Test",
+      customerName: "Taylor",
       moverCompanyName: "Harbourline Relocations",
       reviewUrl: `https://www.matchnmove.co.nz/review/layout-review-${now}`,
       moveRoute: "Auckland to Wellington",

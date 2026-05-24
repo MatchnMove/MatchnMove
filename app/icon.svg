@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Match 'n Move">
+  <defs>
+    <linearGradient id="bg" x1="10" x2="54" y1="8" y2="58" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0f2f5f"/>
+      <stop offset="0.56" stop-color="#0f766e"/>
+      <stop offset="1" stop-color="#f59e0b"/>
+    </linearGradient>
+    <linearGradient id="arrow" x1="15" x2="51" y1="35" y2="35" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#67e8f9"/>
+      <stop offset="1" stop-color="#22c55e"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="#f8fafc"/>
+  <path fill="url(#bg)" d="M32 4 56 16v32L32 60 8 48V16L32 4Z"/>
+  <path fill="#fff" d="M15 22h19.8c7.8 0 14 4.3 16.2 11.2l1.1 3.3-8.3-3.7c-2.2-1-4.7-1.5-7.1-1.5H15V22Z"/>
+  <path fill="url(#arrow)" d="M14 35h26v-6l12 10-12 10v-6H14v-8Z"/>
+  <path fill="#082f49" d="M13 43h12l4 9H13v-9Z" opacity=".86"/>
+</svg>

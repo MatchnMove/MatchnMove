@@ -50,11 +50,15 @@ type EmailSendResult = {
 type EmailTheme = {
   accent: string;
   accentDark: string;
+  accentSoft: string;
+  accentTint: string;
   background: string;
-  panel: string;
   eyebrowBackground: string;
   eyebrowText: string;
   button: string;
+  buttonShadow: string;
+  iconBackground: string;
+  iconText: string;
 };
 
 type EmailShellInput = {
@@ -214,20 +218,33 @@ function getLogoUrl() {
   return `${getPublicBaseUrl()}/logo.webp`;
 }
 
+function getIconUrl() {
+  return `${getPublicBaseUrl()}/icon.svg`;
+}
+
 function renderEmailShell(input: EmailShellInput) {
   const ctaHtml = input.cta
     ? `
       <tr>
-        <td style="padding:8px 28px 24px;">
-          <a href="${escapeHtml(input.cta.href)}" style="display:inline-block;border-radius:14px;background:${input.theme.button};color:#ffffff;font-family:Arial,sans-serif;font-size:15px;font-weight:700;line-height:20px;padding:14px 22px;text-decoration:none;">
-            ${escapeHtml(input.cta.label)}
+        <td align="center" style="padding:4px 36px 18px;">
+          <a href="${escapeHtml(input.cta.href)}" style="display:inline-block;border-radius:12px;background:${input.theme.button};box-shadow:0 14px 26px ${input.theme.buttonShadow};color:#ffffff;font-family:Arial,sans-serif;font-size:16px;font-weight:800;line-height:22px;padding:16px 34px;text-decoration:none;">
+            ${escapeHtml(input.cta.label)}&nbsp;&nbsp;&rarr;
           </a>
         </td>
       </tr>
       <tr>
-        <td style="padding:0 28px 22px;color:#64748b;font-family:Arial,sans-serif;font-size:13px;line-height:21px;">
-          If the button does not work, copy and paste this link into your browser:<br />
-          <a href="${escapeHtml(input.cta.href)}" style="color:${input.theme.accentDark};word-break:break-all;">${escapeHtml(input.cta.href)}</a>
+        <td style="padding:0 36px 26px;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;width:100%;">
+            <tr>
+              <td style="border-top:1px solid #d9e1ea;font-size:1px;line-height:1px;">&nbsp;</td>
+              <td align="center" style="color:#728197;font-family:Arial,sans-serif;font-size:13px;line-height:18px;padding:0 14px;width:34px;">or</td>
+              <td style="border-top:1px solid #d9e1ea;font-size:1px;line-height:1px;">&nbsp;</td>
+            </tr>
+          </table>
+          <p style="color:#64748b;font-family:Arial,sans-serif;font-size:13px;line-height:21px;margin:18px 0 0;text-align:center;">
+            If the button does not work, copy and paste this link into your browser:<br />
+            <a href="${escapeHtml(input.cta.href)}" style="color:${input.theme.accentDark};font-weight:700;word-break:break-all;">${escapeHtml(input.cta.href)}</a>
+          </p>
         </td>
       </tr>
     `
@@ -246,49 +263,93 @@ function renderEmailShell(input: EmailShellInput) {
     </div>
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:${input.theme.background};border-collapse:collapse;width:100%;">
       <tr>
-        <td align="center" style="padding:32px 16px;">
-          <table role="presentation" width="640" cellspacing="0" cellpadding="0" style="background:#ffffff;border:1px solid #e2e8f0;border-collapse:separate;border-radius:24px;box-shadow:0 24px 60px rgba(15,23,42,0.10);overflow:hidden;width:100%;max-width:640px;">
+        <td align="center" style="padding:28px 14px;">
+          <table role="presentation" width="720" cellspacing="0" cellpadding="0" style="background:#ffffff;border:1px solid #eadfce;border-collapse:separate;border-radius:26px;box-shadow:0 28px 70px rgba(15,23,42,0.14);overflow:hidden;width:100%;max-width:720px;">
             <tr>
-              <td style="background:${input.theme.panel};padding:26px 28px;">
+              <td style="background:#06214a;background-image:linear-gradient(135deg,#061c3e 0%,#082f5f 58%,#063b68 100%);padding:28px 36px 34px;">
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;width:100%;">
                   <tr>
-                    <td align="left">
-                      <img src="${escapeHtml(getLogoUrl())}" width="186" alt="Match 'n Move" style="border:0;display:block;height:auto;max-width:186px;" />
+                    <td align="left" style="vertical-align:middle;">
+                      <table role="presentation" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
+                        <tr>
+                          <td style="vertical-align:middle;">
+                            <img src="${escapeHtml(getIconUrl())}" width="54" height="54" alt="" style="border:0;border-radius:14px;display:block;height:54px;width:54px;" />
+                          </td>
+                          <td style="padding-left:14px;vertical-align:middle;">
+                            <div style="color:#ffffff;font-family:Arial,sans-serif;font-size:28px;font-weight:800;letter-spacing:-0.5px;line-height:32px;">
+                              Match <span style="color:#23c5a7;">'n</span> Move
+                            </div>
+                            <div style="color:#d9e9f7;font-family:Arial,sans-serif;font-size:14px;font-weight:700;line-height:20px;margin-top:3px;">
+                              New Zealand moving marketplace
+                            </div>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                    <td align="right" style="vertical-align:middle;">
+                      <div style="color:#2dd4bf;font-family:Arial,sans-serif;font-size:12px;font-weight:800;letter-spacing:2px;line-height:18px;text-transform:uppercase;">
+                        Moving made simple
+                      </div>
                     </td>
                   </tr>
                 </table>
               </td>
             </tr>
             <tr>
-              <td style="padding:30px 28px 8px;">
-                <span style="display:inline-block;border-radius:999px;background:${input.theme.eyebrowBackground};color:${input.theme.eyebrowText};font-family:Arial,sans-serif;font-size:12px;font-weight:700;letter-spacing:1.5px;line-height:16px;padding:8px 12px;text-transform:uppercase;">
+              <td style="background:#0ea5a4;background-image:linear-gradient(90deg,#0ea5a4 0%,#4fd1a5 36%,#f0b338 72%,#f97316 100%);font-size:1px;line-height:8px;">&nbsp;</td>
+            </tr>
+            <tr>
+              <td style="padding:34px 36px 10px;">
+                <span style="display:inline-block;border-radius:999px;background:${input.theme.eyebrowBackground};color:${input.theme.eyebrowText};font-family:Arial,sans-serif;font-size:12px;font-weight:800;letter-spacing:1.7px;line-height:16px;padding:10px 16px;text-transform:uppercase;">
                   ${escapeHtml(input.eyebrow)}
                 </span>
-                <h1 style="color:#0f172a;font-family:Arial,sans-serif;font-size:30px;font-weight:800;line-height:36px;margin:18px 0 12px;">
+                <h1 style="color:#071d3c;font-family:Arial,sans-serif;font-size:34px;font-weight:900;letter-spacing:-0.7px;line-height:40px;margin:24px 0 14px;">
                   ${escapeHtml(input.title)}
                 </h1>
-                <p style="color:#475569;font-family:Arial,sans-serif;font-size:16px;line-height:26px;margin:0 0 20px;">
+                <p style="color:#50627d;font-family:Arial,sans-serif;font-size:17px;line-height:27px;margin:0 0 22px;">
                   ${escapeHtml(input.intro)}
                 </p>
               </td>
             </tr>
             <tr>
-              <td style="padding:0 28px;">
+              <td style="padding:0 36px;">
                 ${input.bodyHtml}
               </td>
             </tr>
             ${ctaHtml}
             <tr>
-              <td style="padding:0 28px 30px;">
-                <div style="border-top:1px solid #e2e8f0;color:#64748b;font-family:Arial,sans-serif;font-size:13px;line-height:21px;padding-top:18px;">
+              <td style="padding:0 36px 34px;">
+                ${renderSupportBox(input.theme)}
+                <p style="color:#64748b;font-family:Arial,sans-serif;font-size:13px;line-height:21px;margin:22px 0 0;">
                   ${escapeHtml(input.footerNote)}
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="background:#fff8ef;padding:28px 36px 24px;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;width:100%;">
+                  <tr>
+                    <td style="vertical-align:middle;">
+                      <img src="${escapeHtml(getLogoUrl())}" width="188" alt="Match 'n Move" style="border:0;display:block;height:auto;max-width:188px;" />
+                    </td>
+                    <td align="right" style="color:#334155;font-family:Arial,sans-serif;font-size:14px;line-height:21px;vertical-align:middle;">
+                      <strong style="color:#071d3c;">${escapeHtml(SITE_EMAILS.support)}</strong><br />
+                      We typically reply within one business day.
+                    </td>
+                  </tr>
+                </table>
+                <div style="border-top:1px solid #e7dbc9;color:#64748b;font-family:Arial,sans-serif;font-size:12px;line-height:19px;margin-top:24px;padding-top:18px;text-align:center;">
+                  <a href="${escapeHtml(getPublicBaseUrl())}/faq" style="color:#0b315f;text-decoration:none;">Help centre</a>
+                  <span style="color:#d97706;"> &nbsp;&bull;&nbsp; </span>
+                  <a href="${escapeHtml(getPublicBaseUrl())}/privacy" style="color:#0b315f;text-decoration:none;">Privacy policy</a>
+                  <span style="color:#d97706;"> &nbsp;&bull;&nbsp; </span>
+                  <a href="${escapeHtml(getPublicBaseUrl())}/terms" style="color:#0b315f;text-decoration:none;">Terms of service</a>
+                  <br />
+                  &copy; ${new Date().getFullYear()} Match 'n Move. All rights reserved.
                 </div>
               </td>
             </tr>
           </table>
-          <p style="color:#94a3b8;font-family:Arial,sans-serif;font-size:12px;line-height:18px;margin:18px 0 0;">
-            Match 'n Move, New Zealand moving marketplace
-          </p>
         </td>
       </tr>
     </table>
@@ -299,22 +360,52 @@ function renderEmailShell(input: EmailShellInput) {
 function renderDetailRow(label: string, value: string) {
   return `
     <tr>
-      <td style="border-bottom:1px solid #e2e8f0;color:#64748b;font-family:Arial,sans-serif;font-size:13px;font-weight:700;padding:12px 0;text-transform:uppercase;width:34%;">
+      <td style="border-bottom:1px solid #e2e8f0;color:#071d3c;font-family:Arial,sans-serif;font-size:14px;font-weight:800;padding:16px 18px;width:32%;">
         ${escapeHtml(label)}
       </td>
-      <td style="border-bottom:1px solid #e2e8f0;color:#0f172a;font-family:Arial,sans-serif;font-size:15px;line-height:22px;padding:12px 0;">
+      <td style="border-bottom:1px solid #e2e8f0;color:#4b5d76;font-family:Arial,sans-serif;font-size:15px;line-height:22px;padding:16px 18px;">
         ${escapeHtml(value)}
       </td>
     </tr>
   `;
 }
 
-function renderNoteBox(content: string, tone = "#f8fafc") {
+function renderDetailTable(rows: string) {
   return `
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:${tone};border:1px solid #e2e8f0;border-collapse:separate;border-radius:18px;margin:0 0 24px;width:100%;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#ffffff;border:1px solid #d8e0ea;border-collapse:separate;border-radius:14px;margin:0 0 24px;overflow:hidden;width:100%;">
+      ${rows}
+    </table>
+  `;
+}
+
+function renderNoteBox(content: string, theme: EmailTheme) {
+  return `
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:${theme.accentTint};border:1px solid ${theme.accentSoft};border-collapse:separate;border-radius:14px;margin:0 0 26px;width:100%;">
       <tr>
-        <td style="color:#334155;font-family:Arial,sans-serif;font-size:14px;line-height:23px;padding:16px 18px;">
+        <td style="padding:18px 20px;width:52px;vertical-align:top;">
+          <div style="background:${theme.iconBackground};border-radius:999px;color:${theme.iconText};font-family:Arial,sans-serif;font-size:22px;font-weight:900;line-height:46px;text-align:center;width:46px;">!</div>
+        </td>
+        <td style="color:#173355;font-family:Arial,sans-serif;font-size:16px;line-height:25px;padding:18px 20px 18px 0;vertical-align:middle;">
           ${content}
+        </td>
+      </tr>
+    </table>
+  `;
+}
+
+function renderSupportBox(theme: EmailTheme) {
+  return `
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f0fbf7;border:1px solid #d7f0e8;border-collapse:separate;border-radius:14px;margin:0;width:100%;">
+      <tr>
+        <td style="padding:18px 20px;width:54px;vertical-align:middle;">
+          <div style="background:#d7f7ec;border-radius:999px;color:#0f766e;font-family:Arial,sans-serif;font-size:20px;font-weight:900;line-height:44px;text-align:center;width:44px;">?</div>
+        </td>
+        <td style="color:#475569;font-family:Arial,sans-serif;font-size:14px;line-height:21px;padding:18px 0;vertical-align:middle;">
+          <strong style="color:#071d3c;font-size:16px;">Need help?</strong><br />
+          Our support team is here if you have any questions.
+        </td>
+        <td align="right" style="padding:18px 20px;vertical-align:middle;">
+          <a href="mailto:${escapeHtml(SITE_EMAILS.support)}" style="color:${theme.accentDark};font-family:Arial,sans-serif;font-size:14px;font-weight:800;text-decoration:none;">Contact support &rarr;</a>
         </td>
       </tr>
     </table>
@@ -564,13 +655,26 @@ export async function getEmailDiagnostics(limit = 10) {
 
 export async function sendContactNotification(input: ContactEmailInput) {
   const config = getContactNotificationConfig();
+  const theme: EmailTheme = {
+    accent: "#0284c7",
+    accentDark: "#0369a1",
+    accentSoft: "#bae6fd",
+    accentTint: "#f0f9ff",
+    background: "#fff7ed",
+    eyebrowBackground: "#fff1e6",
+    eyebrowText: "#c2410c",
+    button: "#ea580c",
+    buttonShadow: "rgba(234,88,12,0.28)",
+    iconBackground: "#ffedd5",
+    iconText: "#ea580c",
+  };
   const subject = `New Match 'n Move contact message from ${input.name}`;
   const bodyHtml = `
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:0 0 22px;width:100%;">
+    ${renderDetailTable(`
       ${renderDetailRow("Name", input.name)}
       ${renderDetailRow("Email", input.email)}
-    </table>
-    ${renderNoteBox(`<strong style="color:#0f172a;">Message</strong><br />${escapeHtml(input.message).replace(/\n/g, "<br />")}`, "#f0f9ff")}
+    `)}
+    ${renderNoteBox(`<strong style="color:#071d3c;">Message received</strong><br />${escapeHtml(input.message).replace(/\n/g, "<br />")}`, theme)}
   `;
   const message: EmailMessage = {
     kind: "contact_notification",
@@ -588,15 +692,7 @@ export async function sendContactNotification(input: ContactEmailInput) {
       input.message,
     ].join("\n"),
     html: renderEmailShell({
-      theme: {
-        accent: "#0284c7",
-        accentDark: "#0369a1",
-        background: "#eef7ff",
-        panel: "#eff8ff",
-        eyebrowBackground: "#dff3ff",
-        eyebrowText: "#075985",
-        button: "#0369a1",
-      },
+      theme,
       preheader: `New contact message from ${input.name}.`,
       eyebrow: "Contact request",
       title: "New message for Match 'n Move",
@@ -615,17 +711,30 @@ export async function sendMoverVerificationEmail(input: MoverAuthEmailInput) {
     return { sent: false, skipped: true as const, queued: false };
   }
 
+  const theme: EmailTheme = {
+    accent: "#14b8a6",
+    accentDark: "#0f766e",
+    accentSoft: "#bceee6",
+    accentTint: "#f0fdfa",
+    background: "#fff7ed",
+    eyebrowBackground: "#e9fbf6",
+    eyebrowText: "#0f766e",
+    button: "#0f766e",
+    buttonShadow: "rgba(15,118,110,0.28)",
+    iconBackground: "#ccfbf1",
+    iconText: "#0f766e",
+  };
   const friendlyName = input.name?.trim() || "there";
   const subject = "Verify your Match 'n Move mover account";
   const bodyHtml = `
     ${renderNoteBox(
       "Your mover account is almost ready. Confirming your email helps keep your dashboard, quote leads, and customer messages protected.",
-      "#eef2ff",
+      theme,
     )}
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:0 0 22px;width:100%;">
+    ${renderDetailTable(`
       ${renderDetailRow("Account", input.email)}
       ${renderDetailRow("Link expires", "48 hours")}
-    </table>
+    `)}
   `;
   const message: EmailMessage = {
     kind: "mover_verification",
@@ -642,15 +751,7 @@ export async function sendMoverVerificationEmail(input: MoverAuthEmailInput) {
       "If you did not create this account, you can ignore this email.",
     ].join("\n"),
     html: renderEmailShell({
-      theme: {
-        accent: "#4f46e5",
-        accentDark: "#4338ca",
-        background: "#f4f6ff",
-        panel: "#eef2ff",
-        eyebrowBackground: "#e0e7ff",
-        eyebrowText: "#3730a3",
-        button: "#4f46e5",
-      },
+      theme,
       preheader: "Verify your mover account to finish setting up your Match 'n Move dashboard.",
       eyebrow: "Mover verification",
       title: `Welcome, ${friendlyName}`,
@@ -673,17 +774,30 @@ export async function sendMoverPasswordResetEmail(input: MoverAuthEmailInput) {
     return { sent: false, skipped: true as const, queued: false };
   }
 
+  const theme: EmailTheme = {
+    accent: "#f97316",
+    accentDark: "#c2410c",
+    accentSoft: "#fed7aa",
+    accentTint: "#fff7ed",
+    background: "#fff7ed",
+    eyebrowBackground: "#fff1e6",
+    eyebrowText: "#c2410c",
+    button: "#ea580c",
+    buttonShadow: "rgba(234,88,12,0.30)",
+    iconBackground: "#ffedd5",
+    iconText: "#ea580c",
+  };
   const friendlyName = input.name?.trim() || "there";
   const subject = "Reset your Match 'n Move password";
   const bodyHtml = `
     ${renderNoteBox(
       "Use the secure link below to choose a new password. For your protection, this reset link is short lived.",
-      "#fff7ed",
+      theme,
     )}
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:0 0 22px;width:100%;">
+    ${renderDetailTable(`
       ${renderDetailRow("Account", input.email)}
       ${renderDetailRow("Link expires", "2 hours")}
-    </table>
+    `)}
   `;
   const message: EmailMessage = {
     kind: "mover_password_reset",
@@ -700,15 +814,7 @@ export async function sendMoverPasswordResetEmail(input: MoverAuthEmailInput) {
       "If you did not request this, you can ignore this email.",
     ].join("\n"),
     html: renderEmailShell({
-      theme: {
-        accent: "#ea580c",
-        accentDark: "#c2410c",
-        background: "#fff7ed",
-        panel: "#fff3e8",
-        eyebrowBackground: "#ffedd5",
-        eyebrowText: "#9a3412",
-        button: "#de7a3a",
-      },
+      theme,
       preheader: "Use this secure link to reset your Match 'n Move mover password.",
       eyebrow: "Account recovery",
       title: "Reset your mover password",
@@ -727,6 +833,19 @@ export async function sendMoverPasswordResetEmail(input: MoverAuthEmailInput) {
 
 export async function sendReviewSurveyEmail(input: ReviewSurveyEmailInput) {
   const config = getReviewEmailConfig();
+  const theme: EmailTheme = {
+    accent: "#22c55e",
+    accentDark: "#047857",
+    accentSoft: "#bbf7d0",
+    accentTint: "#f0fdf4",
+    background: "#fff7ed",
+    eyebrowBackground: "#e8f8ef",
+    eyebrowText: "#047857",
+    button: "#047857",
+    buttonShadow: "rgba(4,120,87,0.28)",
+    iconBackground: "#dcfce7",
+    iconText: "#047857",
+  };
   const friendlyName = input.customerName?.trim() || "there";
   const expiryLabel = new Intl.DateTimeFormat("en-NZ", {
     day: "numeric",
@@ -737,13 +856,13 @@ export async function sendReviewSurveyEmail(input: ReviewSurveyEmailInput) {
   const bodyHtml = `
     ${renderNoteBox(
       `Your review is connected to a completed ${escapeHtml(input.moveRoute)} move, so future customers can trust that the feedback came from a real job.`,
-      "#ecfdf5",
+      theme,
     )}
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:0 0 22px;width:100%;">
+    ${renderDetailTable(`
       ${renderDetailRow("Mover", input.moverCompanyName)}
       ${renderDetailRow("Move", input.moveRoute)}
       ${renderDetailRow("Link expires", expiryLabel)}
-    </table>
+    `)}
   `;
 
   const message: EmailMessage = {
@@ -763,15 +882,7 @@ export async function sendReviewSurveyEmail(input: ReviewSurveyEmailInput) {
       "If you've already shared feedback, you can ignore this email.",
     ].join("\n"),
     html: renderEmailShell({
-      theme: {
-        accent: "#059669",
-        accentDark: "#047857",
-        background: "#f0fdf4",
-        panel: "#083344",
-        eyebrowBackground: "#dcfce7",
-        eyebrowText: "#166534",
-        button: "#047857",
-      },
+      theme,
       preheader: `Share a verified review for your ${input.moveRoute} move with ${input.moverCompanyName}.`,
       eyebrow: "Verified customer review",
       title: `How was ${input.moverCompanyName}?`,
