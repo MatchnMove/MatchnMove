@@ -148,6 +148,10 @@ body { @apply overflow-x-hidden bg-slate-100 text-slate-900; }
   animation-iteration-count: 1;
 }
 
+.match-loader-screen--entry .match-loader-dot {
+  animation-fill-mode: forwards;
+}
+
 .match-loader-screen--leaving {
   pointer-events: none;
   animation: match-loader-screen-leave 620ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
