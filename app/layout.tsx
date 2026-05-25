@@ -26,8 +26,8 @@ export const metadata: Metadata = {
     canonical: "/"
   },
   icons: {
-    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
-    shortcut: [{ url: "/icon.svg", type: "image/svg+xml" }]
+    icon: [{ url: "/logoTrans.webp", type: "image/webp" }],
+    shortcut: [{ url: "/logoTrans.webp", type: "image/webp" }]
   },
   openGraph: {
     title: `${siteName} | Free Moving Quotes NZ`,

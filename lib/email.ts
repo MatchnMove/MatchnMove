@@ -219,7 +219,7 @@ function getLogoUrl() {
 }
 
 function getIconUrl() {
-  return `${getPublicBaseUrl()}/icon.svg`;
+  return `${getPublicBaseUrl()}/logoTrans.webp`;
 }
 
 function renderEmailShell(input: EmailShellInput) {
