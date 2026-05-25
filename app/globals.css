@@ -141,6 +141,10 @@ body { @apply overflow-x-hidden bg-slate-100 text-slate-900; }
   animation: match-loader-screen-enter 360ms ease-out both;
 }
 
+.match-loader-screen--route {
+  animation: match-loader-screen-enter 260ms ease-out both;
+}
+
 .match-loader-screen--entry .match-loader-logo,
 .match-loader-screen--entry .match-loader-glow,
 .match-loader-screen--entry .match-loader-orbit,

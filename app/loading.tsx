@@ -1,5 +1,5 @@
-import { MatchLoadingScreen } from "@/components/match-loading-screen";
+import { DelayedRouteLoadingScreen } from "@/components/delayed-route-loading-screen";
 
 export default function Loading() {
-  return <MatchLoadingScreen />;
+  return <DelayedRouteLoadingScreen />;
 }
