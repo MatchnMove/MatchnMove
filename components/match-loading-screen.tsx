@@ -105,15 +105,9 @@ function OrbitRing({ className, direction }: { className: string; direction: "no
 
 function ProgressIndicator() {
   return (
-    <div className="mt-12 w-full max-w-[360px] sm:mt-14" aria-hidden="true">
-      <div className="relative h-px overflow-visible rounded-full bg-[linear-gradient(90deg,transparent,rgba(8,38,83,0.16),transparent)]">
-        <span className="match-loader-progress absolute left-0 top-1/2 h-px w-[44%] -translate-y-1/2 rounded-full bg-[linear-gradient(90deg,transparent,#14b8a6_24%,#2aa8e8_54%,#f59e0b_100%)]" />
-        <span className="match-loader-dot absolute top-1/2 size-3 -translate-y-1/2 rounded-full bg-cyan-400 shadow-[0_0_0_5px_rgba(34,211,238,0.16),0_0_24px_rgba(20,184,166,0.46)]" />
-      </div>
-      <div className="mt-4 flex justify-center gap-2">
-        <span className="h-1 w-1 rounded-full bg-teal-500/45" />
-        <span className="h-1 w-1 rounded-full bg-sky-500/35" />
-        <span className="h-1 w-1 rounded-full bg-amber-500/40" />
+    <div className="mt-12 flex w-full justify-center sm:mt-14" aria-hidden="true">
+      <div className="match-loader-track">
+        <span className="match-loader-dot" />
       </div>
     </div>
   );

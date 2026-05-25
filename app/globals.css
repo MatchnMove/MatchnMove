@@ -144,7 +144,6 @@ body { @apply overflow-x-hidden bg-slate-100 text-slate-900; }
 .match-loader-screen--entry .match-loader-logo,
 .match-loader-screen--entry .match-loader-glow,
 .match-loader-screen--entry .match-loader-orbit,
-.match-loader-screen--entry .match-loader-progress,
 .match-loader-screen--entry .match-loader-dot {
   animation-iteration-count: 1;
 }
@@ -194,12 +193,26 @@ body { @apply overflow-x-hidden bg-slate-100 text-slate-900; }
   animation: match-loader-route-drift 9s ease-in-out infinite;
 }
 
-.match-loader-progress {
-  animation: match-loader-progress-slide 2.2s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+.match-loader-track {
+  position: relative;
+  height: 2px;
+  width: min(72vw, 300px);
+  border-radius: 9999px;
+  background: linear-gradient(90deg, transparent, rgba(93, 118, 148, 0.24) 14%, rgba(93, 118, 148, 0.24) 86%, transparent);
 }
 
 .match-loader-dot {
-  animation: match-loader-dot-glide 2.2s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  position: absolute;
+  left: 0;
+  top: 50%;
+  height: 9px;
+  width: 9px;
+  border-radius: 9999px;
+  background: #14b8a6;
+  box-shadow:
+    0 0 0 4px rgba(20, 184, 166, 0.11),
+    0 0 18px rgba(20, 184, 166, 0.32);
+  animation: match-loader-dot-glide 2.15s cubic-bezier(0.65, 0, 0.35, 1) infinite;
 }
 
 @keyframes match-loader-logo-float {
@@ -237,27 +250,10 @@ body { @apply overflow-x-hidden bg-slate-100 text-slate-900; }
   }
 }
 
-@keyframes match-loader-progress-slide {
-  0% {
-    opacity: 0;
-    transform: translateX(-28%);
-  }
-  18% {
-    opacity: 1;
-  }
-  72% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-    transform: translateX(214%);
-  }
-}
-
 @keyframes match-loader-dot-glide {
   0% {
     opacity: 0;
-    left: 0%;
+    transform: translate(0, -50%);
   }
   15% {
     opacity: 1;
@@ -267,7 +263,7 @@ body { @apply overflow-x-hidden bg-slate-100 text-slate-900; }
   }
   100% {
     opacity: 0;
-    left: calc(100% - 0.75rem);
+    transform: translate(calc(min(72vw, 300px) - 9px), -50%);
   }
 }
 
@@ -313,8 +309,12 @@ body { @apply overflow-x-hidden bg-slate-100 text-slate-900; }
   .match-loader-glow,
   .match-loader-orbit,
   .match-loader-route,
-  .match-loader-progress,
   .match-loader-dot {
     animation: none;
+  }
+
+  .match-loader-dot {
+    opacity: 0.82;
+    transform: translate(0, -50%);
   }
 }
