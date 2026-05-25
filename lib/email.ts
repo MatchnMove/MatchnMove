@@ -219,7 +219,7 @@ function getLogoUrl() {
 }
 
 function getIconUrl() {
-  return `${getPublicBaseUrl()}/logoTrans.webp`;
+  return `${getPublicBaseUrl()}/logo-mark.png`;
 }
 
 function renderEmailShell(input: EmailShellInput) {
@@ -272,14 +272,14 @@ function renderEmailShell(input: EmailShellInput) {
                     <td align="left" style="vertical-align:middle;">
                       <table role="presentation" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
                         <tr>
-                          <td style="vertical-align:middle;">
-                            <img src="${escapeHtml(getIconUrl())}" width="54" height="54" alt="" style="border:0;border-radius:14px;display:block;height:54px;width:54px;" />
+                          <td style="background:#fff8ef;border:1px solid rgba(255,255,255,0.28);border-radius:17px;padding:7px;vertical-align:middle;">
+                            <img src="${escapeHtml(getIconUrl())}" width="46" height="46" alt="" style="border:0;display:block;height:46px;width:46px;" />
                           </td>
-                          <td style="padding-left:14px;vertical-align:middle;">
-                            <div style="color:#ffffff;font-family:Arial,sans-serif;font-size:28px;font-weight:800;letter-spacing:-0.5px;line-height:32px;">
+                          <td style="padding-left:16px;vertical-align:middle;">
+                            <div style="color:#ffffff;font-family:Arial,sans-serif;font-size:27px;font-weight:900;letter-spacing:-0.3px;line-height:31px;">
                               Match <span style="color:#23c5a7;">'n</span> Move
                             </div>
-                            <div style="color:#d9e9f7;font-family:Arial,sans-serif;font-size:14px;font-weight:700;line-height:20px;margin-top:3px;">
+                            <div style="color:#d9e9f7;font-family:Arial,sans-serif;font-size:14px;font-weight:700;line-height:20px;margin-top:4px;">
                               New Zealand moving marketplace
                             </div>
                           </td>
