@@ -148,6 +148,26 @@ body { @apply overflow-x-hidden bg-slate-100 text-slate-900; }
   color: #071d3c;
 }
 
+.match-loading-screen--entry {
+  animation: match-screen-enter 300ms ease-out both;
+}
+
+.match-loading-screen--entry .match-loading-logo,
+.match-loading-screen--entry .match-loading-pulse,
+.match-loading-screen--entry .match-loading-route span::before,
+.match-loading-screen--entry .match-loading-bar span {
+  animation-iteration-count: 1;
+}
+
+.match-loading-screen--leaving {
+  pointer-events: none;
+  animation: match-screen-leave 560ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.match-loading-screen--leaving .match-loading-panel {
+  animation: match-panel-leave 560ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
 .match-loading-grid {
   position: absolute;
   inset: -20%;
@@ -299,6 +319,34 @@ body { @apply overflow-x-hidden bg-slate-100 text-slate-900; }
   }
   50% {
     transform: translateY(-5px) scale(1.025);
+  }
+}
+
+@keyframes match-screen-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes match-screen-leave {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+@keyframes match-panel-leave {
+  from {
+    transform: translateY(0) scale(1);
+  }
+  to {
+    transform: translateY(-12px) scale(0.985);
   }
 }
 

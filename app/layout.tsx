@@ -1,6 +1,7 @@
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import { ReactNode } from "react";
+import { InitialLoadingScreen } from "@/components/initial-loading-screen";
 
 const siteUrl = "https://www.matchnmove.co.nz";
 const siteName = "Match 'n Move";
@@ -79,6 +80,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
         />
+        <InitialLoadingScreen />
         {children}
       </body>
     </html>
