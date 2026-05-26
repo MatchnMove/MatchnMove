@@ -1,9 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Alignment, Fit, Layout, useRive } from "@rive-app/react-canvas";
 
-export function RiveHeroAnimation() {
+type RiveHeroAnimationProps = {
+  mobileInline?: boolean;
+};
+
+export function RiveHeroAnimation({ mobileInline = false }: RiveHeroAnimationProps) {
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -18,21 +22,37 @@ export function RiveHeroAnimation() {
     };
   }, []);
 
+  const layout = useMemo(
+    () =>
+      new Layout({
+        fit: Fit.FitWidth,
+        alignment: Alignment.BottomCenter,
+      }),
+    [],
+  );
+
   const { RiveComponent } = useRive({
     src: isMobile ? "/animations/herom.riv" : "/animations/hero.riv",
     autoplay: true,
-    layout: new Layout({
-      fit: Fit.FitWidth,
-      alignment: Alignment.BottomCenter,
-    }),
+    layout,
   });
 
   return (
     <div
-      className="relative left-1/2 h-[150px] w-screen min-w-full -translate-x-1/2 sm:h-[clamp(170px,22vh,240px)]"
+      className={
+        mobileInline
+          ? "relative left-1/2 -mt-6 h-[160px] w-screen min-w-full -translate-x-1/2 overflow-hidden"
+          : "relative left-1/2 h-[clamp(170px,22vh,240px)] w-screen min-w-full -translate-x-1/2 overflow-hidden"
+      }
       aria-label="Match 'n Move hero animation"
     >
-      <RiveComponent className="relative z-10 h-full w-full" />
+      <RiveComponent
+        className={
+          isMobile
+            ? "absolute bottom-[-14px] left-1/2 z-10 h-[225px] w-[235vw] max-w-none -translate-x-1/2"
+            : "relative z-10 h-full w-full"
+        }
+      />
     </div>
   );
 }

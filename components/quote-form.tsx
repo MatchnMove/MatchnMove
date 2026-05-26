@@ -180,9 +180,9 @@ const fieldClass =
 const selectClass =
   "w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-slate-800 shadow-sm transition-colors duration-150 focus:border-brandBlue/60 focus:ring-4 focus:ring-brandBlue/15 focus:outline-none";
 const secondaryButtonClass =
-  "rounded-xl border border-slate-300 bg-white px-6 py-2.5 text-slate-700 shadow-sm transition-colors duration-150 hover:bg-slate-50";
+  "inline-flex min-h-[44px] w-full items-center justify-center rounded-xl border border-slate-300 bg-white px-6 py-2.5 text-slate-700 shadow-sm transition-colors duration-150 hover:bg-slate-50 sm:w-auto";
 const primaryButtonClass =
-  "rounded-xl bg-accentOrange px-6 py-2.5 text-white shadow-[0_8px_20px_-12px_rgba(222,122,58,0.6)] transition-colors duration-150 hover:bg-[#d46f30]";
+  "inline-flex min-h-[44px] w-full items-center justify-center rounded-xl bg-accentOrange px-6 py-2.5 text-white shadow-[0_8px_20px_-12px_rgba(222,122,58,0.6)] transition-colors duration-150 hover:bg-[#d46f30] sm:w-auto";
 
 const propertyOptions: Array<{ label: PropertyType; image: string }> = [
   { label: "Apartment", image: "/images/property/apartment.webp" },
@@ -636,20 +636,20 @@ export function QuoteForm() {
     value: string;
     onSelect: (next: PropertyType) => void;
   }) => (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+    <div className="grid grid-cols-3 gap-2 sm:gap-3">
       {propertyOptions.map(({ label, image }) => {
         const active = value === label;
-        const imageClass = label === "Apartment" ? "mx-auto h-24 w-24 object-contain scale-125" : "mx-auto h-24 w-24 object-contain";
+        const imageClass = label === "Apartment" ? "mx-auto h-16 w-16 object-contain scale-110 sm:h-24 sm:w-24 sm:scale-125" : "mx-auto h-16 w-16 object-contain sm:h-24 sm:w-24";
         return (
           <button
             key={label}
             type="button"
-            className={`rounded-lg border p-5 text-center transition ${active ? "border-brandBlue bg-blue-50" : "border-slate-300 bg-white hover:border-slate-400"}`}
+            className={`rounded-xl border p-2.5 text-center transition sm:p-5 ${active ? "border-brandBlue bg-blue-50" : "border-slate-300 bg-white hover:border-slate-400"}`}
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => onSelect(label)}
           >
             <Image src={image} alt={label} width={96} height={96} className={imageClass} />
-            <span className="mt-2 block text-sm font-medium text-slate-700">{label}</span>
+            <span className="mt-1.5 block text-xs font-medium text-slate-700 sm:mt-2 sm:text-sm">{label}</span>
           </button>
         );
       })}
@@ -672,7 +672,7 @@ export function QuoteForm() {
           <button
             key={b}
             type="button"
-            className={`rounded-full border px-4 py-2 text-sm ${value === b ? "border-brandBlue bg-blue-50 text-brandBlue" : "border-slate-300 bg-white text-slate-700"}`}
+            className={`min-h-[42px] min-w-12 rounded-full border px-4 py-2 text-sm ${value === b ? "border-brandBlue bg-blue-50 text-brandBlue" : "border-slate-300 bg-white text-slate-700"}`}
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => onSelect(b)}
           >
@@ -685,20 +685,20 @@ export function QuoteForm() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-[#101b34] to-[#0f2747] py-12">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-[#101b34] to-[#0f2747] py-8 sm:py-12">
       <div className="container-shell relative text-white">
-        <p className="mb-6 max-w-2xl text-2xl text-slate-100">Fill in your details, or use voice transcription to prefill key fields.</p>
-        <div className="mb-5 flex items-center gap-3">
+        <p className="mb-4 max-w-2xl text-base leading-7 text-slate-100 sm:mb-6 sm:text-2xl">Fill in your details, or use voice transcription to prefill key fields.</p>
+        <div className="mb-5 flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:gap-3">
           <button
             onClick={transcribe}
-            className="rounded-xl bg-brandBlue px-5 py-2.5 font-medium text-white shadow-[0_8px_18px_-14px_rgba(95,110,232,0.75)] transition-colors duration-150 hover:bg-[#5262df]"
+            className="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-brandBlue px-5 py-2.5 font-medium text-white shadow-[0_8px_18px_-14px_rgba(95,110,232,0.75)] transition-colors duration-150 hover:bg-[#5262df]"
           >
             Transcribe by voice
           </button>
-          <span className="rounded-full border border-slate-400/30 bg-slate-900/35 px-3 py-1 text-xs uppercase tracking-[0.2em] text-slate-300">{voiceState}</span>
+          <span className="self-start rounded-full border border-slate-400/30 bg-slate-900/35 px-3 py-1 text-xs uppercase tracking-[0.2em] text-slate-300 sm:self-auto">{voiceState}</span>
         </div>
-        <div ref={formCardRef} className="max-w-3xl rounded-2xl border border-slate-200/80 bg-white p-7 text-slate-900 shadow-[0_20px_45px_-25px_rgba(2,6,23,0.65)]">
-          <div className="mb-7">
+        <div ref={formCardRef} className="max-w-3xl rounded-[22px] border border-slate-200/80 bg-white p-4 text-slate-900 shadow-[0_20px_45px_-25px_rgba(2,6,23,0.65)] sm:rounded-2xl sm:p-7">
+          <div className="mb-5 sm:mb-7">
             <div className="mb-2 flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
               <span>Progress</span>
               <span>Step {step} of 3</span>
@@ -719,7 +719,7 @@ export function QuoteForm() {
                   >
                     {n}
                   </span>
-                  <span className={`text-xs ${step >= n ? "text-slate-700" : "text-slate-400"}`}>Step {n}</span>
+                  <span className={`hidden text-xs sm:inline ${step >= n ? "text-slate-700" : "text-slate-400"}`}>Step {n}</span>
                 </div>
               ))}
             </div>
@@ -812,7 +812,7 @@ export function QuoteForm() {
                 type="button"
                 onClick={shareLocation}
                 disabled={locating}
-                className="w-fit rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm text-slate-700 shadow-sm transition-colors duration-150 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex min-h-[42px] w-full items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm text-slate-700 shadow-sm transition-colors duration-150 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 sm:w-fit"
               >
                 {locating ? "Detecting location..." : "Use my current location"}
               </button>
@@ -828,7 +828,7 @@ export function QuoteForm() {
                   {errors[k] && <span className="mt-1 block text-sm text-red-600">{errors[k]}</span>}
                 </label>
               ))}
-              <div className="flex gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row">
                 <button className={secondaryButtonClass} onClick={() => transitionToStep(1)}>Back</button>
                 <button className={primaryButtonClass} onClick={goNext}>Next</button>
               </div>
@@ -839,10 +839,10 @@ export function QuoteForm() {
               <h3 className="text-xl font-semibold">Where are you moving to?</h3>
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
                 <p className="text-sm font-medium">Do you know what type of property you&apos;re moving into?</p>
-                <div className="mt-3 flex gap-2">
+                <div className="mt-3 grid grid-cols-2 gap-2 sm:flex">
                   <button
                     type="button"
-                    className={`rounded px-4 py-2 text-sm ${extra.toKnownPropertyType === "yes" ? "bg-brandBlue text-white" : "bg-white text-slate-700 border border-slate-300"}`}
+                    className={`min-h-[42px] rounded-xl px-4 py-2 text-sm ${extra.toKnownPropertyType === "yes" ? "bg-brandBlue text-white" : "bg-white text-slate-700 border border-slate-300"}`}
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => {
                       updateExtra("toKnownPropertyType", "yes");
@@ -853,7 +853,7 @@ export function QuoteForm() {
                   </button>
                   <button
                     type="button"
-                    className={`rounded px-4 py-2 text-sm ${extra.toKnownPropertyType === "no" ? "bg-brandBlue text-white" : "bg-white text-slate-700 border border-slate-300"}`}
+                    className={`min-h-[42px] rounded-xl px-4 py-2 text-sm ${extra.toKnownPropertyType === "no" ? "bg-brandBlue text-white" : "bg-white text-slate-700 border border-slate-300"}`}
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => {
                       updateExtra("toKnownPropertyType", "no");
@@ -960,7 +960,7 @@ export function QuoteForm() {
                   </button>
                   {isDatePickerOpen && (
                     <div
-                      className="absolute left-0 z-40 mt-2 w-[320px] max-w-[calc(100vw-2.5rem)] rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_20px_40px_-20px_rgba(2,6,23,0.5)]"
+                      className="absolute left-1/2 z-40 mt-2 w-[min(320px,calc(100vw-2rem))] -translate-x-1/2 rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_20px_40px_-20px_rgba(2,6,23,0.5)] sm:left-0 sm:w-[320px] sm:translate-x-0"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <div className="mb-2 flex items-center justify-between">
@@ -1069,11 +1069,11 @@ export function QuoteForm() {
                 {errors.moveDate && <span className="mt-1 block text-sm text-red-600">{errors.moveDate}</span>}
               </div>
               <div className="rounded-lg border border-slate-200 p-4">
-                <div className="mb-2 flex items-center justify-between gap-3">
+                <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                   <span className="text-sm font-medium">Items to Move</span>
                   <button
                     type="button"
-                    className="inline-flex items-center gap-1 rounded border border-slate-300 px-3 py-1.5 text-sm text-slate-700"
+                    className="inline-flex min-h-[40px] w-full items-center justify-center gap-1 rounded-xl border border-slate-300 px-3 py-1.5 text-sm text-slate-700 sm:w-auto"
                     onClick={() => setShowItemsPicker((v) => !v)}
                   >
                     <Plus className="h-4 w-4" />
@@ -1178,7 +1178,7 @@ export function QuoteForm() {
                 Date flexible
               </label>
               {submitError && <p className="text-sm text-red-600">{submitError}</p>}
-              <div className="flex gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row">
                 <button className={secondaryButtonClass} onClick={() => transitionToStep(2)}>Back</button>
                 <button onClick={submit} disabled={loading} className={`${primaryButtonClass} disabled:cursor-not-allowed disabled:opacity-70`}>
                   {loading ? "Submitting..." : "Submit"}

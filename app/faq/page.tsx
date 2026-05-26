@@ -245,7 +245,7 @@ export default function FAQPage() {
 
   return (
     <SiteShell>
-      <section className="relative overflow-hidden bg-[linear-gradient(180deg,#44586a_0%,#3d5061_100%)] pb-16 pt-14 text-white sm:pb-20 sm:pt-16 lg:pb-36 lg:pt-20">
+      <section className="relative overflow-hidden bg-[linear-gradient(180deg,#44586a_0%,#3d5061_100%)] pb-12 pt-10 text-white sm:pb-20 sm:pt-16 lg:pb-36 lg:pt-20">
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute left-[4%] top-14 h-40 w-40 rounded-full bg-sky-300/18 blur-3xl sm:h-64 sm:w-64" />
           <div className="absolute right-[6%] top-12 h-44 w-44 rounded-full bg-emerald-300/14 blur-3xl sm:h-72 sm:w-72" />
@@ -253,12 +253,12 @@ export default function FAQPage() {
         </div>
 
         <div className="container-shell relative">
-          <div className="mx-auto max-w-4xl text-center">
+          <div className="mx-auto max-w-[22rem] text-center sm:max-w-4xl">
             <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-sky-100 backdrop-blur sm:text-sm">
               <Sparkles className="h-4 w-4" />
               Helpful tips and answers
             </p>
-            <h1 className="mt-5 text-[clamp(2.8rem,8vw,5.5rem)] font-black leading-[0.92] tracking-[-0.06em] text-white">
+            <h1 className="mt-4 text-[clamp(1.95rem,8.8vw,5.5rem)] font-black leading-[1] tracking-[-0.025em] text-white sm:mt-5 sm:leading-[0.92] sm:tracking-[-0.06em]">
               Search the questions people ask before they move.
             </h1>
             <p className="mx-auto mt-5 max-w-2xl text-sm leading-7 text-slate-200 sm:text-base">
@@ -267,14 +267,14 @@ export default function FAQPage() {
             </p>
           </div>
 
-          <div className="mx-auto mt-10 max-w-6xl overflow-visible rounded-[32px] border border-white/15 bg-white/[0.08] p-4 shadow-[0_30px_90px_-48px_rgba(15,23,42,0.72)] backdrop-blur-xl sm:p-5">
-            <div className="rounded-[28px] border border-white/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(241,245,249,0.92))] p-4 text-slate-900 sm:p-6">
+          <div className="mx-auto mt-8 max-w-6xl overflow-visible rounded-[24px] border border-white/15 bg-white/[0.08] p-3 shadow-[0_30px_90px_-48px_rgba(15,23,42,0.72)] backdrop-blur-xl sm:mt-10 sm:rounded-[32px] sm:p-5">
+            <div className="rounded-[20px] border border-white/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(241,245,249,0.92))] p-3 text-slate-900 sm:rounded-[28px] sm:p-6">
               <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.62fr)] xl:items-start">
                 <div className="min-w-0">
                   <div className="relative">
                     <label
                       htmlFor="faq-search"
-                      className="flex min-h-[68px] items-center gap-2 rounded-[24px] border border-sky-200 bg-white px-3 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.25)] transition focus-within:border-sky-300 focus-within:ring-4 focus-within:ring-sky-100 sm:gap-3 sm:px-4"
+                      className="flex min-h-[58px] items-center gap-2 rounded-[18px] border border-sky-200 bg-white px-3 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.25)] transition focus-within:border-sky-300 focus-within:ring-4 focus-within:ring-sky-100 sm:min-h-[68px] sm:rounded-[24px] sm:gap-3 sm:px-4"
                     >
                       <div className="rounded-2xl bg-sky-50 p-2.5 text-sky-700 sm:p-3">
                         <Search className="h-5 w-5" />
@@ -293,7 +293,7 @@ export default function FAQPage() {
                       </div>
                     </label>
 
-                    <div className="mt-4 rounded-[26px] border border-slate-200 bg-white/90 p-3 shadow-[0_20px_60px_-42px_rgba(15,23,42,0.3)]">
+                    <div className="mt-3 rounded-[20px] border border-slate-200 bg-white/90 p-3 shadow-[0_20px_60px_-42px_rgba(15,23,42,0.3)] sm:mt-4 sm:rounded-[26px]">
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <p className="text-sm leading-6 text-slate-600">
                           {deferredQuery
@@ -324,7 +324,7 @@ export default function FAQPage() {
                                   setOpenId(item.id);
                                   setSearchHistory((current) => [item.id, ...current.filter((historyId) => historyId !== item.id)].slice(0, 6));
                                 }}
-                                className={`rounded-[22px] border px-4 py-4 text-left transition ${
+                                className={`rounded-[18px] border px-3 py-3 text-left transition sm:rounded-[22px] sm:px-4 sm:py-4 ${
                                   isActive
                                     ? "border-sky-200 bg-sky-50/80 shadow-sm"
                                     : "border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] hover:border-slate-300 hover:bg-white"
@@ -385,17 +385,17 @@ export default function FAQPage() {
         </div>
       </section>
 
-      <section className="relative z-10 bg-[linear-gradient(180deg,#eef5fb_0%,#f8fbfd_28%,#ffffff_100%)] pb-14 pt-8 sm:pb-16 sm:pt-10 lg:-mt-20 lg:pb-20">
+      <section className="relative z-10 bg-[linear-gradient(180deg,#eef5fb_0%,#f8fbfd_28%,#ffffff_100%)] pb-12 pt-7 sm:pb-16 sm:pt-10 lg:-mt-20 lg:pb-20">
         <div className="container-shell">
           {activeItem ? (
-            <div className="overflow-hidden rounded-[32px] border border-slate-200/90 bg-white/95 shadow-[0_28px_80px_-52px_rgba(15,23,42,0.35)]">
-              <div className="border-b border-slate-200 bg-[linear-gradient(135deg,#ffffff_0%,#f4f9ff_100%)] px-5 py-5 sm:px-7 sm:py-6">
+            <div className="overflow-hidden rounded-[24px] border border-slate-200/90 bg-white/95 shadow-[0_28px_80px_-52px_rgba(15,23,42,0.35)] sm:rounded-[32px]">
+              <div className="border-b border-slate-200 bg-[linear-gradient(135deg,#ffffff_0%,#f4f9ff_100%)] px-4 py-4 sm:px-7 sm:py-6">
                 <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">
                   {deferredQuery ? "Quick answer" : "Featured answer"}
                 </p>
                 <div className="mt-3 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
                   <div className="max-w-3xl">
-                    <h2 className="text-[clamp(2rem,5vw,3.6rem)] font-black leading-[0.95] tracking-[-0.05em] text-slate-950">
+                    <h2 className="text-[clamp(1.65rem,8vw,3.6rem)] font-black leading-[1] tracking-[-0.03em] text-slate-950 sm:leading-[0.95] sm:tracking-[-0.05em]">
                       {activeItem.question}
                     </h2>
                     <p className="mt-3 text-sm leading-7 text-slate-600 sm:text-base">{activeItem.blurb}</p>
@@ -406,7 +406,7 @@ export default function FAQPage() {
                 </div>
               </div>
 
-              <div className="grid gap-6 px-5 py-6 sm:px-7 sm:py-7 lg:grid-cols-[minmax(0,1fr)_240px] lg:items-start">
+              <div className="grid gap-5 px-4 py-5 sm:gap-6 sm:px-7 sm:py-7 lg:grid-cols-[minmax(0,1fr)_240px] lg:items-start">
                 <div>
                   <p className="max-w-4xl text-sm leading-7 text-slate-600 sm:text-base">{activeItem.answer}</p>
                   <div className="mt-5 flex flex-wrap gap-2">
@@ -460,7 +460,7 @@ export default function FAQPage() {
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">Top searches</p>
-                  <h2 className="mt-3 text-[clamp(2.2rem,5vw,4rem)] font-black leading-[0.95] tracking-[-0.05em] text-slate-950">
+                  <h2 className="mt-3 text-[clamp(1.75rem,8vw,4rem)] font-black leading-[1] tracking-[-0.03em] text-slate-950 sm:leading-[0.95] sm:tracking-[-0.05em]">
                     Popular questions, laid out to explore fast.
                   </h2>
                 </div>
@@ -472,7 +472,7 @@ export default function FAQPage() {
               <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {featuredFaqs.map((item, index) => (
                   <button key={item.id} type="button" onClick={() => handleQuickSearch(item)} className="group text-left">
-                    <article className="relative flex h-full min-h-[320px] flex-col overflow-hidden rounded-[28px] border border-slate-200 bg-[linear-gradient(145deg,#ffffff_0%,#f5f9ff_100%)] p-5 shadow-[0_24px_70px_-50px_rgba(15,23,42,0.28)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_30px_70px_-44px_rgba(15,23,42,0.34)] sm:p-6">
+                    <article className="relative flex h-full min-h-[250px] flex-col overflow-hidden rounded-[22px] border border-slate-200 bg-[linear-gradient(145deg,#ffffff_0%,#f5f9ff_100%)] p-4 shadow-[0_24px_70px_-50px_rgba(15,23,42,0.28)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_30px_70px_-44px_rgba(15,23,42,0.34)] sm:min-h-[320px] sm:rounded-[28px] sm:p-6">
                       <div className="absolute inset-x-0 top-0 h-1 bg-[linear-gradient(90deg,#38bdf8,#22c55e,#f97316)] opacity-90" />
                       <div className="flex items-start justify-between gap-4">
                         <span className="inline-flex rounded-full border border-slate-200 bg-white/90 px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-slate-500">
@@ -510,9 +510,9 @@ export default function FAQPage() {
             </div>
 
             <div className="flex flex-col gap-5">
-              <div className="overflow-hidden rounded-[30px] border border-slate-200 bg-[linear-gradient(145deg,#0f172a,#183552)] p-6 text-white shadow-[0_28px_74px_-44px_rgba(15,23,42,0.75)] sm:p-7">
+              <div className="overflow-hidden rounded-[24px] border border-slate-200 bg-[linear-gradient(145deg,#0f172a,#183552)] p-4 text-white shadow-[0_28px_74px_-44px_rgba(15,23,42,0.75)] sm:rounded-[30px] sm:p-7">
                 <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-200">Helpful tips</p>
-                <h2 className="mt-3 text-[clamp(2rem,5vw,3rem)] font-black leading-[0.95] tracking-[-0.05em] text-white">
+                <h2 className="mt-3 text-[clamp(1.65rem,8vw,3rem)] font-black leading-[1] tracking-[-0.03em] text-white sm:leading-[0.95] sm:tracking-[-0.05em]">
                   A smoother quote request starts with better detail.
                 </h2>
 
@@ -527,9 +527,9 @@ export default function FAQPage() {
                 </div>
               </div>
 
-              <div className="overflow-hidden rounded-[30px] border border-slate-200 bg-[linear-gradient(135deg,#ffffff_0%,#f7fbff_100%)] p-6 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.32)] sm:p-7">
+              <div className="overflow-hidden rounded-[24px] border border-slate-200 bg-[linear-gradient(135deg,#ffffff_0%,#f7fbff_100%)] p-4 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.32)] sm:rounded-[30px] sm:p-7">
                 <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">Still need help?</p>
-                <h2 className="mt-3 text-[clamp(1.9rem,4vw,2.8rem)] font-black leading-[0.98] tracking-[-0.04em] text-slate-950">
+                <h2 className="mt-3 text-[clamp(1.6rem,7vw,2.8rem)] font-black leading-[1] tracking-[-0.025em] text-slate-950 sm:leading-[0.98] sm:tracking-[-0.04em]">
                   Start the process or talk with the team directly.
                 </h2>
                 <p className="mt-4 text-sm leading-7 text-slate-600 sm:text-base">
@@ -563,11 +563,11 @@ export default function FAQPage() {
             </div>
           </div>
 
-          <div className="mt-8 overflow-hidden rounded-[32px] border border-slate-200 bg-white/95 p-5 shadow-[0_28px_80px_-52px_rgba(15,23,42,0.35)] sm:p-7">
+          <div className="mt-8 overflow-hidden rounded-[24px] border border-slate-200 bg-white/95 p-4 shadow-[0_28px_80px_-52px_rgba(15,23,42,0.35)] sm:rounded-[32px] sm:p-7">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">FAQ search history</p>
-                <h2 className="mt-3 text-[clamp(2rem,5vw,3.4rem)] font-black leading-[0.95] tracking-[-0.05em] text-slate-950">
+                <h2 className="mt-3 text-[clamp(1.65rem,8vw,3.4rem)] font-black leading-[1] tracking-[-0.03em] text-slate-950 sm:leading-[0.95] sm:tracking-[-0.05em]">
                   Recent topics you looked up.
                 </h2>
               </div>
@@ -617,9 +617,9 @@ export default function FAQPage() {
                 );
                 })
               ) : (
-                <div className="rounded-[30px] border border-dashed border-slate-300 bg-[linear-gradient(135deg,#ffffff_0%,#f8fbff_100%)] p-8 text-center">
+                <div className="rounded-[24px] border border-dashed border-slate-300 bg-[linear-gradient(135deg,#ffffff_0%,#f8fbff_100%)] p-5 text-center sm:rounded-[30px] sm:p-8">
                   <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">No history yet</p>
-                  <h3 className="mt-3 text-3xl font-black tracking-[-0.04em] text-slate-950">Search a question and it will appear here.</h3>
+                  <h3 className="mt-3 text-2xl font-black tracking-[-0.03em] text-slate-950 sm:text-3xl sm:tracking-[-0.04em]">Search a question and it will appear here.</h3>
                   <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-slate-600 sm:text-base">
                     Once someone searches in the FAQ bar or opens a suggested result, we keep that topic here for easy revisiting later on the page.
                   </p>

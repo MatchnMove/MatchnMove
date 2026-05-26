@@ -73,7 +73,7 @@ export function Nav() {
       <div className="container-shell flex items-center justify-between gap-3 py-2.5 sm:gap-4 sm:py-3">
         <Link
           href="/"
-          className="relative flex h-10 w-[168px] items-center sm:h-12 sm:w-[220px] lg:h-14 lg:w-[265px]"
+          className="relative flex h-9 w-[150px] items-center sm:h-12 sm:w-[220px] lg:h-14 lg:w-[265px]"
           aria-label="Match 'n Move home"
         >
           <Image
@@ -95,7 +95,7 @@ export function Nav() {
         <div className="flex items-center gap-2 sm:gap-3">
           <Link
             href="/mover/login"
-            className="whitespace-nowrap rounded-lg bg-accentOrange px-2.5 py-2 text-[0.95rem] font-semibold leading-none text-white shadow-sm sm:rounded sm:px-4 sm:py-2 sm:text-base"
+            className="hidden whitespace-nowrap rounded-lg bg-accentOrange px-2.5 py-2 text-[0.82rem] font-semibold leading-none text-white shadow-sm sm:inline-flex sm:rounded sm:px-4 sm:py-2 sm:text-base"
           >
             Mover Login
           </Link>
@@ -105,7 +105,7 @@ export function Nav() {
             aria-controls="mobile-nav"
             aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
             onClick={() => setMobileMenuOpen((open) => !open)}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 md:hidden"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 md:h-10 md:w-10 md:hidden"
           >
             {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
@@ -144,6 +144,13 @@ export function Nav() {
                     {link.label}
                   </Link>
                 ))}
+                <Link
+                  href="/mover/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="mt-2 inline-flex min-h-[46px] items-center justify-center rounded-2xl bg-accentOrange px-4 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-orange-500"
+                >
+                  Mover Login
+                </Link>
               </nav>
             </motion.div>
           </>
@@ -155,14 +162,14 @@ export function Nav() {
 
 export function Footer() {
   return (
-    <footer className="relative mt-16 overflow-hidden border-t border-slate-200 bg-[linear-gradient(180deg,#eef5fc_0%,#e6eef8_22%,#dce7f3_100%)]">
+    <footer className="relative mt-10 overflow-hidden border-t border-slate-200 bg-[linear-gradient(180deg,#eef5fc_0%,#e6eef8_22%,#dce7f3_100%)] sm:mt-16">
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute left-[-4%] top-10 h-40 w-40 rounded-full bg-sky-200/55 blur-3xl sm:h-64 sm:w-64" />
         <div className="absolute right-[-2%] top-20 h-44 w-44 rounded-full bg-orange-100/70 blur-3xl sm:h-72 sm:w-72" />
         <div className="absolute inset-x-0 top-0 h-32 bg-[linear-gradient(180deg,rgba(255,255,255,0.55),transparent)]" />
       </div>
 
-      <div className="relative py-12 sm:py-14 lg:py-16">
+      <div className="relative py-10 sm:py-14 lg:py-16">
         <div className="container-shell">
           <div className="grid gap-8 border-b border-slate-300/70 pb-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-end lg:gap-12 lg:pb-12">
             <div className="max-w-[42rem]">
@@ -170,7 +177,7 @@ export function Footer() {
                 <Sparkles className="h-4 w-4" />
                 Match &apos;n Move
               </p>
-              <h2 className="mt-4 max-w-[12ch] text-[clamp(2.3rem,6vw,4.4rem)] font-black leading-[0.92] tracking-[-0.06em] text-slate-950">
+              <h2 className="mt-4 max-w-[13ch] text-[clamp(2rem,9vw,4.4rem)] font-black leading-[0.96] tracking-[-0.035em] text-slate-950 sm:max-w-[12ch] sm:leading-[0.92] sm:tracking-[-0.06em]">
                 Plan the move. Book with confidence.
               </h2>
               <p className="mt-4 max-w-[36rem] text-sm leading-7 text-slate-600 sm:text-base">

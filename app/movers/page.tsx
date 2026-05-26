@@ -17,7 +17,7 @@ export default async function MoversPage() {
 
   return (
     <SiteShell>
-      <section className="relative overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.18),transparent_28%),radial-gradient(circle_at_82%_20%,rgba(34,211,238,0.12),transparent_22%),linear-gradient(180deg,#06111f_0%,#081425_34%,#091423_68%,#07101c_100%)] py-10 text-white sm:py-18 lg:py-24">
+      <section className="relative overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.18),transparent_28%),radial-gradient(circle_at_82%_20%,rgba(34,211,238,0.12),transparent_22%),linear-gradient(180deg,#06111f_0%,#081425_34%,#091423_68%,#07101c_100%)] py-8 text-white sm:py-18 lg:py-24">
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute left-[7%] top-12 h-44 w-44 rounded-full bg-sky-400/10 blur-[120px]" />
           <div className="absolute right-[9%] top-24 h-56 w-56 rounded-full bg-cyan-300/10 blur-[140px]" />
@@ -25,14 +25,14 @@ export default async function MoversPage() {
         </div>
 
         <div className="container-shell relative">
-          <div className="overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.04))] p-4 shadow-[0_40px_100px_-52px_rgba(2,6,23,0.85)] backdrop-blur-xl sm:rounded-[34px] sm:p-8 lg:p-10">
+          <div className="overflow-hidden rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.04))] p-4 shadow-[0_40px_100px_-52px_rgba(2,6,23,0.85)] backdrop-blur-xl sm:rounded-[34px] sm:p-8 lg:p-10">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
               <div className="max-w-3xl">
                 <p className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.06] px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-sky-100/80 sm:text-sm">
                   <ShieldCheck className="h-4 w-4" />
                   Trusted movers
                 </p>
-                <h1 className="mt-4 max-w-[10ch] text-[clamp(2.25rem,10vw,5rem)] font-black leading-[0.92] tracking-[-0.06em] text-white sm:mt-5 sm:max-w-none">
+                <h1 className="mt-4 max-w-[12ch] text-[clamp(2.05rem,10vw,5rem)] font-black leading-[0.98] tracking-[-0.035em] text-white sm:mt-5 sm:max-w-none sm:leading-[0.92] sm:tracking-[-0.06em]">
                   Browse trusted movers on Match &apos;n Move
                 </h1>
                 <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-300 sm:mt-5 sm:text-base sm:leading-7">
@@ -43,7 +43,7 @@ export default async function MoversPage() {
 
               <Link
                 href="/quote"
-                className="inline-flex min-h-[46px] items-center justify-center gap-2 rounded-2xl border border-white/12 bg-white/[0.08] px-5 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:border-sky-200/30 hover:bg-white/[0.12] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 sm:min-h-[50px] sm:px-6"
+                className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-white/12 bg-white/[0.08] px-5 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:border-sky-200/30 hover:bg-white/[0.12] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 sm:min-h-[50px] sm:w-auto sm:rounded-2xl sm:px-6"
               >
                 Request quotes
                 <ArrowRight className="h-4 w-4" />

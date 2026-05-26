@@ -77,7 +77,7 @@ function StepCard({
       ring: "border-white/35 bg-white/[0.06] text-white",
       title: "text-white",
       number: "text-white",
-      scale: 1.03,
+      scale: 1.015,
       opacity: 1,
       y: -2,
     },
@@ -86,7 +86,7 @@ function StepCard({
       ring: "border-white/15 bg-white/[0.04] text-white/90",
       title: "text-slate-100",
       number: "text-white/85",
-      scale: 0.99,
+      scale: 1,
       opacity: 0.8,
       y: 0,
     },
@@ -95,7 +95,7 @@ function StepCard({
       ring: "border-white/10 bg-white/[0.04] text-slate-400",
       title: "text-slate-400",
       number: "text-slate-500",
-      scale: 0.96,
+      scale: 0.98,
       opacity: 0.58,
       y: 6,
     },
@@ -105,15 +105,15 @@ function StepCard({
     <motion.article
       animate={{ scale: stateClasses.scale, opacity: stateClasses.opacity, y: stateClasses.y }}
       transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-      className={`rounded-[28px] border px-5 py-5 backdrop-blur-xl md:px-6 md:py-6 ${stateClasses.card}`}
+      className={`rounded-[22px] border px-4 py-4 backdrop-blur-xl md:rounded-[28px] md:px-6 md:py-6 ${stateClasses.card}`}
     >
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3 md:gap-4">
         <div
-          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border text-base font-semibold md:h-12 md:w-12 ${stateClasses.ring}`}
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border text-sm font-semibold md:h-12 md:w-12 md:rounded-2xl md:text-base ${stateClasses.ring}`}
         >
           {number}
         </div>
-        <h3 className={`text-lg font-semibold tracking-[-0.02em] md:text-[1.35rem] ${stateClasses.title}`}>{title}</h3>
+        <h3 className={`text-base font-semibold tracking-[-0.01em] md:text-[1.35rem] md:tracking-[-0.02em] ${stateClasses.title}`}>{title}</h3>
       </div>
     </motion.article>
   );
@@ -143,7 +143,7 @@ function BenefitCard({
   const cardRef = useRef<HTMLDivElement | null>(null);
   const isInView = useInView(cardRef, { once: true, margin: "-15% 0px -10% 0px" });
   const isInteractive = Boolean(href);
-  const cardClassName = `group relative h-full overflow-hidden rounded-[28px] border bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.04))] px-5 py-5 backdrop-blur-xl sm:px-6 sm:py-6 ${
+  const cardClassName = `group relative h-full overflow-hidden rounded-[22px] border bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.04))] px-4 py-4 backdrop-blur-xl sm:rounded-[28px] sm:px-6 sm:py-6 ${
     isInteractive
       ? "cursor-pointer border-white/12 transition duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#091423]"
       : "border-white/12"
@@ -154,18 +154,18 @@ function BenefitCard({
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.05),transparent_42%,rgba(255,255,255,0.03))] opacity-90 transition duration-500 group-hover:opacity-100" />
       <div className={`pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-br ${accent} opacity-90 blur-2xl`} />
       <div className="pointer-events-none absolute -right-12 bottom-0 h-24 w-24 rounded-full bg-white/5 blur-3xl" />
-      <div className="relative flex min-h-[180px] flex-col justify-between sm:min-h-[220px]">
+      <div className="relative flex min-h-[150px] flex-col justify-between sm:min-h-[220px]">
         <div className="flex items-start justify-between gap-4">
-          <div className={`inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-white/12 bg-white/[0.08] shadow-[0_12px_30px_-18px_rgba(15,23,42,0.9)] ${iconColor}`}>
-            <Icon className="h-7 w-7" strokeWidth={2.1} />
+          <div className={`inline-flex h-11 w-11 items-center justify-center rounded-xl border border-white/12 bg-white/[0.08] shadow-[0_12px_30px_-18px_rgba(15,23,42,0.9)] sm:h-14 sm:w-14 sm:rounded-2xl ${iconColor}`}>
+            <Icon className="h-5 w-5 sm:h-7 sm:w-7" strokeWidth={2.1} />
           </div>
-          <span className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-white/65">
+          <span className="rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[0.64rem] font-semibold uppercase tracking-[0.14em] text-white/65 sm:px-3 sm:text-[0.7rem] sm:tracking-[0.18em]">
             {pill}
           </span>
         </div>
 
-        <div className="mt-10 sm:mt-12">
-          <h3 className="max-w-[11ch] text-[1.9rem] font-semibold leading-[0.96] tracking-[-0.04em] text-white sm:text-[2.2rem]">
+        <div className="mt-7 sm:mt-12">
+          <h3 className="max-w-[11ch] text-[1.55rem] font-semibold leading-[1] tracking-[-0.025em] text-white sm:text-[2.2rem] sm:leading-[0.96] sm:tracking-[-0.04em]">
             {title}
           </h3>
           <p className="mt-3 max-w-[26ch] text-sm leading-6 text-slate-300 sm:text-[0.98rem]">
@@ -255,12 +255,12 @@ export function ScrollJourneySection() {
       <div className="pointer-events-none absolute left-[12%] top-28 h-44 w-44 rounded-full bg-blue-400/10 blur-[120px]" />
       <div className="pointer-events-none absolute right-[10%] top-1/3 h-56 w-56 rounded-full bg-cyan-300/10 blur-[140px]" />
 
-      <div className="relative mx-auto max-w-[1240px] px-4 py-16 sm:px-6 sm:py-24 lg:px-8 lg:py-28">
-        <div ref={timelineRef} className="grid gap-16 lg:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)] lg:gap-12">
+      <div className="relative mx-auto max-w-[1240px] px-4 py-12 sm:px-6 sm:py-24 lg:px-8 lg:py-28">
+        <div ref={timelineRef} className="grid gap-10 lg:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)] lg:gap-12">
           <motion.div style={{ opacity: headerOpacity, y: headerY }} className="lg:sticky lg:top-28 lg:self-start">
             <div className="max-w-[28rem]">
               <p className="text-sm font-semibold uppercase tracking-[0.26em] text-blue-200/75">Steps</p>
-              <h2 className="mt-5 max-w-[11ch] text-[clamp(2.15rem,8vw,4.75rem)] font-black leading-[0.92] tracking-[-0.05em] text-white sm:max-w-none">
+              <h2 className="mt-4 max-w-[12ch] text-[clamp(2rem,10vw,4.75rem)] font-black leading-[0.96] tracking-[-0.035em] text-white sm:mt-5 sm:max-w-none sm:leading-[0.92] sm:tracking-[-0.05em]">
                 Scroll through the moving journey.
               </h2>
             </div>
@@ -273,7 +273,7 @@ export function ScrollJourneySection() {
               className="absolute left-[21px] top-2 w-[3px] origin-top rounded-full bg-[linear-gradient(180deg,rgba(255,210,182,0.35),rgba(222,122,58,0.95),rgba(255,190,144,0.45))] shadow-[0_0_28px_rgba(222,122,58,0.55)] md:left-[26px]"
             />
 
-            <div className="space-y-6 md:space-y-7">
+            <div className="space-y-4 md:space-y-7">
               {steps.map((step, index) => (
                 <div key={step.number} className="relative pl-14 md:pl-20">
                   <div className="absolute left-[14px] top-6 h-4 w-4 rounded-full border border-blue-200/35 bg-slate-950 md:left-[19px]" />
@@ -289,15 +289,15 @@ export function ScrollJourneySection() {
           </div>
         </div>
 
-        <div className="mt-20 border-t border-white/8 pt-16 sm:mt-28 sm:pt-24">
+        <div className="mt-14 border-t border-white/8 pt-10 sm:mt-28 sm:pt-24">
           <div className="max-w-[40rem]">
             <p className="text-sm font-semibold uppercase tracking-[0.26em] text-blue-200/75">Benefits</p>
-            <h2 className="mt-5 text-[clamp(2.05rem,7.6vw,4rem)] font-black leading-[0.94] tracking-[-0.05em] text-white">
+            <h2 className="mt-4 text-[clamp(1.95rem,9vw,4rem)] font-black leading-[0.98] tracking-[-0.035em] text-white sm:mt-5 sm:leading-[0.94] sm:tracking-[-0.05em]">
               Why choose us?
             </h2>
           </div>
 
-          <div className="mt-10 grid gap-4 sm:mt-12 sm:gap-5 md:grid-cols-3">
+          <div className="mt-7 grid gap-3 sm:mt-12 sm:gap-5 md:grid-cols-3">
             {benefits.map((benefit, index) => (
               <BenefitCard key={benefit.title} index={index} {...benefit} />
             ))}

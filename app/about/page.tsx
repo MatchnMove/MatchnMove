@@ -62,7 +62,7 @@ export default async function AboutPage() {
 
   return (
     <SiteShell>
-      <section className="relative overflow-hidden bg-[linear-gradient(180deg,#edf4fb_0%,#f7fafc_38%,#ffffff_100%)] py-14 sm:py-16 lg:py-20">
+      <section className="relative overflow-hidden bg-[linear-gradient(180deg,#edf4fb_0%,#f7fafc_38%,#ffffff_100%)] py-10 sm:py-16 lg:py-20">
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute left-[4%] top-12 h-40 w-40 rounded-full bg-sky-200/55 blur-3xl sm:h-64 sm:w-64" />
           <div className="absolute right-[8%] top-16 h-44 w-44 rounded-full bg-emerald-100/75 blur-3xl sm:h-72 sm:w-72" />
@@ -70,14 +70,14 @@ export default async function AboutPage() {
         </div>
 
         <div className="container-shell relative">
-          <div className="overflow-hidden rounded-[34px] border border-slate-200/80 bg-[linear-gradient(135deg,rgba(12,21,38,0.96),rgba(37,73,108,0.94))] px-6 py-7 text-white shadow-[0_30px_90px_-48px_rgba(15,23,42,0.55)] sm:px-8 sm:py-9 lg:px-12 lg:py-12">
-            <div className="grid gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(300px,0.7fr)] lg:items-end">
+          <div className="overflow-hidden rounded-[24px] border border-slate-200/80 bg-[linear-gradient(135deg,rgba(12,21,38,0.96),rgba(37,73,108,0.94))] px-4 py-5 text-white shadow-[0_30px_90px_-48px_rgba(15,23,42,0.55)] sm:rounded-[34px] sm:px-8 sm:py-9 lg:px-12 lg:py-12">
+            <div className="grid gap-5 sm:gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(300px,0.7fr)] lg:items-end">
               <div className="max-w-3xl">
                 <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-sky-100 backdrop-blur sm:text-sm">
                   <Sparkles className="h-4 w-4" />
                   About Match &apos;n Move
                 </p>
-                <h1 className="mt-5 text-[clamp(2.8rem,8vw,5.4rem)] font-black leading-[0.92] tracking-[-0.06em] text-white">
+                <h1 className="mt-4 text-[clamp(2.15rem,10vw,5.4rem)] font-black leading-[0.98] tracking-[-0.035em] text-white sm:mt-5 sm:leading-[0.92] sm:tracking-[-0.06em]">
                   Making moving feel more modern, calm, and connected.
                 </h1>
                 <p className="mt-5 max-w-2xl text-sm leading-7 text-slate-200 sm:text-base">
@@ -86,18 +86,18 @@ export default async function AboutPage() {
                 </p>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
-                <div className="rounded-[24px] border border-white/10 bg-white/[0.08] px-4 py-4 backdrop-blur">
+              <div className="grid gap-2.5 sm:grid-cols-3 sm:gap-3 lg:grid-cols-1">
+                <div className="rounded-[18px] border border-white/10 bg-white/[0.08] px-4 py-3 backdrop-blur sm:rounded-[24px] sm:py-4">
                   <p className="text-xs uppercase tracking-[0.18em] text-sky-100/75">Mover profiles</p>
                   <p className="mt-2 text-3xl font-black tracking-[-0.05em] text-white">{movers.length}</p>
                   <p className="mt-1 text-sm text-slate-300">Companies currently in the network.</p>
                 </div>
-                <div className="rounded-[24px] border border-white/10 bg-white/[0.08] px-4 py-4 backdrop-blur">
+                <div className="rounded-[18px] border border-white/10 bg-white/[0.08] px-4 py-3 backdrop-blur sm:rounded-[24px] sm:py-4">
                   <p className="text-xs uppercase tracking-[0.18em] text-sky-100/75">Successful moves</p>
                   <p className="mt-2 text-3xl font-black tracking-[-0.05em] text-white">{successfulMoves}</p>
                   <p className="mt-1 text-sm text-slate-300">Live count based on leads taken by movers.</p>
                 </div>
-                <div className="rounded-[24px] border border-white/10 bg-white/[0.08] px-4 py-4 backdrop-blur">
+                <div className="rounded-[18px] border border-white/10 bg-white/[0.08] px-4 py-3 backdrop-blur sm:rounded-[24px] sm:py-4">
                   <p className="text-xs uppercase tracking-[0.18em] text-sky-100/75">Avg. experience</p>
                   <p className="mt-2 text-3xl font-black tracking-[-0.05em] text-white">{averageExperience || 0}+</p>
                   <p className="mt-1 text-sm text-slate-300">Years operating across listed movers.</p>
@@ -106,12 +106,12 @@ export default async function AboutPage() {
             </div>
           </div>
 
-          <div className="mt-10 grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(340px,0.95fr)] lg:items-start">
-            <div className="overflow-hidden rounded-[30px] border border-slate-200 bg-white/90 p-6 shadow-[0_26px_70px_-46px_rgba(15,23,42,0.35)] backdrop-blur sm:p-7">
+          <div className="mt-8 grid gap-5 sm:mt-10 sm:gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(340px,0.95fr)] lg:items-start">
+            <div className="overflow-hidden rounded-[24px] border border-slate-200 bg-white/90 p-4 shadow-[0_26px_70px_-46px_rgba(15,23,42,0.35)] backdrop-blur sm:rounded-[30px] sm:p-7">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">Our team</p>
-                  <h2 className="mt-3 text-[clamp(2.1rem,5vw,3.5rem)] font-black leading-[0.95] tracking-[-0.05em] text-slate-950">
+                  <h2 className="mt-3 text-[clamp(1.75rem,8vw,3.5rem)] font-black leading-[1] tracking-[-0.03em] text-slate-950 sm:leading-[0.95] sm:tracking-[-0.05em]">
                     Faces coming soon, direction already clear.
                   </h2>
                 </div>
@@ -121,14 +121,14 @@ export default async function AboutPage() {
                 </div>
               </div>
 
-              <div className="mt-7 grid gap-4 md:grid-cols-3">
+              <div className="mt-5 grid gap-3 sm:mt-7 sm:gap-4 md:grid-cols-3">
                 {teamCards.map((member, index) => (
                   <article
                     key={member.name}
-                    className="group relative overflow-hidden rounded-[26px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-[0_24px_48px_-34px_rgba(15,23,42,0.35)]"
+                    className="group relative overflow-hidden rounded-[20px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] p-4 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-[0_24px_48px_-34px_rgba(15,23,42,0.35)] sm:rounded-[26px] sm:p-5"
                   >
                     <div className="absolute inset-x-0 top-0 h-1 bg-[linear-gradient(90deg,#38bdf8,#22c55e)] opacity-80" />
-                    <div className="flex h-40 items-center justify-center rounded-[22px] border border-dashed border-slate-300 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.12),transparent_55%),linear-gradient(180deg,#f8fafc,#eef6ff)]">
+                    <div className="flex h-32 items-center justify-center rounded-[18px] border border-dashed border-slate-300 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.12),transparent_55%),linear-gradient(180deg,#f8fafc,#eef6ff)] sm:h-40 sm:rounded-[22px]">
                       <div className="text-center">
                         <p className="text-[0.72rem] font-semibold uppercase tracking-[0.2em] text-slate-400">
                           Team slot 0{index + 1}
@@ -144,9 +144,9 @@ export default async function AboutPage() {
               </div>
             </div>
 
-            <div className="overflow-hidden rounded-[30px] border border-slate-200 bg-[linear-gradient(145deg,#0f172a,#17324f)] p-6 text-white shadow-[0_28px_74px_-44px_rgba(15,23,42,0.75)] sm:p-7">
+            <div className="overflow-hidden rounded-[24px] border border-slate-200 bg-[linear-gradient(145deg,#0f172a,#17324f)] p-4 text-white shadow-[0_28px_74px_-44px_rgba(15,23,42,0.75)] sm:rounded-[30px] sm:p-7">
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-200">Network pulse</p>
-              <h2 className="mt-3 text-[clamp(2rem,5vw,3.2rem)] font-black leading-[0.95] tracking-[-0.05em] text-white">
+              <h2 className="mt-3 text-[clamp(1.75rem,8vw,3.2rem)] font-black leading-[1] tracking-[-0.03em] text-white sm:leading-[0.95] sm:tracking-[-0.05em]">
                 A platform that grows alongside the movers using it.
               </h2>
 
@@ -216,13 +216,13 @@ export default async function AboutPage() {
               return (
                 <article
                   key={card.title}
-                  className="rounded-[30px] border border-slate-200 bg-[linear-gradient(135deg,#ffffff_0%,#f8fbff_100%)] p-6 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.3)] sm:p-7"
+                  className="rounded-[24px] border border-slate-200 bg-[linear-gradient(135deg,#ffffff_0%,#f8fbff_100%)] p-4 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.3)] sm:rounded-[30px] sm:p-7"
                 >
                   <div className="inline-flex rounded-2xl bg-sky-50 p-3 text-sky-700">
                     <Icon className="h-5 w-5" />
                   </div>
                   <p className="mt-5 text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">{card.eyebrow}</p>
-                  <h3 className="mt-3 max-w-[14ch] text-[clamp(1.9rem,4vw,3rem)] font-black leading-[0.98] tracking-[-0.04em] text-slate-950">
+                  <h3 className="mt-3 max-w-[16ch] text-[clamp(1.55rem,7vw,3rem)] font-black leading-[1] tracking-[-0.025em] text-slate-950 sm:max-w-[14ch] sm:leading-[0.98] sm:tracking-[-0.04em]">
                     {card.title}
                   </h3>
                   <p className="mt-4 max-w-[40rem] text-sm leading-7 text-slate-600 sm:text-base">{card.copy}</p>
@@ -232,11 +232,11 @@ export default async function AboutPage() {
           </div>
 
           <section className="mt-12">
-            <div className="mb-8 overflow-hidden rounded-[32px] border border-slate-200 bg-[linear-gradient(145deg,#0f172a,#17324f)] p-6 text-white shadow-[0_30px_80px_-46px_rgba(15,23,42,0.7)] sm:p-7 lg:p-8">
+            <div className="mb-6 overflow-hidden rounded-[24px] border border-slate-200 bg-[linear-gradient(145deg,#0f172a,#17324f)] p-4 text-white shadow-[0_30px_80px_-46px_rgba(15,23,42,0.7)] sm:mb-8 sm:rounded-[32px] sm:p-7 lg:p-8">
               <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
                 <div className="max-w-3xl">
                   <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-200">For moving companies</p>
-                  <h2 className="mt-3 text-[clamp(2.1rem,5vw,3.8rem)] font-black leading-[0.94] tracking-[-0.05em] text-white">
+                  <h2 className="mt-3 text-[clamp(1.8rem,8vw,3.8rem)] font-black leading-[1] tracking-[-0.03em] text-white sm:leading-[0.94] sm:tracking-[-0.05em]">
                     Want to join the Match &apos;n Move network?
                   </h2>
                   <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">
@@ -257,7 +257,7 @@ export default async function AboutPage() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">Partner wall</p>
-                <h2 className="mt-3 text-[clamp(2.3rem,6vw,4.2rem)] font-black leading-[0.94] tracking-[-0.05em] text-slate-950">
+                <h2 className="mt-3 text-[clamp(1.85rem,8vw,4.2rem)] font-black leading-[1] tracking-[-0.03em] text-slate-950 sm:leading-[0.94] sm:tracking-[-0.05em]">
                   Businesses that grow with us show up here.
                 </h2>
                 <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base">
@@ -297,11 +297,11 @@ export default async function AboutPage() {
                 ))}
               </div>
             ) : (
-              <div className="mt-6 overflow-hidden rounded-[30px] border border-dashed border-slate-300 bg-[linear-gradient(135deg,#ffffff_0%,#f7fbff_100%)] p-8 shadow-[0_18px_46px_-36px_rgba(15,23,42,0.22)]">
+              <div className="mt-6 overflow-hidden rounded-[24px] border border-dashed border-slate-300 bg-[linear-gradient(135deg,#ffffff_0%,#f7fbff_100%)] p-5 shadow-[0_18px_46px_-36px_rgba(15,23,42,0.22)] sm:rounded-[30px] sm:p-8">
                 <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
                   <div className="max-w-2xl">
                     <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">No partner logos yet</p>
-                    <h3 className="mt-3 text-[clamp(1.9rem,4vw,3rem)] font-black leading-[0.98] tracking-[-0.04em] text-slate-950">
+                    <h3 className="mt-3 text-[clamp(1.55rem,7vw,3rem)] font-black leading-[1] tracking-[-0.025em] text-slate-950 sm:leading-[0.98] sm:tracking-[-0.04em]">
                       The showcase will build itself as businesses join.
                     </h3>
                     <p className="mt-4 text-sm leading-7 text-slate-600 sm:text-base">
