@@ -15,10 +15,21 @@ export function MatchLoadingScreen({ className = "" }: MatchLoadingScreenProps) 
       <BackgroundTexture />
 
       <section className="relative z-10 flex w-full max-w-[620px] flex-col items-center">
-        <div className="relative grid size-[176px] place-items-center sm:size-[214px]">
+        <div className="relative grid size-[190px] place-items-center sm:size-[232px]">
           <div className="match-loader-glow absolute inset-0 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.96)_0%,rgba(236,249,250,0.78)_42%,rgba(255,176,43,0.12)_66%,transparent_72%)] blur-[2px]" />
-          <OrbitRing className="absolute inset-0 text-[#14b8a6]/55" direction="normal" />
-          <OrbitRing className="absolute inset-[18px] text-[#f59e0b]/45" direction="reverse" />
+          <OrbitRing
+            className="match-loader-orbit--outer absolute inset-0 text-[#14b8a6]/60"
+            radius={101}
+            start={{ x: 49, y: 35 }}
+            end={{ x: 207, y: 105 }}
+            dot={{ x: 207, y: 105 }}
+          />
+          <OrbitRing
+            className="match-loader-orbit--middle absolute inset-[24px] text-[#f59e0b]/48"
+            radius={78}
+            start={{ x: 37, y: 118 }}
+            end={{ x: 153, y: 43 }}
+          />
           <div className="match-loader-logo-shell relative grid size-[86px] place-items-center rounded-[24px] bg-white/80 ring-1 ring-white/80 backdrop-blur-xl sm:size-[104px] sm:rounded-[28px]">
             <Image
               src="/logo-mark.png"
@@ -87,18 +98,34 @@ function BackgroundTexture() {
   );
 }
 
-function OrbitRing({ className, direction }: { className: string; direction: "normal" | "reverse" }) {
+type OrbitRingProps = {
+  className: string;
+  radius: number;
+  start: {
+    x: number;
+    y: number;
+  };
+  end: {
+    x: number;
+    y: number;
+  };
+  dot?: {
+    x: number;
+    y: number;
+  };
+};
+
+function OrbitRing({ className, radius, start, end, dot }: OrbitRingProps) {
   return (
-    <svg
-      className={`match-loader-orbit ${direction === "reverse" ? "match-loader-orbit--reverse" : ""} ${className}`}
-      viewBox="0 0 220 220"
-      fill="none"
-      aria-hidden="true"
-    >
-      <circle cx="110" cy="110" r="95" stroke="currentColor" strokeWidth="1" opacity="0.16" />
-      <path d="M41 45A94 94 0 0 1 174 37" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      <path d="M182 77A94 94 0 0 1 151 193" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      <circle cx="176" cy="38" r="2.8" fill="currentColor" opacity="0.7" />
+    <svg className={`match-loader-orbit ${className}`} viewBox="0 0 220 220" fill="none" aria-hidden="true">
+      <circle cx="110" cy="110" r={radius} stroke="currentColor" strokeWidth="1" opacity="0.12" />
+      <path
+        d={`M${start.x} ${start.y}A${radius} ${radius} 0 0 1 ${end.x} ${end.y}`}
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      {dot ? <circle cx={dot.x} cy={dot.y} r="2.6" fill="currentColor" opacity="0.62" /> : null}
     </svg>
   );
 }

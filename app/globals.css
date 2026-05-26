@@ -189,12 +189,12 @@ body { @apply overflow-x-hidden bg-slate-100 text-slate-900; }
 
 .match-loader-orbit {
   transform-origin: 50% 50%;
-  animation: match-loader-orbit 9s linear infinite;
+  animation: match-loader-orbit 10.5s linear infinite;
 }
 
-.match-loader-orbit--reverse {
+.match-loader-orbit--middle {
   animation-direction: reverse;
-  animation-duration: 12s;
+  animation-duration: 13.5s;
 }
 
 .match-loader-route {
