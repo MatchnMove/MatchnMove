@@ -6,6 +6,24 @@ body { @apply overflow-x-hidden bg-slate-100 text-slate-900; }
 .container-shell { @apply mx-auto max-w-6xl px-4; }
 .card { @apply rounded-xl border bg-white shadow-sm; }
 
+/* Keep oversized black headings from clipping heavy glyphs or stacking too tightly. */
+:where(h1, h2, h3)[class*="font-black"][class*="text-[clamp"],
+:where(h1, h2, h3)[class*="font-black"][class*="text-3xl"],
+:where(h1, h2, h3)[class*="font-black"][class*="text-4xl"] {
+  overflow: visible;
+  padding-block: 0.04em;
+  padding-inline-end: 0.04em;
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+
+:where(h1, h2, h3) :where([class*="bg-clip-text"][class*="text-transparent"]) {
+  padding-inline-end: 0.06em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
 @keyframes hero-float-slow {
   0%, 100% { transform: translateY(0px); }
   50% { transform: translateY(-7px); }
