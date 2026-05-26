@@ -147,7 +147,6 @@ body { @apply overflow-x-hidden bg-slate-100 text-slate-900; }
 
 .match-loader-screen--entry .match-loader-logo,
 .match-loader-screen--entry .match-loader-glow,
-.match-loader-screen--entry .match-loader-orbit,
 .match-loader-screen--entry .match-loader-dot {
   animation-iteration-count: 1;
 }
@@ -185,16 +184,6 @@ body { @apply overflow-x-hidden bg-slate-100 text-slate-900; }
 
 .match-loader-logo {
   animation: match-loader-logo-float 2.8s ease-in-out infinite;
-}
-
-.match-loader-orbit {
-  transform-origin: 50% 50%;
-  animation: match-loader-orbit 10.5s linear infinite;
-}
-
-.match-loader-orbit--middle {
-  animation-direction: reverse;
-  animation-duration: 13.5s;
 }
 
 .match-loader-route {
@@ -240,12 +229,6 @@ body { @apply overflow-x-hidden bg-slate-100 text-slate-900; }
   50% {
     opacity: 1;
     transform: scale(1.04);
-  }
-}
-
-@keyframes match-loader-orbit {
-  to {
-    transform: rotate(360deg);
   }
 }
 
@@ -315,7 +298,6 @@ body { @apply overflow-x-hidden bg-slate-100 text-slate-900; }
   .match-loader-screen--leaving > section,
   .match-loader-logo,
   .match-loader-glow,
-  .match-loader-orbit,
   .match-loader-route,
   .match-loader-dot {
     animation: none;
