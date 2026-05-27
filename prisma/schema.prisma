@@ -21,6 +21,7 @@ enum LeadStatus {
   WON
   LOST
   ARCHIVED
+  EXPIRED
 }
 
 enum PaymentStatus {
@@ -144,23 +145,30 @@ model QuoteRequest {
 }
 
 model Lead {
-  id               String             @id @default(cuid())
-  quoteRequestId   String
-  moverCompanyId   String
-  status           LeadStatus         @default(NEW)
-  price            Int
-  purchasedAt      DateTime?
-  createdAt        DateTime           @default(now())
-  quoteRequest     QuoteRequest       @relation(fields: [quoteRequestId], references: [id])
-  moverCompany     MoverCompany       @relation(fields: [moverCompanyId], references: [id])
-  payment          Payment?
-  auditLogs        AuditLog[]
-  review           Review?
-  reviewSurveyInvite ReviewSurveyInvite?
+  id                  String              @id @default(cuid())
+  quoteRequestId      String
+  moverCompanyId      String
+  status              LeadStatus          @default(NEW)
+  price               Int
+  purchasedAt         DateTime?
+  expiresAt           DateTime?
+  reminderSentAt      DateTime?
+  expiredAt           DateTime?
+  redistributedAt     DateTime?
+  redistributionRound Int                 @default(0)
+  createdAt           DateTime            @default(now())
+  quoteRequest        QuoteRequest        @relation(fields: [quoteRequestId], references: [id])
+  moverCompany        MoverCompany        @relation(fields: [moverCompanyId], references: [id])
+  payment             Payment?
+  auditLogs           AuditLog[]
+  review              Review?
+  reviewSurveyInvite  ReviewSurveyInvite?
 
   @@index([quoteRequestId])
   @@index([moverCompanyId, createdAt])
   @@index([moverCompanyId, status])
+  @@index([status, expiresAt])
+  @@index([reminderSentAt, createdAt])
 }
 
 model Review {
@@ -287,4 +295,3 @@ model EmailDelivery {
   @@index([recipient, createdAt])
   @@index([kind, status])
 }
-

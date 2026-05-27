@@ -31,7 +31,7 @@ function matchesServiceArea(serviceAreas: string[], lead: { fromCity: string; fr
 export default async function MoverDashboardPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ tab?: string; billing?: string }>;
+  searchParams?: Promise<{ tab?: string; billing?: string; lead?: string }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/mover/login");
@@ -144,6 +144,11 @@ export default async function MoverDashboardPage({
       price: lead.price,
       createdAt: lead.createdAt.toISOString(),
       purchasedAt: lead.purchasedAt?.toISOString() ?? null,
+      expiresAt: lead.expiresAt?.toISOString() ?? null,
+      reminderSentAt: lead.reminderSentAt?.toISOString() ?? null,
+      expiredAt: lead.expiredAt?.toISOString() ?? null,
+      redistributedAt: lead.redistributedAt?.toISOString() ?? null,
+      redistributionRound: lead.redistributionRound,
       paymentStatus: lead.payment?.status ?? "PENDING",
       paymentReference: lead.payment?.stripeCheckoutId ?? null,
       lastAction: lead.auditLogs[0]?.action ?? null,
@@ -171,5 +176,12 @@ export default async function MoverDashboardPage({
     })),
   };
 
-  return <MoverDashboardExperience mover={dashboardData} initialTab={resolvedSearchParams?.tab} billingState={resolvedSearchParams?.billing} />;
+  return (
+    <MoverDashboardExperience
+      mover={dashboardData}
+      initialTab={resolvedSearchParams?.tab}
+      initialLeadId={resolvedSearchParams?.lead}
+      billingState={resolvedSearchParams?.billing}
+    />
+  );
 }

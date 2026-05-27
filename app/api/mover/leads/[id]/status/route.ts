@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { isLeadUnlockable } from "@/lib/lead-lifecycle";
 import { revalidateAboutPage } from "@/lib/public-cache";
 import { sendReviewInviteForLeadCompletion } from "@/lib/reviews";
 import { leadStatusUpdateSchema } from "@/lib/validators";
@@ -30,6 +31,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   });
   if (!lead) {
     return NextResponse.json({ error: "Lead not found" }, { status: 404 });
+  }
+
+  if (lead.status === "EXPIRED" || (!isLeadUnlockable(lead.status) && !["PURCHASED", "CONTACTED", "WON", "LOST", "ARCHIVED"].includes(lead.status))) {
+    return NextResponse.json({ error: "This lead is no longer available to update." }, { status: 410 });
   }
 
   const nextStatus = parsed.data.status;

@@ -27,7 +27,26 @@ type ReviewSurveyEmailInput = {
   expiresAt: Date;
 };
 
-type EmailKind = "contact_notification" | "mover_verification" | "mover_password_reset" | "review_survey";
+type MoverLeadEmailInput = {
+  email: string;
+  moverName?: string | null;
+  moverCompanyName: string;
+  dashboardUrl: string;
+  customerName: string;
+  moveRoute: string;
+  moveDateLabel: string;
+  bedrooms: string;
+  price: number;
+  expiresAt: Date;
+};
+
+type EmailKind =
+  | "contact_notification"
+  | "mover_verification"
+  | "mover_password_reset"
+  | "review_survey"
+  | "mover_new_lead"
+  | "mover_lead_expiry_warning";
 
 type EmailMessage = {
   kind: EmailKind;
@@ -156,6 +175,22 @@ function getReviewEmailConfig() {
     process.env.DEFAULT_FROM_EMAIL,
     process.env.CONTACT_FROM_EMAIL,
     SITE_EMAILS.feedback,
+  ));
+
+  return {
+    configured: isSmtpConfigured() && Boolean(from),
+    from,
+  };
+}
+
+function getLeadEmailConfig() {
+  const from = getEffectiveFrom(getFirstConfiguredValue(
+    process.env.LEAD_FROM_EMAIL,
+    process.env.NOTIFICATIONS_FROM_EMAIL,
+    process.env.NO_REPLY_FROM_EMAIL,
+    process.env.DEFAULT_FROM_EMAIL,
+    process.env.CONTACT_FROM_EMAIL,
+    SITE_EMAILS.noReply,
   ));
 
   return {
@@ -645,11 +680,44 @@ export async function getEmailDiagnostics(limit = 10) {
       contactFrom: getContactNotificationConfig().from || null,
       authFrom: getAuthEmailConfig().from || null,
       reviewFrom: getReviewEmailConfig().from || null,
+      leadFrom: getLeadEmailConfig().from || null,
     },
     queue: {
       counts: Object.fromEntries(statusCounts.map((item) => [item.status, item._count._all])),
       recentDeliveries,
     },
+  };
+}
+
+function formatEmailCurrency(cents: number) {
+  return new Intl.NumberFormat("en-NZ", {
+    style: "currency",
+    currency: "NZD",
+    maximumFractionDigits: 0,
+  }).format(cents / 100);
+}
+
+function formatEmailDateTime(value: Date) {
+  return new Intl.DateTimeFormat("en-NZ", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Pacific/Auckland",
+  }).format(value);
+}
+
+function getMoverLeadTheme(): EmailTheme {
+  return {
+    accent: "#0ea5a4",
+    accentDark: "#0f766e",
+    accentSoft: "#99f6e4",
+    accentTint: "#f0fdfa",
+    background: "#fff7ed",
+    eyebrowBackground: "#e9fbf6",
+    eyebrowText: "#0f766e",
+    button: "#0f766e",
+    buttonShadow: "rgba(15,118,110,0.28)",
+    iconBackground: "#ccfbf1",
+    iconText: "#0f766e",
   };
 }
 
@@ -825,6 +893,140 @@ export async function sendMoverPasswordResetEmail(input: MoverAuthEmailInput) {
         label: "Reset password",
       },
       footerNote: "If you did not request a password reset, no action is needed and your current password remains unchanged.",
+    }),
+  };
+
+  return queueAndTrySend(message, config.configured);
+}
+
+export async function sendMoverNewLeadEmail(input: MoverLeadEmailInput) {
+  const config = getLeadEmailConfig();
+  const theme = getMoverLeadTheme();
+  const friendlyName = input.moverName?.trim() || input.moverCompanyName;
+  const expiryLabel = formatEmailDateTime(input.expiresAt);
+  const priceLabel = formatEmailCurrency(input.price);
+  const subject = `New Match 'n Move lead: ${input.moveRoute}`;
+  const bodyHtml = `
+    ${renderNoteBox(
+      `A new customer quote request is ready for <strong style="color:#071d3c;">${escapeHtml(input.moverCompanyName)}</strong>. Open it from the dashboard to view the customer contact details and start follow-up.`,
+      theme,
+    )}
+    ${renderDetailTable(`
+      ${renderDetailRow("Customer", input.customerName)}
+      ${renderDetailRow("Move", input.moveRoute)}
+      ${renderDetailRow("Move date", input.moveDateLabel)}
+      ${renderDetailRow("Move size", input.bedrooms)}
+      ${renderDetailRow("Lead price", priceLabel)}
+      ${renderDetailRow("Unlock by", expiryLabel)}
+    `)}
+  `;
+
+  const message: EmailMessage = {
+    kind: "mover_new_lead",
+    from: config.from,
+    to: input.email,
+    subject,
+    text: [
+      `Hi ${friendlyName},`,
+      "",
+      `A new Match 'n Move quote request is ready for ${input.moverCompanyName}.`,
+      "",
+      `Customer: ${input.customerName}`,
+      `Move: ${input.moveRoute}`,
+      `Move date: ${input.moveDateLabel}`,
+      `Move size: ${input.bedrooms}`,
+      `Lead price: ${priceLabel}`,
+      `Unlock by: ${expiryLabel}`,
+      "",
+      "Open the lead board:",
+      input.dashboardUrl,
+      "",
+      "If you are already signed in, this link will take you straight to the lead in your dashboard.",
+    ].join("\n"),
+    html: renderEmailShell({
+      theme,
+      preheader: `New ${input.moveRoute} lead available in your Match 'n Move dashboard.`,
+      eyebrow: "New lead",
+      title: "You have a new moving lead",
+      intro: `Hi ${friendlyName}, a new customer request has matched with your service area.`,
+      bodyHtml,
+      cta: {
+        href: input.dashboardUrl,
+        label: "Open lead board",
+      },
+      footerNote: "If you are already signed in, the dashboard link will open your lead board automatically.",
+    }),
+  };
+
+  return queueAndTrySend(message, config.configured);
+}
+
+export async function sendMoverLeadExpiryWarningEmail(input: MoverLeadEmailInput) {
+  const config = getLeadEmailConfig();
+  const theme: EmailTheme = {
+    accent: "#f97316",
+    accentDark: "#c2410c",
+    accentSoft: "#fed7aa",
+    accentTint: "#fff7ed",
+    background: "#fff7ed",
+    eyebrowBackground: "#fff1e6",
+    eyebrowText: "#c2410c",
+    button: "#ea580c",
+    buttonShadow: "rgba(234,88,12,0.30)",
+    iconBackground: "#ffedd5",
+    iconText: "#ea580c",
+  };
+  const friendlyName = input.moverName?.trim() || input.moverCompanyName;
+  const expiryLabel = formatEmailDateTime(input.expiresAt);
+  const priceLabel = formatEmailCurrency(input.price);
+  const subject = `24 hours left to open your Match 'n Move lead`;
+  const bodyHtml = `
+    ${renderNoteBox(
+      `This lead is still unopened. If it is not opened before <strong style="color:#071d3c;">${escapeHtml(expiryLabel)}</strong>, it will be redistributed to another mover in the system.`,
+      theme,
+    )}
+    ${renderDetailTable(`
+      ${renderDetailRow("Customer", input.customerName)}
+      ${renderDetailRow("Move", input.moveRoute)}
+      ${renderDetailRow("Move date", input.moveDateLabel)}
+      ${renderDetailRow("Move size", input.bedrooms)}
+      ${renderDetailRow("Lead price", priceLabel)}
+      ${renderDetailRow("Unlock by", expiryLabel)}
+    `)}
+  `;
+
+  const message: EmailMessage = {
+    kind: "mover_lead_expiry_warning",
+    from: config.from,
+    to: input.email,
+    subject,
+    text: [
+      `Hi ${friendlyName},`,
+      "",
+      `This is your 24-hour reminder for the ${input.moveRoute} lead.`,
+      "If you do not open it within the next 24 hours, it will be redistributed to another mover in the system.",
+      "",
+      `Customer: ${input.customerName}`,
+      `Move date: ${input.moveDateLabel}`,
+      `Move size: ${input.bedrooms}`,
+      `Lead price: ${priceLabel}`,
+      `Unlock by: ${expiryLabel}`,
+      "",
+      "Open the lead board:",
+      input.dashboardUrl,
+    ].join("\n"),
+    html: renderEmailShell({
+      theme,
+      preheader: `Open your ${input.moveRoute} lead before it is redistributed.`,
+      eyebrow: "Lead reminder",
+      title: "24 hours left on this lead",
+      intro: `Hi ${friendlyName}, this lead is still waiting in your dashboard.`,
+      bodyHtml,
+      cta: {
+        href: input.dashboardUrl,
+        label: "Open lead now",
+      },
+      footerNote: "Once the lead expires, it may be offered to another mover that has not received this customer request yet.",
     }),
   };
 

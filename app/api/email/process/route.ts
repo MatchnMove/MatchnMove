@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getEmailDiagnostics, processEmailQueue } from "@/lib/email";
+import { processLeadLifecycle } from "@/lib/lead-lifecycle";
 
 function isAuthorized(request: NextRequest) {
   const configuredSecret = process.env.EMAIL_QUEUE_SECRET || process.env.REVIEW_INVITE_CRON_SECRET;
@@ -24,8 +25,15 @@ export async function POST(request: NextRequest) {
   const parsedLimit = limitParam ? Number(limitParam) : 50;
   const limit = Number.isFinite(parsedLimit) ? parsedLimit : 50;
 
-  const result = await processEmailQueue(limit);
-  return NextResponse.json(result);
+  const [email, leads] = await Promise.all([
+    processEmailQueue(limit),
+    processLeadLifecycle(limit),
+  ]);
+
+  return NextResponse.json({
+    ...email,
+    leads,
+  });
 }
 
 export async function GET(request: NextRequest) {

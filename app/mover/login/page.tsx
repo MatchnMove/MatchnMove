@@ -51,6 +51,14 @@ const onboardingSteps = [
 
 type Mode = "login" | "signup";
 
+function getSafeRedirectPath(value: string | null) {
+  if (!value || !value.startsWith("/") || value.startsWith("//") || value.includes("\\")) {
+    return "/mover/dashboard";
+  }
+
+  return value;
+}
+
 export default function MoverLoginPage() {
   const router = useRouter();
   const googleButtonRef = useRef<HTMLDivElement | null>(null);
@@ -74,6 +82,7 @@ export default function MoverLoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [googleReady, setGoogleReady] = useState(false);
+  const [redirectPath, setRedirectPath] = useState("/mover/dashboard");
 
   const passwordChecks = [
     { label: "8+ characters", valid: signupForm.password.length >= 8 },
@@ -88,6 +97,10 @@ export default function MoverLoginPage() {
       googleButtonRef.current.innerHTML = "";
     }
   }, [mode]);
+
+  useEffect(() => {
+    setRedirectPath(getSafeRedirectPath(new URLSearchParams(window.location.search).get("next")));
+  }, []);
 
   const submitGoogleCredential = useEffectEvent(async (credential: string) => {
     setSubmitting(true);
@@ -108,7 +121,7 @@ export default function MoverLoginPage() {
       }
 
       setSuccess("Signed in with Google. Redirecting to your mover dashboard...");
-      startTransition(() => router.push("/mover/dashboard"));
+      startTransition(() => router.push(redirectPath));
     } finally {
       setSubmitting(false);
     }
@@ -163,7 +176,7 @@ export default function MoverLoginPage() {
       }
 
       setSuccess("Welcome back. Taking you to your dashboard...");
-      startTransition(() => router.push("/mover/dashboard"));
+      startTransition(() => router.push(redirectPath));
     } finally {
       setSubmitting(false);
     }
@@ -194,9 +207,9 @@ export default function MoverLoginPage() {
       setSuccess(
         payload.verificationEmailSent
           ? "Your Match 'n Move mover account is ready. Check your inbox for a verification email while we take you to the dashboard..."
-          : "Your Match 'n Move mover account is ready. Email verification is available once SMTP is configured, and we’re taking you to the dashboard now..."
+          : "Your Match 'n Move mover account is ready. Email verification is available once SMTP is configured, and we're taking you to the dashboard now..."
       );
-      startTransition(() => router.push("/mover/dashboard"));
+      startTransition(() => router.push(redirectPath));
     } finally {
       setSubmitting(false);
     }

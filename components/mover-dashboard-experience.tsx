@@ -116,6 +116,11 @@ type DashboardMover = {
     price: number;
     createdAt: string;
     purchasedAt: string | null;
+    expiresAt: string | null;
+    reminderSentAt: string | null;
+    expiredAt: string | null;
+    redistributedAt: string | null;
+    redistributionRound: number;
     paymentStatus: string;
     paymentReference: string | null;
     lastAction: string | null;
@@ -161,10 +166,12 @@ const statusTone: Record<string, string> = {
   WON: "bg-teal-100 text-teal-800",
   LOST: "bg-rose-100 text-rose-800",
   ARCHIVED: "bg-slate-200 text-slate-700",
+  EXPIRED: "bg-rose-100 text-rose-800",
 };
 
 const money = new Intl.NumberFormat("en-NZ", { style: "currency", currency: "NZD", maximumFractionDigits: 0 });
 const relative = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+const hourMs = 60 * 60 * 1000;
 
 type BillingResponse = {
   paymentMethod: {
@@ -231,6 +238,48 @@ function isUnlockedStatus(status: string) {
   return unlockedLeadStatuses.includes(status as (typeof unlockedLeadStatuses)[number]);
 }
 
+function isActiveLeadStatus(status: string) {
+  return activePipelineStatuses.includes(status as (typeof activePipelineStatuses)[number]);
+}
+
+type LeadExpiryState = {
+  label: string;
+  meta: string;
+  tone: "good" | "warning" | "expired" | "neutral";
+  hoursRemaining: number | null;
+};
+
+function getLeadExpiryState(lead: DashboardMover["leads"][number], nowMs: number): LeadExpiryState {
+  if (isUnlockedStatus(lead.status)) {
+    return { label: "Opened", meta: "lead secured", tone: "good", hoursRemaining: null };
+  }
+
+  if (lead.status === "EXPIRED" || lead.expiredAt) {
+    return { label: "Expired", meta: "may be redistributed", tone: "expired", hoursRemaining: 0 };
+  }
+
+  if (!lead.expiresAt) {
+    return { label: "No timer", meta: "legacy lead", tone: "neutral", hoursRemaining: null };
+  }
+
+  const diffMs = new Date(lead.expiresAt).getTime() - nowMs;
+  if (diffMs <= 0) {
+    return { label: "Expired", meta: "may be redistributed", tone: "expired", hoursRemaining: 0 };
+  }
+
+  const hoursRemaining = Math.ceil(diffMs / hourMs);
+  return {
+    label: `${hoursRemaining}h left`,
+    meta: hoursRemaining <= 24 ? "redistributes soon" : "unlock window",
+    tone: hoursRemaining <= 24 ? "warning" : "neutral",
+    hoursRemaining,
+  };
+}
+
+function canOpenLead(lead: DashboardMover["leads"][number], nowMs: number) {
+  return isActiveLeadStatus(lead.status) && getLeadExpiryState(lead, nowMs).tone !== "expired";
+}
+
 function getLeadStats(profile: DashboardMover) {
   return {
     activeLeads: profile.leads.filter((lead) => activePipelineStatuses.includes(lead.status as (typeof activePipelineStatuses)[number])).length,
@@ -247,10 +296,12 @@ function getLeadStats(profile: DashboardMover) {
 export function MoverDashboardExperience({
   mover,
   initialTab,
+  initialLeadId,
   billingState,
 }: {
   mover: DashboardMover;
   initialTab?: string;
+  initialLeadId?: string;
   billingState?: string;
 }) {
   const [profile, setProfile] = useState(mover);
@@ -259,11 +310,14 @@ export function MoverDashboardExperience({
   );
   const [profileFocusSection, setProfileFocusSection] = useState<"profile" | "documents" | null>(null);
   const [laneFilter, setLaneFilter] = useState<"all" | "hot" | "open" | "won">("all");
-  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(mover.leads[0]?.id ?? null);
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(
+    initialLeadId && mover.leads.some((lead) => lead.id === initialLeadId) ? initialLeadId : mover.leads[0]?.id ?? null,
+  );
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [leadActionMessage, setLeadActionMessage] = useState<string | null>(null);
   const [leadActionError, setLeadActionError] = useState<string | null>(null);
   const [busyLeadId, setBusyLeadId] = useState<string | null>(null);
+  const [nowMs, setNowMs] = useState(() => Date.now());
 
   const filteredLeads = profile.leads.filter((lead) => {
     if (laneFilter === "hot") return ["NEW", "NOTIFIED", "VIEWED"].includes(lead.status);
@@ -279,6 +333,11 @@ export function MoverDashboardExperience({
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [activeTab]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNowMs(Date.now()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   function openTab(tab: (typeof tabs)[number]["id"]) {
     setActiveTab(tab);
@@ -432,7 +491,7 @@ export function MoverDashboardExperience({
             ) : null}
 
             {activeTab === "overview" ? <OverviewPanel mover={profile} routeFitCount={routeFitCount} onOpenTab={openTab} /> : null}
-            {activeTab === "leads" ? <LeadsPanel filteredLeads={filteredLeads} laneFilter={laneFilter} onLaneFilterChange={setLaneFilter} selectedLead={selectedLead} selectedLeadId={selectedLeadId} onSelectLead={setSelectedLeadId} onUnlockLead={unlockLead} onUpdateLeadStatus={updateLeadStatus} busyLeadId={busyLeadId} actionMessage={leadActionMessage} actionError={leadActionError} /> : null}
+            {activeTab === "leads" ? <LeadsPanel filteredLeads={filteredLeads} laneFilter={laneFilter} onLaneFilterChange={setLaneFilter} selectedLead={selectedLead} selectedLeadId={selectedLeadId} onSelectLead={setSelectedLeadId} onUnlockLead={unlockLead} onUpdateLeadStatus={updateLeadStatus} busyLeadId={busyLeadId} actionMessage={leadActionMessage} actionError={leadActionError} nowMs={nowMs} /> : null}
             {activeTab === "ratings" ? <MoverRatingsPanel ratings={profile.ratings} /> : null}
             {activeTab === "profile" ? <ProfilePanel mover={profile} focusSection={profileFocusSection} onFocusHandled={() => setProfileFocusSection(null)} onProfileChange={(nextProfile) => setProfile((current) => ({ ...current, ...nextProfile, documentsCount: nextProfile.documents.length, profileCompletion: nextProfile.readiness.completion }))} /> : null}
             {activeTab === "payments" ? <PaymentsPanel billingState={billingState} /> : null}
@@ -737,6 +796,7 @@ type LeadsPanelProps = {
   busyLeadId: string | null;
   actionMessage: string | null;
   actionError: string | null;
+  nowMs: number;
 };
 
 function LeadsPanel({
@@ -751,6 +811,7 @@ function LeadsPanel({
   busyLeadId,
   actionMessage,
   actionError,
+  nowMs,
 }: LeadsPanelProps) {
   const detailPanelRef = useRef<HTMLDivElement | null>(null);
   const filters: Array<{ id: LeadsPanelProps["laneFilter"]; label: string }> = [
@@ -784,6 +845,8 @@ function LeadsPanel({
     });
   }
 
+  const selectedLeadExpiry = selectedLead ? getLeadExpiryState(selectedLead, nowMs) : null;
+
   return (
     <div className="grid gap-3 sm:gap-4 2xl:grid-cols-[minmax(320px,0.9fr)_minmax(0,1.1fr)]">
       <div className="order-2 rounded-[24px] border border-slate-200 bg-white p-3 shadow-sm sm:rounded-[30px] sm:p-4 2xl:order-1">
@@ -795,20 +858,27 @@ function LeadsPanel({
           ))}
         </div>
         <div className="mt-3 space-y-2 sm:mt-4 sm:space-y-3">
-          {filteredLeads.length ? filteredLeads.map((lead) => (
-            <button key={lead.id} type="button" onClick={() => focusSelectedLead(lead.id)} className={cx("w-full rounded-[20px] border p-3 text-left transition sm:rounded-[24px] sm:p-4", selectedLeadId === lead.id ? "border-slate-900 bg-slate-50" : "border-slate-200 hover:border-slate-300 hover:bg-slate-50")}>
-              <div className="flex items-center justify-between gap-2">
-                <span className={cx("rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] sm:text-[11px]", statusTone[lead.status] ?? "bg-slate-100 text-slate-700")}>{lead.status}</span>
-                <span className="text-[11px] font-semibold text-slate-500 sm:text-xs">{formatRelativeDate(lead.createdAt)}</span>
-              </div>
-              <p className="mt-2 text-sm font-bold text-slate-950 sm:mt-3 sm:text-base">{lead.quoteRequest.fromCity} to {lead.quoteRequest.toCity}</p>
-              <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-semibold text-slate-500 sm:text-xs">
-                <span>{lead.quoteRequest.bedrooms}</span>
-                <span>{formatCurrency(lead.price)}</span>
-                <span>{lead.routeMatch ? "Match" : "Check route"}</span>
-              </div>
-            </button>
-          )) : <EmptyCard title="No leads in this filter" />}
+          {filteredLeads.length ? filteredLeads.map((lead) => {
+            const expiry = getLeadExpiryState(lead, nowMs);
+            return (
+              <button key={lead.id} type="button" onClick={() => focusSelectedLead(lead.id)} className={cx("w-full rounded-[20px] border p-3 text-left transition sm:rounded-[24px] sm:p-4", selectedLeadId === lead.id ? "border-slate-900 bg-slate-50" : "border-slate-200 hover:border-slate-300 hover:bg-slate-50")}>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className={cx("rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] sm:text-[11px]", statusTone[lead.status] ?? "bg-slate-100 text-slate-700")}>{lead.status}</span>
+                  <span className="text-[11px] font-semibold text-slate-500 sm:text-xs">{formatRelativeDate(lead.createdAt)}</span>
+                </div>
+                <p className="mt-2 text-sm font-bold text-slate-950 sm:mt-3 sm:text-base">{lead.quoteRequest.fromCity} to {lead.quoteRequest.toCity}</p>
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-semibold text-slate-500 sm:text-xs">
+                  <span>{lead.quoteRequest.bedrooms}</span>
+                  <span>{formatCurrency(lead.price)}</span>
+                  <span>{lead.routeMatch ? "Match" : "Check route"}</span>
+                  <span className={cx("inline-flex items-center gap-1 rounded-full px-2 py-1", expiry.tone === "expired" ? "bg-rose-100 text-rose-700" : expiry.tone === "warning" ? "bg-amber-100 text-amber-800" : expiry.tone === "good" ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600")}>
+                    <Clock3 className="h-3 w-3" />
+                    {expiry.label}
+                  </span>
+                </div>
+              </button>
+            );
+          }) : <EmptyCard title="No leads in this filter" />}
         </div>
       </div>
 
@@ -828,13 +898,18 @@ function LeadsPanel({
               <ActionTile title="Property" value={selectedLead.quoteRequest.fromPropertyType} meta={`to ${selectedLead.quoteRequest.toPropertyType}`} />
               <ActionTile title="Lead price" value={formatCurrency(selectedLead.price)} meta={selectedLead.paymentStatus === "SUCCEEDED" ? "paid" : "invoice later"} />
             </div>
-            <div className="mt-3 grid gap-2 sm:mt-4 sm:gap-3 md:grid-cols-2">
+            <div className="mt-3 grid gap-2 sm:mt-4 sm:gap-3 md:grid-cols-3">
               <StatusChip label="Coverage" value={selectedLead.routeMatch ? "Good fit" : "Manual review"} good={selectedLead.routeMatch} />
               <StatusChip label="Last activity" value={selectedLead.lastAction ? selectedLead.lastAction.replaceAll("_", " ") : "No events yet"} good={false} />
+              {selectedLeadExpiry ? <ExpiryStatusChip state={selectedLeadExpiry} /> : null}
             </div>
             <div className="mt-4 flex flex-col gap-2 sm:mt-5 sm:gap-3 sm:flex-row">
               {isUnlockedStatus(selectedLead.status) ? (
                 <div className="flex min-h-[48px] flex-1 items-center justify-center rounded-2xl bg-emerald-50 px-4 text-sm font-semibold text-emerald-700 sm:min-h-[52px] sm:px-5">Lead open</div>
+              ) : !canOpenLead(selectedLead, nowMs) ? (
+                <div className="flex min-h-[48px] flex-1 items-center justify-center rounded-2xl bg-rose-50 px-4 text-sm font-semibold text-rose-700 sm:min-h-[52px] sm:px-5">
+                  {selectedLeadExpiry?.tone === "expired" ? "Lead expired" : "Lead unavailable"}
+                </div>
               ) : (
                 <div className="flex-1">
                   <button type="button" disabled={busyLeadId === selectedLead.id} onClick={() => void handleUnlockLead(selectedLead.id)} className="inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl bg-accentOrange px-4 text-sm font-semibold text-white transition hover:translate-y-[-1px] hover:bg-orange-500 disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-[52px] sm:px-5">
@@ -1241,6 +1316,27 @@ function CompactCard({ icon: Icon, title, value, meta }: { icon: typeof MapPinne
 
 function StatusChip({ label, value, good = false }: { label: string; value: string; good?: boolean }) {
   return <div className={cx("rounded-[20px] border p-3 sm:rounded-[24px] sm:p-4", good ? "border-emerald-200 bg-emerald-50" : "border-slate-200 bg-white")}><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500 sm:text-xs">{label}</p><p className="mt-1.5 break-words text-sm font-semibold text-slate-900 sm:mt-2">{value}</p></div>;
+}
+
+function ExpiryStatusChip({ state }: { state: LeadExpiryState }) {
+  return (
+    <div
+      className={cx(
+        "rounded-[20px] border p-3 sm:rounded-[24px] sm:p-4",
+        state.tone === "expired"
+          ? "border-rose-200 bg-rose-50"
+          : state.tone === "warning"
+            ? "border-amber-200 bg-amber-50"
+            : state.tone === "good"
+              ? "border-emerald-200 bg-emerald-50"
+              : "border-slate-200 bg-white",
+      )}
+    >
+      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500 sm:text-xs">Lead expiry</p>
+      <p className="mt-1.5 break-words text-sm font-semibold text-slate-900 sm:mt-2">{state.label}</p>
+      <p className="mt-1 text-xs text-slate-500">{state.meta}</p>
+    </div>
+  );
 }
 
 function JumpCard({ title, action, href, onClickLabel, onClick }: { title: string; action: string; href?: string; onClickLabel?: string; onClick?: () => void }) {

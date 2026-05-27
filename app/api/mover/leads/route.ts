@@ -11,6 +11,9 @@ export async function GET() {
       moverCompany: {
         userId: session.user.id,
       },
+      status: {
+        not: "EXPIRED",
+      },
     },
     orderBy: { createdAt: "desc" },
     include: {

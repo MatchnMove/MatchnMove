@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { expireAndRedistributeLead, isLeadPastExpiry, isLeadUnlockable } from "@/lib/lead-lifecycle";
 import { revalidateAboutPage } from "@/lib/public-cache";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -20,6 +21,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   if (["PURCHASED", "CONTACTED", "WON"].includes(lead.status)) {
     return NextResponse.json({ ok: true, unlockedAt: lead.purchasedAt?.toISOString() ?? null });
+  }
+
+  if (!isLeadUnlockable(lead.status)) {
+    return NextResponse.json({ error: "This lead is no longer available to open." }, { status: 410 });
+  }
+
+  const now = new Date();
+  if (isLeadPastExpiry(lead, now)) {
+    await expireAndRedistributeLead(lead.id, now);
+    return NextResponse.json({ error: "This lead has expired and may be redistributed to another mover." }, { status: 410 });
   }
 
   const unlockedAt = new Date();

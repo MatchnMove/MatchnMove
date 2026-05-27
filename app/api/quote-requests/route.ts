@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getLeadExpiryDate, getQuoteMatchedRegions, selectLeadRecipients, sendMoverNewLeadNotification } from "@/lib/lead-lifecycle";
 import { calculateLeadPrice } from "@/lib/lead-pricing";
-import { canonicaliseServiceArea } from "@/lib/nz-regions";
 import { quoteSchema } from "@/lib/validators";
 import { rateLimit } from "@/lib/rate-limit";
 
@@ -30,9 +30,7 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    const matchedRegions = Array.from(new Set([data.fromRegion, data.toRegion]
-      .map((region) => canonicaliseServiceArea(region))
-      .filter((region): region is NonNullable<typeof region> => Boolean(region))));
+    const matchedRegions = getQuoteMatchedRegions(data);
 
     const movers = matchedRegions.length
       ? await prisma.moverCompany.findMany({
@@ -40,38 +38,74 @@ export async function POST(req: NextRequest) {
             serviceAreas: { hasSome: matchedRegions },
             status: "ACTIVE",
           },
-          select: {
-            id: true,
+          include: {
+            user: true,
           },
         })
       : [];
+    const selectedMovers = selectLeadRecipients(movers);
 
-    const leadRows = movers.map((mover) => {
-      const pricing = calculateLeadPrice({
-        bedrooms: data.bedrooms,
-        moveDate,
-        dateFlexible: data.dateFlexible,
-        fromCity: data.fromCity,
-        fromRegion: data.fromRegion,
-        fromCountry: data.fromCountry,
-        toCity: data.toCity,
-        toRegion: data.toRegion,
-        toCountry: data.toCountry,
-      });
-
-      return {
-        quoteRequestId: quote.id,
-        moverCompanyId: mover.id,
-        status: "NOTIFIED" as const,
-        price: pricing.price,
-      };
+    const pricing = calculateLeadPrice({
+      bedrooms: data.bedrooms,
+      moveDate,
+      dateFlexible: data.dateFlexible,
+      fromCity: data.fromCity,
+      fromRegion: data.fromRegion,
+      fromCountry: data.fromCountry,
+      toCity: data.toCity,
+      toRegion: data.toRegion,
+      toCountry: data.toCountry,
     });
+    const expiresAt = getLeadExpiryDate();
 
-    if (leadRows.length > 0) {
-      await prisma.lead.createMany({ data: leadRows });
+    const leads = selectedMovers.length
+      ? await prisma.$transaction(
+          selectedMovers.map((mover) =>
+            prisma.lead.create({
+              data: {
+                quoteRequestId: quote.id,
+                moverCompanyId: mover.id,
+                status: "NOTIFIED",
+                price: pricing.price,
+                expiresAt,
+              },
+              include: {
+                quoteRequest: true,
+                moverCompany: {
+                  include: {
+                    user: true,
+                  },
+                },
+              },
+            }),
+          ),
+        )
+      : [];
+
+    if (leads.length > 0) {
+      await Promise.allSettled([
+        ...leads.map((lead) => sendMoverNewLeadNotification(lead)),
+        ...leads.map((lead) =>
+          prisma.auditLog.create({
+            data: {
+              leadId: lead.id,
+              action: "lead_initially_notified",
+              meta: {
+                quoteRequestId: quote.id,
+                matchedRegions,
+                expiresAt: lead.expiresAt?.toISOString() ?? null,
+              },
+            },
+          }),
+        ),
+      ]);
     }
 
-    return NextResponse.json({ id: quote.id, distributedTo: movers.length });
+    return NextResponse.json({
+      id: quote.id,
+      distributedTo: selectedMovers.length,
+      matchingMovers: movers.length,
+    });
   } catch (error) {
     console.error("quote POST failed", error);
     return NextResponse.json({ error: "Server failed to process quote submission." }, { status: 500 });
