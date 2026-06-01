@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { ArrowRight } from "lucide-react";
 import {
   AddressAutocomplete,
   AddressSuggestion
@@ -80,11 +81,7 @@ export function HeroQuoteCard() {
       onSubmit={submit}
       className="relative z-20 w-full overflow-visible rounded-[18px] border border-white/10 bg-[linear-gradient(145deg,#101b34_0%,#172857_64%,#1f3f86_100%)] p-3 text-left text-white shadow-[0_22px_54px_-38px_rgba(15,23,42,0.85)] sm:rounded-[22px] sm:p-4"
     >
-      <p className="max-w-[35rem] text-[0.82rem] leading-5 text-slate-200 sm:text-[0.92rem] sm:leading-[1.5]">
-        Tell us about your move once, review transparent options, and choose the best mover for your timeline.
-      </p>
-
-      <h2 className="mt-2 text-[1.06rem] font-black leading-tight tracking-[-0.02em] text-white sm:mt-2.5 sm:text-[1.36rem] sm:tracking-[-0.03em]">
+      <h2 className="text-[1.06rem] font-black leading-tight tracking-normal text-white sm:text-[1.36rem]">
         Moving soon? Let&apos;s get you sorted.
       </h2>
 
@@ -124,9 +121,10 @@ export function HeroQuoteCard() {
       <div className="mt-2.5 flex">
         <button
           type="submit"
-          className="inline-flex min-h-[44px] w-full items-center justify-center rounded-xl bg-[linear-gradient(135deg,#5468ee,#6171f3)] px-5 py-2.5 text-[0.95rem] font-bold text-white shadow-[0_18px_36px_-22px_rgba(79,100,235,0.72)] transition duration-200 hover:translate-y-[-1px] hover:shadow-[0_22px_42px_-22px_rgba(79,100,235,0.82)] focus:outline-none focus:ring-4 focus:ring-brandBlue/20 active:translate-y-0 sm:min-h-[46px] sm:w-auto sm:min-w-[190px] sm:rounded-2xl sm:text-base"
+          className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(135deg,#5468ee,#6171f3)] px-5 py-2.5 text-[0.95rem] font-bold text-white shadow-[0_18px_36px_-22px_rgba(79,100,235,0.72)] transition duration-200 hover:translate-y-[-1px] hover:shadow-[0_22px_42px_-22px_rgba(79,100,235,0.82)] focus:outline-none focus:ring-4 focus:ring-brandBlue/20 active:translate-y-0 sm:min-h-[46px] sm:w-auto sm:min-w-[190px] sm:rounded-2xl sm:text-base"
         >
           Get free quotes
+          <ArrowRight className="h-4 w-4" />
         </button>
       </div>
     </form>
