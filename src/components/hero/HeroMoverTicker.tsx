@@ -12,12 +12,32 @@ type HeroMoverTickerProps = {
 const cardAngles = [-4, -3, -5];
 const cardOffsets = [0, 12, 24];
 
+type PublicMoversResponse = {
+  movers?: unknown;
+  source?: unknown;
+};
+
 function getVisibleMovers(movers: HeroMoverTickerItem[], startIndex: number) {
   return Array.from({ length: Math.min(3, movers.length) }, (_, offset) => movers[(startIndex + offset) % movers.length]);
 }
 
 function formatRating(rating: number) {
   return rating > 0 ? rating.toFixed(1) : "New";
+}
+
+function isHeroMoverTickerItem(item: unknown): item is HeroMoverTickerItem {
+  if (typeof item !== "object" || item === null) return false;
+
+  const candidate = item as Partial<HeroMoverTickerItem>;
+
+  return (
+    typeof candidate.id === "string" &&
+    typeof candidate.name === "string" &&
+    typeof candidate.rating === "number" &&
+    typeof candidate.reviewCount === "number" &&
+    typeof candidate.badge === "string" &&
+    typeof candidate.tone === "string"
+  );
 }
 
 export function HeroMoverTicker({ initialMovers }: HeroMoverTickerProps) {
@@ -45,22 +65,24 @@ export function HeroMoverTicker({ initialMovers }: HeroMoverTickerProps) {
     const refreshMovers = async () => {
       try {
         const response = await fetch("/api/public-movers", { cache: "no-store" });
-        const data: unknown = await response.json();
+        const data = (await response.json()) as PublicMoversResponse;
 
         if (cancelled || !response.ok || typeof data !== "object" || data === null || !("movers" in data)) {
           return;
         }
 
-        const nextMovers = Array.isArray(data.movers) ? data.movers : [];
+        const nextMovers = Array.isArray(data.movers) ? data.movers.filter(isHeroMoverTickerItem) : [];
 
-        if (nextMovers.length > 0) {
-          setMovers(nextMovers as HeroMoverTickerItem[]);
+        if (data.source === "database") {
+          setMovers(nextMovers);
           setStartIndex(0);
         }
       } catch {
         // Keep the server-rendered list if the refresh cannot complete.
       }
     };
+
+    refreshMovers();
 
     const interval = window.setInterval(refreshMovers, 60000);
 
@@ -69,6 +91,10 @@ export function HeroMoverTicker({ initialMovers }: HeroMoverTickerProps) {
       window.clearInterval(interval);
     };
   }, []);
+
+  if (movers.length === 0) {
+    return null;
+  }
 
   return (
     <div className="pointer-events-none absolute right-[4.5%] top-[11%] z-20 hidden w-[min(28vw,390px)] lg:block">

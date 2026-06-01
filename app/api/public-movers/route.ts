@@ -7,6 +7,6 @@ export async function GET() {
 
   return NextResponse.json({
     movers: buildHeroMoverItems(movers),
-    source: movers.length > 0 ? "database" : "fallback",
+    source: movers.length > 0 ? "database" : "empty",
   });
 }
