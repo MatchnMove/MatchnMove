@@ -1,6 +1,7 @@
 export type HeroMoverTickerItem = {
   id: string;
   name: string;
+  logoUrl: string | null;
   rating: number;
   reviewCount: number;
   badge: string;
@@ -10,6 +11,7 @@ export type HeroMoverTickerItem = {
 type HeroMoverSource = {
   id: string;
   companyName: string;
+  logoUrl: string | null;
   averageRating: number;
   totalReviewCount: number;
   leaderboardEligible: boolean;
@@ -21,6 +23,7 @@ export function buildHeroMoverItems(movers: HeroMoverSource[]) {
   return movers.slice(0, 10).map((mover, index) => ({
     id: mover.id,
     name: mover.companyName,
+    logoUrl: mover.logoUrl,
     rating: mover.averageRating,
     reviewCount: mover.totalReviewCount,
     badge: mover.leaderboardEligible ? "Top rated" : mover.totalReviewCount > 0 ? "Verified mover" : "New mover",

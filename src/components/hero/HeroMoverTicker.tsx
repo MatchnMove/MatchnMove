@@ -1,5 +1,6 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element */
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, Star, Truck } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -33,6 +34,7 @@ function isHeroMoverTickerItem(item: unknown): item is HeroMoverTickerItem {
   return (
     typeof candidate.id === "string" &&
     typeof candidate.name === "string" &&
+    (typeof candidate.logoUrl === "string" || candidate.logoUrl === null) &&
     typeof candidate.rating === "number" &&
     typeof candidate.reviewCount === "number" &&
     typeof candidate.badge === "string" &&
@@ -117,8 +119,19 @@ export function HeroMoverTicker({ initialMovers }: HeroMoverTickerProps) {
               className="absolute left-0 top-0 flex min-h-[78px] w-full items-center justify-between gap-4 rounded-xl bg-white/95 px-4 py-3 shadow-[0_18px_42px_-28px_rgba(15,23,42,0.45)] backdrop-blur"
             >
               <div className="flex min-w-0 items-center gap-3">
-                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-white ${mover.tone}`}>
-                  <Truck className="h-5 w-5" />
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white p-1.5 shadow-sm">
+                  {mover.logoUrl ? (
+                    <img
+                      src={mover.logoUrl}
+                      alt={`${mover.name} logo`}
+                      className="h-full w-full object-contain"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className={`flex h-full w-full items-center justify-center rounded-md text-white ${mover.tone}`}>
+                      <Truck className="h-5 w-5" />
+                    </div>
+                  )}
                 </div>
                 <div className="min-w-0">
                   <p className="truncate text-sm font-black text-slate-950">{mover.name}</p>
