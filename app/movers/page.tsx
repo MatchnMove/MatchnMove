@@ -5,7 +5,8 @@ import { PublicMoversDirectory } from "@/components/public-movers-directory";
 import { SiteShell } from "@/components/site-shell";
 import { getPublicMovers } from "@/lib/public-movers";
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export const metadata: Metadata = {
   title: "Trusted Movers | Match 'n Move",

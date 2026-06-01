@@ -39,19 +39,15 @@ function comparePublicMoversByRating(left: PublicMoverCandidate, right: PublicMo
 }
 
 const loadPublicMovers = cacheTaggedData(async () => {
-  try {
-    const movers = await prisma.moverCompany.findMany({
-      where: {
-        status: "ACTIVE",
-      },
-      select: publicMoverSelect,
-      orderBy: [{ averageRating: "desc" }, { totalReviewCount: "desc" }, { updatedAt: "desc" }],
-    });
+  const movers = await prisma.moverCompany.findMany({
+    where: {
+      status: "ACTIVE",
+    },
+    select: publicMoverSelect,
+    orderBy: [{ averageRating: "desc" }, { totalReviewCount: "desc" }, { updatedAt: "desc" }],
+  });
 
-    return movers.filter(isMoverPubliclyVisible).sort(comparePublicMoversByRating);
-  } catch {
-    return [];
-  }
+  return movers.filter(isMoverPubliclyVisible).sort(comparePublicMoversByRating);
 }, ["public-movers-directory"], [PUBLIC_MOVERS_TAG]);
 
 const loadPublicMoverProfile = cacheTaggedData(async (moverId: string) => {
