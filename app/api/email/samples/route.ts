@@ -52,11 +52,6 @@ export async function POST(request: NextRequest) {
       moverName: "Mover Partner",
       moverCompanyName: "Harbourline Relocations",
       dashboardUrl: `https://www.matchnmove.co.nz/mover/dashboard?tab=leads&lead=layout-lead-${now}`,
-      customerName: "Taylor Smith",
-      moveRoute: "Auckland to Hamilton",
-      moveDateLabel: "12 Jun 2026",
-      bedrooms: "3 bedrooms",
-      price: 2000,
       expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000),
     }),
     sendMoverLeadExpiryWarningEmail({
@@ -64,11 +59,6 @@ export async function POST(request: NextRequest) {
       moverName: "Mover Partner",
       moverCompanyName: "Harbourline Relocations",
       dashboardUrl: `https://www.matchnmove.co.nz/mover/dashboard?tab=leads&lead=layout-lead-${now}`,
-      customerName: "Taylor Smith",
-      moveRoute: "Auckland to Hamilton",
-      moveDateLabel: "12 Jun 2026",
-      bedrooms: "3 bedrooms",
-      price: 2000,
       expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
     }),
     sendReviewSurveyEmail({

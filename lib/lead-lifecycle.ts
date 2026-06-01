@@ -28,7 +28,6 @@ type QuoteForLeadLifecycle = {
 
 type LeadEmailContext = {
   id: string;
-  price: number;
   createdAt: Date;
   expiresAt: Date | null;
   quoteRequest: QuoteForLeadLifecycle;
@@ -347,25 +346,8 @@ function buildLeadEmailInput(lead: LeadEmailContext) {
     moverName: lead.moverCompany.contactPerson || lead.moverCompany.user.name || lead.moverCompany.companyName,
     moverCompanyName: lead.moverCompany.companyName,
     dashboardUrl: getLeadDashboardUrl(lead.id),
-    customerName: lead.quoteRequest.name,
-    moveRoute: `${lead.quoteRequest.fromCity} to ${lead.quoteRequest.toCity}`,
-    moveDateLabel: formatMoveDate(lead.quoteRequest.moveDate, lead.quoteRequest.dateFlexible),
-    bedrooms: lead.quoteRequest.bedrooms,
-    price: lead.price,
     expiresAt: lead.expiresAt ?? getLeadExpiryDate(lead.createdAt),
   };
-}
-
-function formatMoveDate(value: Date | null, dateFlexible: boolean) {
-  if (!value) return "Flexible timing";
-
-  const label = new Intl.DateTimeFormat("en-NZ", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  }).format(value);
-
-  return dateFlexible ? `${label} or flexible` : label;
 }
 
 function getPublicBaseUrl() {

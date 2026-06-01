@@ -113,6 +113,8 @@ $env:SEND_TEST_EMAIL="true"; $env:TEST_EMAIL="you@example.com"; npm run email:ve
 ## Production email queue
 Transactional emails are stored in the `EmailDelivery` table before delivery. This covers contact notifications,
 mover verification, password resets, and verified review surveys. Failed sends are retried with exponential backoff.
+In production, the app also starts a small background worker that processes queued email and lead lifecycle jobs,
+including the 24-hour unopened-lead warning and 48-hour redistribution checks.
 
 Required production variables:
 ```bash
@@ -122,12 +124,15 @@ EMAIL_RETRY_BASE_MS=60000
 EMAIL_RETRY_MAX_MS=1800000
 EMAIL_SENDING_STALE_MS=600000
 EMAIL_FORCE_SMTP_USER_FROM=true
+BACKGROUND_JOBS_ENABLED=true
+BACKGROUND_JOBS_INTERVAL_MS=60000
+BACKGROUND_JOBS_PROCESS_LIMIT=50
 ```
 
 Use `EMAIL_FORCE_SMTP_USER_FROM=true` when sending through `smtp.gmail.com` unless every `*_FROM_EMAIL` address is
 configured as an approved Google Workspace send-as alias for `SMTP_USER`.
 
-Schedule a Railway cron or external uptime job to call this endpoint every minute:
+You can also call this endpoint manually, or from a Railway cron/external uptime job as a backup:
 ```bash
 POST https://www.matchnmove.co.nz/api/email/process?limit=50
 Authorization: Bearer $EMAIL_QUEUE_SECRET

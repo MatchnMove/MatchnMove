@@ -32,11 +32,6 @@ type MoverLeadEmailInput = {
   moverName?: string | null;
   moverCompanyName: string;
   dashboardUrl: string;
-  customerName: string;
-  moveRoute: string;
-  moveDateLabel: string;
-  bedrooms: string;
-  price: number;
   expiresAt: Date;
 };
 
@@ -689,14 +684,6 @@ export async function getEmailDiagnostics(limit = 10) {
   };
 }
 
-function formatEmailCurrency(cents: number) {
-  return new Intl.NumberFormat("en-NZ", {
-    style: "currency",
-    currency: "NZD",
-    maximumFractionDigits: 0,
-  }).format(cents / 100);
-}
-
 function formatEmailDateTime(value: Date) {
   return new Intl.DateTimeFormat("en-NZ", {
     dateStyle: "medium",
@@ -904,19 +891,15 @@ export async function sendMoverNewLeadEmail(input: MoverLeadEmailInput) {
   const theme = getMoverLeadTheme();
   const friendlyName = input.moverName?.trim() || input.moverCompanyName;
   const expiryLabel = formatEmailDateTime(input.expiresAt);
-  const priceLabel = formatEmailCurrency(input.price);
-  const subject = `New Match 'n Move lead: ${input.moveRoute}`;
+  const subject = "New Match 'n Move lead available";
   const bodyHtml = `
     ${renderNoteBox(
-      `A new customer quote request is ready for <strong style="color:#071d3c;">${escapeHtml(input.moverCompanyName)}</strong>. Open it from the dashboard to view the customer contact details and start follow-up.`,
+      `A new customer quote request is ready for <strong style="color:#071d3c;">${escapeHtml(input.moverCompanyName)}</strong>. Customer and move details stay locked until you open the lead from your dashboard.`,
       theme,
     )}
     ${renderDetailTable(`
-      ${renderDetailRow("Customer", input.customerName)}
-      ${renderDetailRow("Move", input.moveRoute)}
-      ${renderDetailRow("Move date", input.moveDateLabel)}
-      ${renderDetailRow("Move size", input.bedrooms)}
-      ${renderDetailRow("Lead price", priceLabel)}
+      ${renderDetailRow("Customer details", "Locked until opened")}
+      ${renderDetailRow("Move details", "Locked until opened")}
       ${renderDetailRow("Unlock by", expiryLabel)}
     `)}
   `;
@@ -930,12 +913,8 @@ export async function sendMoverNewLeadEmail(input: MoverLeadEmailInput) {
       `Hi ${friendlyName},`,
       "",
       `A new Match 'n Move quote request is ready for ${input.moverCompanyName}.`,
+      "Customer and move details are locked until you open the lead from your dashboard.",
       "",
-      `Customer: ${input.customerName}`,
-      `Move: ${input.moveRoute}`,
-      `Move date: ${input.moveDateLabel}`,
-      `Move size: ${input.bedrooms}`,
-      `Lead price: ${priceLabel}`,
       `Unlock by: ${expiryLabel}`,
       "",
       "Open the lead board:",
@@ -945,7 +924,7 @@ export async function sendMoverNewLeadEmail(input: MoverLeadEmailInput) {
     ].join("\n"),
     html: renderEmailShell({
       theme,
-      preheader: `New ${input.moveRoute} lead available in your Match 'n Move dashboard.`,
+      preheader: "A new locked lead is available in your Match 'n Move dashboard.",
       eyebrow: "New lead",
       title: "You have a new moving lead",
       intro: `Hi ${friendlyName}, a new customer request has matched with your service area.`,
@@ -978,19 +957,15 @@ export async function sendMoverLeadExpiryWarningEmail(input: MoverLeadEmailInput
   };
   const friendlyName = input.moverName?.trim() || input.moverCompanyName;
   const expiryLabel = formatEmailDateTime(input.expiresAt);
-  const priceLabel = formatEmailCurrency(input.price);
-  const subject = `24 hours left to open your Match 'n Move lead`;
+  const subject = "24 hours left to open your Match 'n Move lead";
   const bodyHtml = `
     ${renderNoteBox(
       `This lead is still unopened. If it is not opened before <strong style="color:#071d3c;">${escapeHtml(expiryLabel)}</strong>, it will be redistributed to another mover in the system.`,
       theme,
     )}
     ${renderDetailTable(`
-      ${renderDetailRow("Customer", input.customerName)}
-      ${renderDetailRow("Move", input.moveRoute)}
-      ${renderDetailRow("Move date", input.moveDateLabel)}
-      ${renderDetailRow("Move size", input.bedrooms)}
-      ${renderDetailRow("Lead price", priceLabel)}
+      ${renderDetailRow("Customer details", "Locked until opened")}
+      ${renderDetailRow("Move details", "Locked until opened")}
       ${renderDetailRow("Unlock by", expiryLabel)}
     `)}
   `;
@@ -1003,13 +978,10 @@ export async function sendMoverLeadExpiryWarningEmail(input: MoverLeadEmailInput
     text: [
       `Hi ${friendlyName},`,
       "",
-      `This is your 24-hour reminder for the ${input.moveRoute} lead.`,
+      "This is your 24-hour reminder for an unopened Match 'n Move lead.",
       "If you do not open it within the next 24 hours, it will be redistributed to another mover in the system.",
+      "Customer and move details are locked until you open the lead from your dashboard.",
       "",
-      `Customer: ${input.customerName}`,
-      `Move date: ${input.moveDateLabel}`,
-      `Move size: ${input.bedrooms}`,
-      `Lead price: ${priceLabel}`,
       `Unlock by: ${expiryLabel}`,
       "",
       "Open the lead board:",
@@ -1017,7 +989,7 @@ export async function sendMoverLeadExpiryWarningEmail(input: MoverLeadEmailInput
     ].join("\n"),
     html: renderEmailShell({
       theme,
-      preheader: `Open your ${input.moveRoute} lead before it is redistributed.`,
+      preheader: "Open this locked lead before it is redistributed.",
       eyebrow: "Lead reminder",
       title: "24 hours left on this lead",
       intro: `Hi ${friendlyName}, this lead is still waiting in your dashboard.`,
