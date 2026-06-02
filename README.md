@@ -6,7 +6,7 @@ Full-stack quote marketplace for moving companies built with **Next.js App Route
 - Public marketing site: home, quote flow, contact, about, faq, terms, thank-you pages.
 - 3-step quote request flow with optional AI voice transcription trigger.
 - API endpoints for quote submission, contact form, transcription session + webhook, mover leads, lead unlock, Stripe webhook.
-- Mover authentication (credentials + JWT cookie session) and protected dashboard with profile progress + leads.
+- Mover authentication (credentials or Google sign-in + JWT cookie session) and protected dashboard with profile progress + leads.
 - Lead distribution by service area and pay-per-lead model.
 - Prisma schema for users, movers, quotes, leads, payments, messages, logs.
 
@@ -73,7 +73,9 @@ Default seeded mover login:
 
 ## Optional integrations
 - `NEXT_PUBLIC_GOOGLE_CLIENT_ID`
-  Enables Google sign-in for movers.
+  Enables the Google Identity Services button on the mover login page.
+- `GOOGLE_CLIENT_ID`
+  Optional server-side override for Google ID token verification. Leave blank unless it differs from `NEXT_PUBLIC_GOOGLE_CLIENT_ID`.
 - `STRIPE_SECRET_KEY`
 - `STRIPE_WEBHOOK_SECRET`
   Required only if you want live Stripe billing flows.
@@ -91,6 +93,22 @@ Default seeded mover login:
 - No watermark references are included in the UI.
 - Stripe unlock endpoint gracefully simulates unlock if Stripe key is absent.
 - n8n transcription webhook endpoint stores transcript payload on quote requests.
+
+## Google mover sign-in
+The mover login page uses Google Identity Services to collect a Google ID token, then `/api/mover/google` verifies it server-side and issues the existing `mm_session` cookie.
+
+To enable it:
+1. In Google Cloud Console, create or choose an OAuth client with application type `Web application`.
+2. Add authorized JavaScript origins for each app origin you use, for example:
+   ```text
+   http://localhost:3000
+   https://www.matchnmove.co.nz
+   https://your-service.up.railway.app
+   ```
+3. Set `NEXT_PUBLIC_GOOGLE_CLIENT_ID` to that Web client ID in `.env` and Railway.
+4. Restart the dev server or redeploy so Next.js picks up the public env var.
+
+This ID-token button flow does not use an OAuth redirect callback URL.
 
 ## Google Workspace Email
 The app sends transactional email through Nodemailer using the `SMTP_*` variables.
