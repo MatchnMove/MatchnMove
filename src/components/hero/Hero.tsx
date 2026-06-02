@@ -1,5 +1,4 @@
 import Image from "next/image";
-import { CircleDot } from "lucide-react";
 import { getPublicMovers } from "@/lib/public-movers";
 import { HeroQuoteCard } from "@/src/components/hero/HeroQuoteCard";
 import { HeroMoverTicker } from "@/src/components/hero/HeroMoverTicker";
@@ -26,12 +25,7 @@ export async function Hero() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_46%,rgba(255,255,255,0.88)_0%,rgba(255,255,255,0.62)_28%,transparent_50%)] lg:bg-none" />
 
         <div className="relative z-20 mx-auto flex min-h-[calc(100svh-61px)] max-w-[1280px] flex-col items-start justify-center px-4 py-6 text-left sm:min-h-[calc(100svh-73px)] sm:px-6 sm:py-8 lg:h-full lg:min-h-0 lg:justify-center lg:py-6">
-          <div className="inline-flex items-center gap-2 rounded-full bg-blue-50/92 px-3 py-2 text-[0.72rem] font-bold text-brandBlue shadow-sm backdrop-blur">
-            <CircleDot className="h-3.5 w-3.5 fill-current" />
-            NZ&apos;s smart way to move
-          </div>
-
-          <div className="relative mt-4 flex w-full max-w-[680px] flex-col items-start opacity-100 transition duration-700 ease-out sm:mt-5 lg:max-w-[720px]">
+          <div className="relative flex w-full max-w-[680px] flex-col items-start opacity-100 transition duration-700 ease-out lg:max-w-[720px]">
             <h1 className="max-w-[15ch] text-[2.7rem] font-black leading-[1] tracking-normal text-slate-950 drop-shadow-[0_2px_0_rgba(255,255,255,0.65)] sm:text-[3.95rem] lg:text-[4.25rem] xl:text-[4.85rem]">
               Compare trusted{" "}
               <span className="bg-[linear-gradient(135deg,#2f73ff,#5b6ef5)] bg-clip-text text-transparent">
