@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { calculateMoverProfileReadiness, requireAuthenticatedMover } from "@/lib/mover-profile";
+import { DOCUMENT_VERIFICATION } from "@/lib/nzbn-verification";
 import { revalidateAboutPage, revalidatePublicMovers } from "@/lib/public-cache";
 import { moverDocumentTypeSchema, moverDocumentUploadSchema, parseDataUrl, sanitiseFileName } from "@/lib/validators";
 
@@ -13,6 +14,10 @@ function serialiseDocument(document: {
   fileName: string | null;
   mimeType: string | null;
   fileSize: number | null;
+  verificationStatus: string;
+  verificationNote: string | null;
+  reviewedAt: Date | null;
+  reviewedBy: string | null;
   createdAt: Date;
 }) {
   return {
@@ -21,6 +26,10 @@ function serialiseDocument(document: {
     fileName: document.fileName ?? "Document",
     mimeType: document.mimeType,
     fileSize: document.fileSize,
+    verificationStatus: document.verificationStatus,
+    verificationNote: document.verificationNote,
+    reviewedAt: document.reviewedAt?.toISOString() ?? null,
+    reviewedBy: document.reviewedBy,
     viewUrl: `/api/mover/profile/documents/${document.id}/file`,
     createdAt: document.createdAt.toISOString(),
   };
@@ -79,6 +88,10 @@ export async function POST(req: NextRequest) {
       mimeType: fileData.mimeType,
       fileSize: fileData.fileSize,
       fileUrl: parsed.data.fileDataUrl,
+      verificationStatus: DOCUMENT_VERIFICATION.PENDING_REVIEW,
+      verificationNote: null,
+      reviewedAt: null,
+      reviewedBy: null,
     },
   });
 

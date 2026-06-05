@@ -159,6 +159,7 @@ async function createTempMovers() {
 
   for (let index = 0; index < tempMoverCount; index += 1) {
     const email = `${runId}-mover-${index}@loadtest.local`;
+    const reviewedAt = new Date();
     tempMoverEmails.push(email);
 
     const created = await prisma.$transaction(async (tx) => {
@@ -180,12 +181,47 @@ async function createTempMovers() {
           phone: "+64 21 555 0101",
           serviceAreas: ["Auckland", "Wellington"],
           nzbn: `9999999999${String(index).padStart(3, "0")}`,
+          nzbnVerificationStatus: "VERIFIED",
+          nzbnVerifiedAt: reviewedAt,
+          nzbnRegisteredName: `Load Test Movers ${index}`,
+          nzbnEntityStatus: "REGISTERED",
+          nzbnVerificationSource: "SEED",
+          nzbnVerificationError: null,
           yearsOperating: 5,
           businessDescription: "Temporary mover account used for local load testing.",
         },
         include: {
           user: true,
         },
+      });
+
+      await tx.moverDocument.createMany({
+        data: [
+          {
+            moverCompanyId: mover.id,
+            type: "INSURANCE",
+            fileName: `Load Test Movers ${index} insurance certificate.pdf`,
+            mimeType: "application/pdf",
+            fileSize: 18,
+            fileUrl: "data:application/pdf;base64,JVBERi0xLjQKJUVPRg==",
+            verificationStatus: "APPROVED",
+            verificationNote: "Approved load-test verification document.",
+            reviewedAt,
+            reviewedBy: "load-scenario",
+          },
+          {
+            moverCompanyId: mover.id,
+            type: "NZBN_PROOF",
+            fileName: `Load Test Movers ${index} NZBN register extract.pdf`,
+            mimeType: "application/pdf",
+            fileSize: 18,
+            fileUrl: "data:application/pdf;base64,JVBERi0xLjQKJUVPRg==",
+            verificationStatus: "APPROVED",
+            verificationNote: "Approved load-test NZBN proof.",
+            reviewedAt,
+            reviewedBy: "load-scenario",
+          },
+        ],
       });
 
       return mover;

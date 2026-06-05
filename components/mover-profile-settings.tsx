@@ -22,6 +22,10 @@ type ProfileDocument = {
   fileName: string;
   mimeType: string | null;
   fileSize: number | null;
+  verificationStatus: string;
+  verificationNote: string | null;
+  reviewedAt: string | null;
+  reviewedBy: string | null;
   viewUrl: string;
   createdAt: string;
 };
@@ -32,6 +36,11 @@ export type MoverProfileState = {
   contactPerson: string;
   phone: string;
   nzbn: string;
+  nzbnVerificationStatus?: string | null;
+  nzbnRegisteredName?: string | null;
+  nzbnEntityStatus?: string | null;
+  nzbnVerifiedAt?: string | null;
+  nzbnVerificationError?: string | null;
   yearsOperating: number | null;
   serviceAreas: string[];
   email: string;
@@ -95,6 +104,11 @@ function formatFileSize(fileSize: number | null) {
 }
 
 function inferReadiness(profile: MoverProfileState) {
+  const approvedDocumentTypes = new Set(
+    profile.documents.filter((document) => document.verificationStatus === "APPROVED").map((document) => document.type),
+  );
+  const requiredDocumentCount = ["INSURANCE", "NZBN_PROOF"].filter((type) => approvedDocumentTypes.has(type)).length;
+  const nzbnVerified = profile.nzbnVerificationStatus === "VERIFIED";
   const checks: ReadinessCheck[] = [
     {
       key: "email",
@@ -114,10 +128,10 @@ function inferReadiness(profile: MoverProfileState) {
     },
     {
       key: "business",
-      complete: Boolean(profile.nzbn && profile.yearsOperating !== null),
-      label: profile.nzbn && profile.yearsOperating !== null ? "Ready" : "Add NZBN",
+      complete: Boolean(profile.nzbn && profile.yearsOperating !== null && nzbnVerified),
+      label: nzbnVerified ? "NZBN verified" : profile.nzbnVerificationStatus === "PENDING_REVIEW" ? "NZBN in review" : profile.nzbnVerificationStatus === "FAILED" ? "NZBN failed" : "Verify NZBN",
       title: "Verify business identity",
-      description: "Add your NZBN and years operating so the business profile can be checked.",
+      description: profile.nzbnVerificationError || "Add an NZBN that matches an active NZBN Register entity and your mover profile name.",
       destination: "profile",
     },
     {
@@ -146,10 +160,10 @@ function inferReadiness(profile: MoverProfileState) {
     },
     {
       key: "docs",
-      complete: profile.documents.length > 0,
-      label: profile.documents.length ? `${profile.documents.length} on file` : "Upload docs",
+      complete: requiredDocumentCount === 2,
+      label: requiredDocumentCount === 2 ? "Approved" : `${requiredDocumentCount}/2 approved`,
       title: "Upload verification documents",
-      description: "Upload proof such as insurance, NZBN proof, or transport/business documentation.",
+      description: "Upload insurance and NZBN proof. They must be reviewed and approved before the profile can go live.",
       destination: "documents",
     },
   ];
@@ -174,6 +188,12 @@ function inferReadiness(profile: MoverProfileState) {
 
 function withReadiness(profile: MoverProfileState, readiness?: MoverProfileState["readiness"]) {
   return { ...profile, readiness: readiness ?? inferReadiness(profile) };
+}
+
+function getDocumentVerificationLabel(status: string) {
+  if (status === "APPROVED") return "Approved";
+  if (status === "REJECTED") return "Rejected";
+  return "Pending review";
 }
 
 export function MoverProfileSettings({ profile, onProfileChange, focusSection, onFocusHandled, onOpenSecurity }: Props) {
@@ -325,6 +345,11 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
           contactPerson: data?.contactPerson ?? payload.contactPerson,
           phone: data?.phone ?? payload.phone,
           nzbn: data?.nzbn ?? payload.nzbn,
+          nzbnVerificationStatus: data?.nzbnVerificationStatus ?? profile.nzbnVerificationStatus,
+          nzbnRegisteredName: data?.nzbnRegisteredName ?? profile.nzbnRegisteredName,
+          nzbnEntityStatus: data?.nzbnEntityStatus ?? profile.nzbnEntityStatus,
+          nzbnVerifiedAt: data?.nzbnVerifiedAt ?? profile.nzbnVerifiedAt,
+          nzbnVerificationError: data?.nzbnVerificationError ?? profile.nzbnVerificationError,
           yearsOperating: typeof data?.yearsOperating === "number" || data?.yearsOperating === null ? data.yearsOperating : payload.yearsOperating ? Number(payload.yearsOperating) : null,
           serviceAreas: data?.serviceAreas ?? payload.serviceAreas,
           email: data?.email ?? profile.email,
@@ -397,7 +422,7 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
         if (data.document.type === documentType) {
           setCategoryDocuments((current) => [data.document!, ...current.filter((document) => document.id !== data.document!.id)]);
         }
-        setDocumentSuccess("Document uploaded.");
+        setDocumentSuccess("Document uploaded for verification review.");
       });
     };
 
@@ -435,8 +460,8 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
   }
 
   return (
-    <div className="grid gap-3 sm:gap-4 2xl:grid-cols-[minmax(0,1fr)_minmax(340px,0.88fr)]">
-      <div className="order-2 space-y-3 sm:space-y-4 2xl:order-1">
+    <div className={cx("grid gap-3 sm:gap-4", profile.readiness.isLive ? "" : "2xl:grid-cols-[minmax(0,1fr)_minmax(340px,0.88fr)]")}>
+      <div className={cx("space-y-3 sm:space-y-4", profile.readiness.isLive ? "" : "order-2 2xl:order-1")}>
         <section ref={profileSectionRef} tabIndex={-1} className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 sm:rounded-[30px] sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -467,6 +492,23 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
             <EditableField label="Phone number" value={form.phone} editing={editing} onChange={(value) => setForm((current) => ({ ...current, phone: value }))} placeholder="+64..." />
             <EditableField label="NZBN" value={form.nzbn} editing={editing} onChange={(value) => setForm((current) => ({ ...current, nzbn: value }))} placeholder="13-digit NZBN" />
             <EditableField label="Years operating" value={form.yearsOperating} editing={editing} onChange={(value) => setForm((current) => ({ ...current, yearsOperating: value }))} placeholder="0" inputMode="numeric" />
+          </div>
+
+          <div className="mt-3 rounded-[20px] border border-slate-200 bg-slate-50 p-3 sm:mt-4 sm:rounded-[24px] sm:p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">NZBN verification</p>
+            <p className="mt-2 text-sm font-semibold text-slate-900">
+              {profile.nzbnVerificationStatus === "VERIFIED"
+                ? `Verified${profile.nzbnRegisteredName ? ` as ${profile.nzbnRegisteredName}` : ""}`
+                : profile.nzbnVerificationStatus === "PENDING_REVIEW"
+                  ? "Submitted for manual review"
+                  : profile.nzbnVerificationStatus === "FAILED"
+                    ? "Verification failed"
+                    : "Not verified yet"}
+            </p>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              {profile.nzbnVerificationError ||
+                "Your NZBN is checked against the NZBN Register. If the name cannot be matched automatically, Match 'n Move will review the submitted business evidence before the profile goes live."}
+            </p>
           </div>
 
           <div className="mt-3 rounded-[20px] border border-slate-200 bg-slate-50 p-3 sm:mt-4 sm:rounded-[24px] sm:p-4">
@@ -585,6 +627,21 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
                       <p className="text-sm font-semibold text-slate-900">{document.fileName}</p>
                       <p className="mt-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{document.type.replaceAll("_", " ")}</p>
                       <p className="mt-1 text-sm text-slate-500">{formatFileSize(document.fileSize)}</p>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <span
+                          className={cx(
+                            "rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em]",
+                            document.verificationStatus === "APPROVED"
+                              ? "bg-emerald-100 text-emerald-700"
+                              : document.verificationStatus === "REJECTED"
+                                ? "bg-rose-100 text-rose-700"
+                                : "bg-amber-100 text-amber-800",
+                          )}
+                        >
+                          {getDocumentVerificationLabel(document.verificationStatus)}
+                        </span>
+                        {document.verificationNote ? <span className="text-xs text-slate-500">{document.verificationNote}</span> : null}
+                      </div>
                     </div>
                   </div>
                   <div className="flex gap-2">
@@ -601,64 +658,64 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
             ) : (
               <div className="rounded-[20px] border border-dashed border-slate-300 bg-slate-50 px-4 py-7 text-center sm:rounded-[24px] sm:py-8">
                 <p className="font-semibold text-slate-900">No documents uploaded for this category yet</p>
-                <p className="mt-2 text-sm text-slate-500">Upload {selectedDocumentType.title.toLowerCase()} documents here so this part of your profile is easy to verify.</p>
+                <p className="mt-2 text-sm text-slate-500">Upload {selectedDocumentType.title.toLowerCase()} documents here so Match &apos;n Move can review and approve this part of your profile.</p>
               </div>
             )}
           </div>
 
-          <p className="mt-3 text-xs text-slate-500">PDF, PNG, JPG, or WEBP up to 4MB. Make sure the file is clear, current, and easy to read.</p>
+          <p className="mt-3 text-xs text-slate-500">PDF, PNG, JPG, or WEBP up to 4MB. Uploaded documents stay pending until a reviewer approves them.</p>
           {documentSuccess ? <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">{documentSuccess}</p> : null}
           {documentError ? <p className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{documentError}</p> : null}
         </section>
       </div>
 
-      <aside className="order-1 rounded-[24px] border border-slate-200 bg-[linear-gradient(180deg,#fff8ef,#ffffff)] p-4 shadow-sm sm:rounded-[30px] sm:p-5 2xl:order-2">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-orange-600 sm:text-sm">Verification readiness</p>
-            <h2 className="mt-1 text-xl font-black tracking-[-0.05em] text-slate-950 sm:text-2xl">
-              {profile.readiness.isLive ? "Profile live" : `${profile.readiness.missingCount} to go live`}
-            </h2>
+      {!profile.readiness.isLive ? (
+        <aside className="order-1 rounded-[24px] border border-slate-200 bg-[linear-gradient(180deg,#fff8ef,#ffffff)] p-4 shadow-sm sm:rounded-[30px] sm:p-5 2xl:order-2">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-orange-600 sm:text-sm">Verification readiness</p>
+              <h2 className="mt-1 text-xl font-black tracking-[-0.05em] text-slate-950 sm:text-2xl">
+                {profile.readiness.missingCount} to go live
+              </h2>
+            </div>
+            <div className="rounded-2xl bg-white p-3 text-emerald-700 shadow-sm">
+              <ShieldCheck className="h-5 w-5" />
+            </div>
           </div>
-          <div className="rounded-2xl bg-white p-3 text-emerald-700 shadow-sm">
-            <ShieldCheck className="h-5 w-5" />
+
+          <p className="mt-3 text-sm leading-6 text-slate-600">
+            Complete every verification check before your mover profile can go live or open new leads.
+          </p>
+
+          <div className="mt-4 h-3 rounded-full bg-slate-200">
+            <div className="h-full rounded-full bg-[linear-gradient(90deg,#f97316,#fb923c)]" style={{ width: `${profile.readiness.completion}%` }} />
           </div>
-        </div>
 
-        <p className="mt-3 text-sm leading-6 text-slate-600">
-          {profile.readiness.isLive
-            ? "Your verification checks are complete. Your profile is eligible for public visibility and lead access."
-            : "Complete every verification check before your mover profile can go live or open new leads."}
-        </p>
+          {profile.readiness.nextStep ? (
+            <button
+              type="button"
+              onClick={() => openReadinessDestination(profile.readiness.nextStep!.destination)}
+              className="mt-4 inline-flex w-full items-center justify-center rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:translate-y-[-1px]"
+            >
+              Next: {profile.readiness.nextStep.title}
+            </button>
+          ) : null}
 
-        <div className="mt-4 h-3 rounded-full bg-slate-200">
-          <div className="h-full rounded-full bg-[linear-gradient(90deg,#f97316,#fb923c)]" style={{ width: `${profile.readiness.completion}%` }} />
-        </div>
-
-        {profile.readiness.nextStep ? (
-          <button
-            type="button"
-            onClick={() => openReadinessDestination(profile.readiness.nextStep!.destination)}
-            className="mt-4 inline-flex w-full items-center justify-center rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:translate-y-[-1px]"
-          >
-            Next: {profile.readiness.nextStep.title}
-          </button>
-        ) : null}
-
-        <div className="mt-4 space-y-2 sm:mt-5 sm:space-y-3">
-          {readinessItems.map((item) => (
-            <ReadinessCard
-              key={item.key}
-              title={item.title}
-              value={item.key === "email" ? profile.email : item.label}
-              status={item.complete ? "Complete" : item.description}
-              complete={item.complete}
-              actionLabel={item.complete ? undefined : item.destination === "security" ? "Open security" : item.destination === "documents" ? "Upload docs" : "Edit profile"}
-              onClick={item.complete ? undefined : () => openReadinessDestination(item.destination)}
-            />
-          ))}
-        </div>
-      </aside>
+          <div className="mt-4 space-y-2 sm:mt-5 sm:space-y-3">
+            {readinessItems.map((item) => (
+              <ReadinessCard
+                key={item.key}
+                title={item.title}
+                value={item.key === "email" ? profile.email : item.label}
+                status={item.complete ? "Complete" : item.description}
+                complete={item.complete}
+                actionLabel={item.complete ? undefined : item.destination === "security" ? "Open security" : item.destination === "documents" ? "Upload docs" : "Edit profile"}
+                onClick={item.complete ? undefined : () => openReadinessDestination(item.destination)}
+              />
+            ))}
+          </div>
+        </aside>
+      ) : null}
     </div>
   );
 }

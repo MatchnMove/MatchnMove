@@ -68,6 +68,12 @@ model MoverCompany {
   companyName              String
   businessDescription      String?
   nzbn                     String?
+  nzbnVerificationStatus   String               @default("UNVERIFIED")
+  nzbnVerifiedAt           DateTime?
+  nzbnRegisteredName       String?
+  nzbnEntityStatus         String?
+  nzbnVerificationSource   String?
+  nzbnVerificationError    String?              @db.Text
   yearsOperating           Int?
   logoUrl                  String?
   serviceAreas             String[]
@@ -98,6 +104,7 @@ model MoverCompany {
   reviewSurveyInvites      ReviewSurveyInvite[]
 
   @@index([status, updatedAt])
+  @@index([nzbnVerificationStatus, updatedAt])
 }
 
 model MoverDocument {
@@ -108,10 +115,15 @@ model MoverDocument {
   mimeType       String?
   fileSize       Int?
   fileUrl        String
+  verificationStatus String   @default("PENDING_REVIEW")
+  verificationNote   String?  @db.Text
+  reviewedAt         DateTime?
+  reviewedBy         String?
   createdAt      DateTime     @default(now())
   moverCompany   MoverCompany @relation(fields: [moverCompanyId], references: [id])
 
   @@index([moverCompanyId, createdAt])
+  @@index([verificationStatus, createdAt])
 }
 
 model QuoteRequest {

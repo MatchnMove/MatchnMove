@@ -6,7 +6,6 @@ import {
   AlertTriangle,
   ArrowRight,
   Check,
-  CheckCircle2,
   CreditCard,
   LoaderCircle,
   LockKeyhole,
@@ -267,75 +266,61 @@ export function MoverSecurityPanel({ mover, onOpenDestination }: Props) {
 
   return (
     <div className="space-y-4">
-      <section
-        className={cx(
-          "rounded-[24px] border p-4 shadow-sm sm:rounded-[30px] sm:p-5",
-          mover.readiness.isLive
-            ? "border-emerald-200 bg-[linear-gradient(135deg,#ecfdf5,#ffffff)]"
-            : "border-amber-200 bg-[linear-gradient(135deg,#fff8e8,#fffef8)]",
-        )}
-      >
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="max-w-3xl">
-            <div
-              className={cx(
-                "inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em]",
-                mover.readiness.isLive ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800",
-              )}
-            >
-              {mover.readiness.isLive ? <CheckCircle2 className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
-              {mover.readiness.isLive ? "Profile live" : "Verification required"}
+      {!mover.readiness.isLive ? (
+        <section className="rounded-[24px] border border-amber-200 bg-[linear-gradient(135deg,#fff8e8,#fffef8)] p-4 shadow-sm sm:rounded-[30px] sm:p-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="max-w-3xl">
+              <div className="inline-flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-amber-800">
+                <AlertTriangle className="h-4 w-4" />
+                Verification required
+              </div>
+              <h2 className="mt-3 text-xl font-black tracking-[-0.05em] text-slate-950 sm:text-2xl">Complete verification before your mover profile goes live</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-700">
+                Security is required here. Finish every item in this checklist before the public profile and new lead access are enabled.
+              </p>
             </div>
-            <h2 className="mt-3 text-xl font-black tracking-[-0.05em] text-slate-950 sm:text-2xl">
-              {mover.readiness.isLive ? "Your mover profile is verified and live" : "Complete verification before your mover profile goes live"}
-            </h2>
-            <p className="mt-2 text-sm leading-6 text-slate-700">
-              {mover.readiness.isLive
-                ? "Your required profile, document, and email checks are complete. Keep this section current whenever your business details change."
-                : "Security is required here. Finish every item in this checklist before the public profile and new lead access are enabled."}
-            </p>
+
+            <div className="w-full max-w-[300px]">
+              {mover.readiness.nextStep?.destination === "security" ? (
+                <FeedbackButton
+                  kind="primary"
+                  fullWidth
+                  state={verifyState.status}
+                  defaultLabel="Resend verification email"
+                  loadingLabel="Sending..."
+                  successLabel="Sent"
+                  onClick={resendVerification}
+                  iconIdle={<MailCheck className="h-4 w-4" />}
+                />
+              ) : mover.readiness.nextStep ? (
+                <NavigationButton
+                  label={nextNavigationDestination === "documents" ? "Upload documents" : "Complete profile"}
+                  active={navigationState === nextNavigationDestination}
+                  onClick={() => openDestination(nextNavigationDestination)}
+                />
+              ) : null}
+            </div>
           </div>
 
-          <div className="w-full max-w-[300px]">
-            {mover.readiness.nextStep?.destination === "security" ? (
-              <FeedbackButton
-                kind="primary"
-                fullWidth
-                state={verifyState.status}
-                defaultLabel="Resend verification email"
-                loadingLabel="Sending..."
-                successLabel="Sent"
-                onClick={resendVerification}
-                iconIdle={<MailCheck className="h-4 w-4" />}
-              />
-            ) : mover.readiness.nextStep ? (
-              <NavigationButton
-                label={nextNavigationDestination === "documents" ? "Upload documents" : "Complete profile"}
-                active={navigationState === nextNavigationDestination}
-                onClick={() => openDestination(nextNavigationDestination)}
-              />
-            ) : (
-              <NavigationButton label="Review profile" active={navigationState === "profile"} onClick={() => openDestination("profile")} />
-            )}
+          <div className="mt-4 grid gap-2 sm:grid-cols-3">
+            <StatusSummary label="Verification" value={`${mover.readiness.missingCount} missing`} good={false} />
+            <StatusSummary label="Email" value={mover.emailVerified ? "Verified" : "Pending"} good={mover.emailVerified} />
+            <StatusSummary label="Documents" value={documentsReady ? "Approved" : "Required"} good={documentsReady} />
           </div>
-        </div>
 
-        <div className="mt-4 grid gap-2 sm:grid-cols-3">
-          <StatusSummary label="Verification" value={mover.readiness.isLive ? "Live" : `${mover.readiness.missingCount} missing`} good={mover.readiness.isLive} />
-          <StatusSummary label="Email" value={mover.emailVerified ? "Verified" : "Pending"} good={mover.emailVerified} />
-          <StatusSummary label="Documents" value={documentsReady ? "On file" : "Required"} good={documentsReady} />
-        </div>
+          <StatusMessage state={verifyState} className="mt-4" />
+        </section>
+      ) : null}
 
-        <StatusMessage state={verifyState} className="mt-4" />
-      </section>
-
-      <div className="grid gap-3 sm:gap-4 2xl:grid-cols-[minmax(0,0.95fr)_minmax(340px,1.05fr)]">
-        <div className="order-2 space-y-3 sm:space-y-4 2xl:order-1">
+      <div className={cx("grid gap-3 sm:gap-4", mover.readiness.isLive ? "" : "2xl:grid-cols-[minmax(0,0.95fr)_minmax(340px,1.05fr)]")}>
+        <div className={cx("space-y-3 sm:space-y-4", mover.readiness.isLive ? "" : "order-2 2xl:order-1")}>
           <section className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm sm:rounded-[30px] sm:p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-[0.16em] text-sky-700">Account status</p>
-                <h2 className="mt-1 text-xl font-black tracking-[-0.05em] text-slate-950 sm:text-2xl">Verification at a glance</h2>
+                <h2 className="mt-1 text-xl font-black tracking-[-0.05em] text-slate-950 sm:text-2xl">
+                  {mover.readiness.isLive ? "Account security at a glance" : "Verification at a glance"}
+                </h2>
               </div>
               <div className="rounded-2xl bg-sky-100 p-3 text-sky-700">
                 <ShieldCheck className="h-5 w-5" />
@@ -486,6 +471,7 @@ export function MoverSecurityPanel({ mover, onOpenDestination }: Props) {
           </section>
         </div>
 
+        {!mover.readiness.isLive ? (
         <aside className="order-1 rounded-[24px] border border-slate-200 bg-[linear-gradient(180deg,#f8fbff,#ffffff)] p-4 shadow-sm sm:rounded-[30px] sm:p-5 2xl:order-2">
           <p className="text-sm font-semibold uppercase tracking-[0.16em] text-sky-700">Verification to go live</p>
           <h2 className="mt-1 text-xl font-black tracking-[-0.05em] text-slate-950 sm:text-2xl">
@@ -519,6 +505,7 @@ export function MoverSecurityPanel({ mover, onOpenDestination }: Props) {
 
           {billingError ? <p className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{billingError}</p> : null}
         </aside>
+        ) : null}
       </div>
     </div>
   );

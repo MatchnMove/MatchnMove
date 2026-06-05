@@ -156,6 +156,38 @@ export const moverDocumentUploadSchema = z.object({
   fileDataUrl: z.string().trim().min(1, "A file is required"),
 });
 
+const optionalReviewTextSchema = z
+  .string()
+  .trim()
+  .max(1000, "Review note is too long")
+  .optional()
+  .nullable()
+  .transform((value) => value || null);
+
+export const adminDocumentReviewSchema = z.object({
+  status: z.enum(["PENDING_REVIEW", "APPROVED", "REJECTED"]),
+  note: optionalReviewTextSchema,
+});
+
+export const adminNzbnReviewSchema = z.object({
+  status: z.enum(["UNVERIFIED", "PENDING_REVIEW", "VERIFIED", "FAILED"]),
+  registeredName: z
+    .string()
+    .trim()
+    .max(160, "Registered name is too long")
+    .optional()
+    .nullable()
+    .transform((value) => value || null),
+  entityStatus: z
+    .string()
+    .trim()
+    .max(80, "Entity status is too long")
+    .optional()
+    .nullable()
+    .transform((value) => value || null),
+  note: optionalReviewTextSchema,
+});
+
 const optionalRatingSchema = z
   .union([z.number(), z.string()])
   .optional()

@@ -24,12 +24,16 @@ export const getAboutPageStats = cacheTaggedData(async (): Promise<AboutPageStat
           contactPerson: true,
           phone: true,
           nzbn: true,
+          nzbnVerificationStatus: true,
+          nzbnVerificationError: true,
           logoUrl: true,
           serviceAreas: true,
           yearsOperating: true,
           documents: {
             select: {
               id: true,
+              type: true,
+              verificationStatus: true,
             },
           },
           user: {

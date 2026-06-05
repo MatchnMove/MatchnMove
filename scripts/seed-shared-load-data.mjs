@@ -209,6 +209,12 @@ function buildMoverRows(passwordHash) {
       companyName: `Shared Load Movers ${pad(index)}`,
       businessDescription: makeBusinessDescription(index),
       nzbn: `999999999${String(index).padStart(4, "0")}`,
+      nzbnVerificationStatus: "VERIFIED",
+      nzbnVerifiedAt: new Date(),
+      nzbnRegisteredName: `Shared Load Movers ${pad(index)}`,
+      nzbnEntityStatus: "REGISTERED",
+      nzbnVerificationSource: "SEED",
+      nzbnVerificationError: null,
       yearsOperating: 3 + (index % 12),
       serviceAreas: getServiceAreas(index),
       status: "ACTIVE",
@@ -217,15 +223,34 @@ function buildMoverRows(passwordHash) {
       baseLeadPrice: 2000,
     });
 
-    documents.push({
-      id: `shared-load-document-${pad(index)}`,
-      moverCompanyId: moverId,
-      type: "INSURANCE",
-      fileName: `Shared Load Movers ${pad(index)} insurance certificate.pdf`,
-      mimeType: "application/pdf",
-      fileSize: 18,
-      fileUrl: "data:application/pdf;base64,JVBERi0xLjQKJUVPRg==",
-    });
+    documents.push(
+      {
+        id: `shared-load-document-${pad(index)}-insurance`,
+        moverCompanyId: moverId,
+        type: "INSURANCE",
+        fileName: `Shared Load Movers ${pad(index)} insurance certificate.pdf`,
+        mimeType: "application/pdf",
+        fileSize: 18,
+        fileUrl: "data:application/pdf;base64,JVBERi0xLjQKJUVPRg==",
+        verificationStatus: "APPROVED",
+        verificationNote: "Approved load-test verification document.",
+        reviewedAt: new Date(),
+        reviewedBy: "seed",
+      },
+      {
+        id: `shared-load-document-${pad(index)}-nzbn-proof`,
+        moverCompanyId: moverId,
+        type: "NZBN_PROOF",
+        fileName: `Shared Load Movers ${pad(index)} NZBN register extract.pdf`,
+        mimeType: "application/pdf",
+        fileSize: 18,
+        fileUrl: "data:application/pdf;base64,JVBERi0xLjQKJUVPRg==",
+        verificationStatus: "APPROVED",
+        verificationNote: "Approved load-test NZBN proof.",
+        reviewedAt: new Date(),
+        reviewedBy: "seed",
+      },
+    );
   }
 
   return { users, movers, documents };

@@ -338,6 +338,8 @@ async function findReplacementMover(quoteRequestId: string, matchedRegions: stri
       documents: {
         select: {
           id: true,
+          type: true,
+          verificationStatus: true,
         },
       },
     },

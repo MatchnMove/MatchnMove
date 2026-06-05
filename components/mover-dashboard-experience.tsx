@@ -41,6 +41,11 @@ type DashboardMover = {
   contactPerson: string;
   phone: string;
   nzbn: string;
+  nzbnVerificationStatus?: string | null;
+  nzbnRegisteredName?: string | null;
+  nzbnEntityStatus?: string | null;
+  nzbnVerifiedAt?: string | null;
+  nzbnVerificationError?: string | null;
   yearsOperating: number | null;
   serviceAreas: string[];
   documentsCount: number;
@@ -483,19 +488,21 @@ export function MoverDashboardExperience({
           </aside>
 
           <main className="space-y-3 sm:space-y-4">
-            <VerificationBanner mover={profile} onOpenDestination={openDashboardDestination} />
+            {!profile.readiness.isLive ? <VerificationBanner mover={profile} onOpenDestination={openDashboardDestination} /> : null}
 
             {activeTab !== "payments" ? (
-              <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
+              <div className={cx("grid grid-cols-2 gap-2 sm:gap-3", profile.readiness.isLive ? "sm:grid-cols-3" : "xl:grid-cols-4")}>
                 <TopCard icon={BellRing} label="New demand" value={String(profile.stats.activeLeads)} meta="Needs response" />
                 <TopCard icon={BadgeDollarSign} label="Avg lead price" value={formatCurrency(profile.stats.averageLeadPrice)} meta="Billed month end" />
                 <TopCard icon={Target} label="Wins" value={String(profile.stats.wonLeads)} meta="Tracked jobs" />
-                <TopCard
-                  icon={ShieldCheck}
-                  label="Verification"
-                  value={profile.readiness.isLive ? "Live" : `${profile.readiness.missingCount} left`}
-                  meta={profile.readiness.isLive ? "Profile live" : "Required before lead access"}
-                />
+                {!profile.readiness.isLive ? (
+                  <TopCard
+                    icon={ShieldCheck}
+                    label="Verification"
+                    value={`${profile.readiness.missingCount} left`}
+                    meta="Required before lead access"
+                  />
+                ) : null}
               </div>
             ) : null}
 

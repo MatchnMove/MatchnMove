@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { DOCUMENT_VERIFICATION, NZBN_VERIFICATION } from "@/lib/nzbn-verification";
 
 const authenticatedMoverInclude = Prisma.validator<Prisma.MoverCompanyInclude>()({
   user: true,
@@ -52,12 +53,25 @@ export function calculateMoverProfileReadiness(mover: {
   contactPerson: string | null;
   phone: string | null;
   nzbn: string | null;
+  nzbnVerificationStatus?: string | null;
+  nzbnVerificationError?: string | null;
   yearsOperating: number | null;
   logoUrl: string | null;
   serviceAreas: string[];
-  documents: Array<{ id: string }>;
+  documents: Array<{ id: string; type?: string | null; verificationStatus?: string | null }>;
   user: { emailVerifiedAt: Date | null };
 }): MoverProfileReadiness {
+  const nzbnVerified = mover.nzbnVerificationStatus === NZBN_VERIFICATION.VERIFIED;
+  const requiredDocumentTypes = ["INSURANCE", "NZBN_PROOF"] as const;
+  const approvedDocumentTypes = new Set(
+    mover.documents
+      .filter((document) => document.verificationStatus === DOCUMENT_VERIFICATION.APPROVED)
+      .map((document) => document.type)
+      .filter((type): type is string => Boolean(type)),
+  );
+  const approvedRequiredDocumentCount = requiredDocumentTypes.filter((type) => approvedDocumentTypes.has(type)).length;
+  const requiredDocumentsApproved = approvedRequiredDocumentCount === requiredDocumentTypes.length;
+
   const checks: MoverProfileReadinessCheck[] = [
     {
       key: "email",
@@ -77,10 +91,16 @@ export function calculateMoverProfileReadiness(mover: {
     },
     {
       key: "business",
-      complete: hasText(mover.nzbn) && mover.yearsOperating !== null,
-      label: hasText(mover.nzbn) && mover.yearsOperating !== null ? "Ready" : "Add NZBN",
+      complete: hasText(mover.nzbn) && mover.yearsOperating !== null && nzbnVerified,
+      label: nzbnVerified
+        ? "NZBN verified"
+        : mover.nzbnVerificationStatus === NZBN_VERIFICATION.PENDING_REVIEW
+          ? "NZBN in review"
+          : mover.nzbnVerificationStatus === NZBN_VERIFICATION.FAILED
+            ? "NZBN failed"
+            : "Verify NZBN",
       title: "Verify business identity",
-      description: "Add your NZBN and years operating so the business profile can be checked.",
+      description: mover.nzbnVerificationError || "Add an NZBN that matches an active NZBN Register entity and your mover profile name.",
       destination: "profile",
     },
     {
@@ -109,10 +129,10 @@ export function calculateMoverProfileReadiness(mover: {
     },
     {
       key: "docs",
-      complete: mover.documents.length > 0,
-      label: mover.documents.length ? `${mover.documents.length} on file` : "Upload docs",
+      complete: requiredDocumentsApproved,
+      label: requiredDocumentsApproved ? "Approved" : `${approvedRequiredDocumentCount}/${requiredDocumentTypes.length} approved`,
       title: "Upload verification documents",
-      description: "Upload proof such as insurance, NZBN proof, or transport/business documentation.",
+      description: "Upload insurance and NZBN proof. They must be reviewed and approved before the profile can go live.",
       destination: "documents",
     },
   ];

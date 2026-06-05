@@ -11,6 +11,12 @@ async function main() {
     businessDescription:
       "AKL Moving helps Auckland households and small businesses plan reliable local and regional moves with clear communication, careful loading, and practical move-day support.",
     nzbn: "9873670937863",
+    nzbnVerificationStatus: "VERIFIED",
+    nzbnVerifiedAt: now,
+    nzbnRegisteredName: "AKL Moving",
+    nzbnEntityStatus: "REGISTERED",
+    nzbnVerificationSource: "SEED",
+    nzbnVerificationError: null,
     yearsOperating: 5,
     logoUrl: "/images/movers/mover-partner-preview.svg",
     contactPerson: "Mark Henderson",
@@ -46,15 +52,33 @@ async function main() {
 
   if (mover.moverCompany) {
     await prisma.moverDocument.deleteMany({ where: { moverCompanyId: mover.moverCompany.id } });
-    await prisma.moverDocument.create({
-      data: {
-        moverCompanyId: mover.moverCompany.id,
-        type: "INSURANCE",
-        fileName: "AKL Moving insurance certificate.pdf",
-        mimeType: "application/pdf",
-        fileSize: 18,
-        fileUrl: "data:application/pdf;base64,JVBERi0xLjQKJUVPRg==",
-      },
+    await prisma.moverDocument.createMany({
+      data: [
+        {
+          moverCompanyId: mover.moverCompany.id,
+          type: "INSURANCE",
+          fileName: "AKL Moving insurance certificate.pdf",
+          mimeType: "application/pdf",
+          fileSize: 18,
+          fileUrl: "data:application/pdf;base64,JVBERi0xLjQKJUVPRg==",
+          verificationStatus: "APPROVED",
+          verificationNote: "Approved demo verification document.",
+          reviewedAt: now,
+          reviewedBy: "seed",
+        },
+        {
+          moverCompanyId: mover.moverCompany.id,
+          type: "NZBN_PROOF",
+          fileName: "AKL Moving NZBN register extract.pdf",
+          mimeType: "application/pdf",
+          fileSize: 18,
+          fileUrl: "data:application/pdf;base64,JVBERi0xLjQKJUVPRg==",
+          verificationStatus: "APPROVED",
+          verificationNote: "Approved demo NZBN proof.",
+          reviewedAt: now,
+          reviewedBy: "seed",
+        },
+      ],
     });
   }
 

@@ -229,6 +229,12 @@ async function createDemoData() {
             companyName: mover.companyName,
             businessDescription: mover.businessDescription,
             nzbn: mover.nzbn,
+            nzbnVerificationStatus: "VERIFIED",
+            nzbnVerifiedAt: baseDate,
+            nzbnRegisteredName: mover.companyName,
+            nzbnEntityStatus: "REGISTERED",
+            nzbnVerificationSource: "SEED",
+            nzbnVerificationError: null,
             yearsOperating: mover.yearsOperating,
             logoUrl: mover.logoUrl,
             serviceAreas: mover.serviceAreas,
@@ -241,16 +247,35 @@ async function createDemoData() {
       },
     });
 
-    await prisma.moverDocument.create({
-      data: {
-        id: `demo-document-${mover.id}-insurance`,
-        moverCompanyId: mover.id,
-        type: "INSURANCE",
-        fileName: `${mover.companyName} insurance certificate.pdf`,
-        mimeType: "application/pdf",
-        fileSize: 18,
-        fileUrl: "data:application/pdf;base64,JVBERi0xLjQKJUVPRg==",
-      },
+    await prisma.moverDocument.createMany({
+      data: [
+        {
+          id: `demo-document-${mover.id}-insurance`,
+          moverCompanyId: mover.id,
+          type: "INSURANCE",
+          fileName: `${mover.companyName} insurance certificate.pdf`,
+          mimeType: "application/pdf",
+          fileSize: 18,
+          fileUrl: "data:application/pdf;base64,JVBERi0xLjQKJUVPRg==",
+          verificationStatus: "APPROVED",
+          verificationNote: "Approved demo verification document.",
+          reviewedAt: baseDate,
+          reviewedBy: "seed",
+        },
+        {
+          id: `demo-document-${mover.id}-nzbn-proof`,
+          moverCompanyId: mover.id,
+          type: "NZBN_PROOF",
+          fileName: `${mover.companyName} NZBN register extract.pdf`,
+          mimeType: "application/pdf",
+          fileSize: 18,
+          fileUrl: "data:application/pdf;base64,JVBERi0xLjQKJUVPRg==",
+          verificationStatus: "APPROVED",
+          verificationNote: "Approved demo NZBN proof.",
+          reviewedAt: baseDate,
+          reviewedBy: "seed",
+        },
+      ],
     });
 
     const reviewMetrics = [];

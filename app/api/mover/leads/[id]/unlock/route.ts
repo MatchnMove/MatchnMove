@@ -24,6 +24,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           documents: {
             select: {
               id: true,
+              type: true,
+              verificationStatus: true,
             },
           },
         },

@@ -44,6 +44,8 @@ export async function POST(req: NextRequest) {
             documents: {
               select: {
                 id: true,
+                type: true,
+                verificationStatus: true,
               },
             },
           },
