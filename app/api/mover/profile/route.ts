@@ -54,6 +54,9 @@ export async function PATCH(req: NextRequest) {
 
   const serviceAreas = sanitiseServiceAreas(parsed.data.serviceAreas);
   const publicFieldsChanged =
+    mover.contactPerson !== parsed.data.contactPerson ||
+    mover.phone !== parsed.data.phone ||
+    mover.nzbn !== parsed.data.nzbn ||
     mover.businessDescription !== parsed.data.businessDescription ||
     mover.yearsOperating !== parsed.data.yearsOperating ||
     mover.serviceAreas.length !== serviceAreas.length ||

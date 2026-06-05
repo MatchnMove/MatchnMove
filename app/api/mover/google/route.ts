@@ -5,6 +5,7 @@ import { moverGoogleSchema } from "@/lib/validators";
 import { createMoverAccount, ensureMoverCompanyProfile, establishMoverSession } from "@/lib/mover-auth";
 import { revalidatePublicSite } from "@/lib/public-cache";
 import { rateLimit } from "@/lib/rate-limit";
+import { getDatabaseUnavailableMessage, logRuntimeWarning } from "@/lib/runtime-errors";
 
 const googleClient = new OAuth2Client();
 
@@ -50,62 +51,67 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Google sign-in is not configured" }, { status: 503 });
   }
 
-  const parsed = moverGoogleSchema.safeParse(await req.json());
-  if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.issues[0]?.message || "Invalid Google sign-in request" }, { status: 400 });
-  }
+  try {
+    const parsed = moverGoogleSchema.safeParse(await req.json());
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0]?.message || "Invalid Google sign-in request" }, { status: 400 });
+    }
 
-  const googleAccount = await verifyGoogleCredential(parsed.data.credential, clientId);
-  if (!googleAccount) {
-    return NextResponse.json({ error: "Google account verification failed" }, { status: 401 });
-  }
+    const googleAccount = await verifyGoogleCredential(parsed.data.credential, clientId);
+    if (!googleAccount) {
+      return NextResponse.json({ error: "Google account verification failed" }, { status: 401 });
+    }
 
-  const existingUser = await prisma.user.findUnique({
-    where: { email: googleAccount.email },
-    include: { moverCompany: true },
-  });
-
-  if (!existingUser) {
-    const newUser = await createMoverAccount({
-      name: googleAccount.name,
-      companyName: buildCompanyName(googleAccount.name),
-      email: googleAccount.email,
-      phone: "",
-      serviceAreas: ["Auckland"]
-    });
-
-    await prisma.user.update({
-      where: { id: newUser.id },
-      data: { emailVerifiedAt: new Date() }
-    });
-
-    revalidatePublicSite();
-    return NextResponse.json({ ok: true, onboarding: true });
-  }
-
-  let sessionUser = existingUser;
-  const userUpdates: { emailVerifiedAt?: Date; name?: string } = {};
-  if (!existingUser.emailVerifiedAt) userUpdates.emailVerifiedAt = new Date();
-  if (!existingUser.name) userUpdates.name = googleAccount.name;
-
-  if (Object.keys(userUpdates).length) {
-    sessionUser = await prisma.user.update({
-      where: { id: existingUser.id },
-      data: userUpdates,
+    const existingUser = await prisma.user.findUnique({
+      where: { email: googleAccount.email },
       include: { moverCompany: true },
     });
-  }
 
-  if (!existingUser.moverCompany) {
-    await ensureMoverCompanyProfile({
-      userId: existingUser.id,
-      name: sessionUser.name || googleAccount.name,
-      companyName: buildCompanyName(sessionUser.name || googleAccount.name),
-      serviceAreas: ["Auckland"]
-    });
-    revalidatePublicSite();
-  }
+    if (!existingUser) {
+      const newUser = await createMoverAccount({
+        name: googleAccount.name,
+        companyName: buildCompanyName(googleAccount.name),
+        email: googleAccount.email,
+        phone: "",
+        serviceAreas: ["Auckland"]
+      });
 
-  await establishMoverSession(sessionUser);
-  return NextResponse.json({ ok: true });
+      await prisma.user.update({
+        where: { id: newUser.id },
+        data: { emailVerifiedAt: new Date() }
+      });
+
+      revalidatePublicSite();
+      return NextResponse.json({ ok: true, onboarding: true });
+    }
+
+    let sessionUser = existingUser;
+    const userUpdates: { emailVerifiedAt?: Date; name?: string } = {};
+    if (!existingUser.emailVerifiedAt) userUpdates.emailVerifiedAt = new Date();
+    if (!existingUser.name) userUpdates.name = googleAccount.name;
+
+    if (Object.keys(userUpdates).length) {
+      sessionUser = await prisma.user.update({
+        where: { id: existingUser.id },
+        data: userUpdates,
+        include: { moverCompany: true },
+      });
+    }
+
+    if (!existingUser.moverCompany) {
+      await ensureMoverCompanyProfile({
+        userId: existingUser.id,
+        name: sessionUser.name || googleAccount.name,
+        companyName: buildCompanyName(sessionUser.name || googleAccount.name),
+        serviceAreas: ["Auckland"]
+      });
+      revalidatePublicSite();
+    }
+
+    await establishMoverSession(sessionUser);
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    logRuntimeWarning("Mover Google sign-in unavailable", error);
+    return NextResponse.json({ error: getDatabaseUnavailableMessage("Mover Google sign-in") }, { status: 503 });
+  }
 }

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { isMoverProfileLive } from "@/lib/mover-profile";
 import { ABOUT_PAGE_TAG, cacheTaggedData } from "@/lib/public-cache";
 
 type AboutPageMover = {
@@ -19,9 +20,23 @@ export const getAboutPageStats = cacheTaggedData(async (): Promise<AboutPageStat
         select: {
           id: true,
           companyName: true,
+          businessDescription: true,
+          contactPerson: true,
+          phone: true,
+          nzbn: true,
           logoUrl: true,
           serviceAreas: true,
           yearsOperating: true,
+          documents: {
+            select: {
+              id: true,
+            },
+          },
+          user: {
+            select: {
+              emailVerifiedAt: true,
+            },
+          },
         },
         orderBy: { createdAt: "desc" },
       }),
@@ -34,7 +49,16 @@ export const getAboutPageStats = cacheTaggedData(async (): Promise<AboutPageStat
       }),
     ]);
 
-    return [movers, successfulMoves];
+    return [
+      movers.filter(isMoverProfileLive).map((mover) => ({
+        id: mover.id,
+        companyName: mover.companyName,
+        logoUrl: mover.logoUrl,
+        serviceAreas: mover.serviceAreas,
+        yearsOperating: mover.yearsOperating,
+      })),
+      successfulMoves,
+    ];
   } catch {
     return [[], 0];
   }

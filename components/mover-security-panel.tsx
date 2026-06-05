@@ -23,10 +23,21 @@ type SecurityMover = {
   readiness: {
     completion: number;
     checks: Array<{
-      key: string;
+      key: "email" | "contact" | "business" | "description" | "serviceAreas" | "logo" | "docs";
       complete: boolean;
       label: string;
+      title: string;
+      description: string;
+      destination: "security" | "profile" | "documents";
     }>;
+    isLive: boolean;
+    missingCount: number;
+    nextStep: {
+      key: "email" | "contact" | "business" | "description" | "serviceAreas" | "logo" | "docs";
+      title: string;
+      destination: "security" | "profile" | "documents";
+      label: string;
+    } | null;
   };
 };
 
@@ -113,80 +124,47 @@ export function MoverSecurityPanel({ mover, onOpenDestination }: Props) {
 
   const readinessMap = useMemo(() => new Map(mover.readiness.checks.map((check) => [check.key, check])), [mover.readiness.checks]);
   const documentsReady = readinessMap.get("docs")?.complete ?? mover.documentsCount > 0;
-  const profileReady = ["contact", "business", "serviceAreas", "logo"].every((key) => readinessMap.get(key)?.complete);
   const paymentMethodReady = Boolean(billing?.paymentMethod);
-  const checklistCompletion = Math.round(([
-    mover.emailVerified,
-    paymentMethodReady,
-    documentsReady,
-    profileReady,
-  ].filter(Boolean).length / 4) * 100);
+  const checklistCompletion = mover.readiness.completion;
+  const nextNavigationDestination = mover.readiness.nextStep?.destination === "documents" ? "documents" : "profile";
 
-  const checklistItems = [
-    {
-      key: "email",
-      title: "Email verified",
-      complete: mover.emailVerified,
-      description: mover.emailVerified ? "Your recovery email is confirmed." : "Verify your email to secure your account and keep full access protected.",
-      action: (
-        <FeedbackButton
-          kind="secondary"
-          state={verifyState.status}
-          defaultLabel="Resend verification email"
-          loadingLabel="Sending..."
-          successLabel="Sent"
-          onClick={resendVerification}
-          disabled={mover.emailVerified}
-          iconIdle={<MailCheck className="h-4 w-4" />}
-        />
-      ),
-    },
-    {
-      key: "payment",
-      title: "Billing method ready",
-      complete: paymentMethodReady,
-      description: billingLoading
-        ? "Checking your billing setup..."
-        : billing?.stripeEnabled === false
-          ? "Billing setup is temporarily unavailable."
-          : paymentMethodReady
-            ? `Card ending in ${billing?.paymentMethod?.last4} is available for invoice payments if needed.`
-            : "Adding a card is optional. You can still access leads and receive a month-end invoice.",
-      action: (
+  const checklistItems = mover.readiness.checks.map((check) => {
+    const destination = check.destination === "documents" ? "documents" : "profile";
+
+    return {
+      key: check.key,
+      title: check.title,
+      complete: check.complete,
+      description: check.complete ? check.label : check.description,
+      action:
+        check.key === "email" ? (
+          <FeedbackButton
+            kind="secondary"
+            state={verifyState.status}
+            defaultLabel={check.complete ? "Email verified" : "Resend verification email"}
+            loadingLabel="Sending..."
+            successLabel="Sent"
+            onClick={resendVerification}
+            disabled={check.complete}
+            iconIdle={<MailCheck className="h-4 w-4" />}
+          />
+        ) : (
         <NavigationButton
-          label={paymentMethodReady ? "Manage billing" : "Add billing card"}
-          active={navigationState === "payments"}
-          onClick={() => openDestination("payments")}
+          label={
+            check.complete
+              ? destination === "documents"
+                ? "Review documents"
+                : "Review profile"
+              : destination === "documents"
+                ? "Upload documents"
+                : "Complete in profile"
+          }
+          active={navigationState === destination}
+          onClick={() => openDestination(destination)}
         />
       ),
-    },
-    {
-      key: "documents",
-      title: "Documents uploaded",
-      complete: documentsReady,
-      description: documentsReady ? "Required business documents are on file." : "Upload your business documents to strengthen trust and readiness.",
-      action: (
-        <NavigationButton
-          label={documentsReady ? "Review documents" : "Upload documents"}
-          active={navigationState === "documents"}
-          onClick={() => openDestination("documents")}
-        />
-      ),
-    },
-    {
-      key: "profile",
-      title: "Profile completed",
-      complete: profileReady,
-      description: profileReady ? "Your business details are complete and ready." : "Finish your business details, service areas, and logo to complete your profile.",
-      action: (
-        <NavigationButton
-          label={profileReady ? "View profile" : "Complete profile"}
-          active={navigationState === "profile"}
-          onClick={() => openDestination("profile")}
-        />
-      ),
-    },
-  ];
+    };
+  });
 
   async function resendVerification() {
     setVerifyState({ status: "loading", message: "" });
@@ -289,20 +267,37 @@ export function MoverSecurityPanel({ mover, onOpenDestination }: Props) {
 
   return (
     <div className="space-y-4">
-      {!mover.emailVerified ? (
-        <section className="rounded-[24px] border border-amber-200 bg-[linear-gradient(135deg,#fff8e8,#fffef8)] p-4 shadow-sm sm:rounded-[30px] sm:p-5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="max-w-2xl">
-              <div className="inline-flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-amber-800">
-                <AlertTriangle className="h-4 w-4" />
-                Action needed
-              </div>
-              <h2 className="mt-3 text-xl font-black tracking-[-0.05em] text-slate-950 sm:text-2xl">Verify your email to secure your account and keep full access protected</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-700">
-                Confirm <span className="font-semibold text-slate-950">{mover.email}</span> so you can recover access easily and use your account with confidence.
-              </p>
+      <section
+        className={cx(
+          "rounded-[24px] border p-4 shadow-sm sm:rounded-[30px] sm:p-5",
+          mover.readiness.isLive
+            ? "border-emerald-200 bg-[linear-gradient(135deg,#ecfdf5,#ffffff)]"
+            : "border-amber-200 bg-[linear-gradient(135deg,#fff8e8,#fffef8)]",
+        )}
+      >
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="max-w-3xl">
+            <div
+              className={cx(
+                "inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em]",
+                mover.readiness.isLive ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800",
+              )}
+            >
+              {mover.readiness.isLive ? <CheckCircle2 className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+              {mover.readiness.isLive ? "Profile live" : "Verification required"}
             </div>
-            <div className="w-full max-w-[280px]">
+            <h2 className="mt-3 text-xl font-black tracking-[-0.05em] text-slate-950 sm:text-2xl">
+              {mover.readiness.isLive ? "Your mover profile is verified and live" : "Complete verification before your mover profile goes live"}
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-slate-700">
+              {mover.readiness.isLive
+                ? "Your required profile, document, and email checks are complete. Keep this section current whenever your business details change."
+                : "Security is required here. Finish every item in this checklist before the public profile and new lead access are enabled."}
+            </p>
+          </div>
+
+          <div className="w-full max-w-[300px]">
+            {mover.readiness.nextStep?.destination === "security" ? (
               <FeedbackButton
                 kind="primary"
                 fullWidth
@@ -313,24 +308,26 @@ export function MoverSecurityPanel({ mover, onOpenDestination }: Props) {
                 onClick={resendVerification}
                 iconIdle={<MailCheck className="h-4 w-4" />}
               />
-            </div>
+            ) : mover.readiness.nextStep ? (
+              <NavigationButton
+                label={nextNavigationDestination === "documents" ? "Upload documents" : "Complete profile"}
+                active={navigationState === nextNavigationDestination}
+                onClick={() => openDestination(nextNavigationDestination)}
+              />
+            ) : (
+              <NavigationButton label="Review profile" active={navigationState === "profile"} onClick={() => openDestination("profile")} />
+            )}
           </div>
-          <StatusMessage state={verifyState} />
-        </section>
-      ) : (
-        <section className="rounded-[24px] border border-emerald-200 bg-[linear-gradient(135deg,#ecfdf5,#ffffff)] p-4 shadow-sm sm:rounded-[30px] sm:p-5">
-          <div className="flex items-start gap-3">
-            <div className="rounded-2xl bg-emerald-100 p-3 text-emerald-700">
-              <CheckCircle2 className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.16em] text-emerald-700">Account protected</p>
-              <h2 className="mt-1 text-xl font-black tracking-[-0.05em] text-slate-950 sm:text-2xl">Your email is verified</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600">Your email is used to recover access to your account, and it is already confirmed.</p>
-            </div>
-          </div>
-        </section>
-      )}
+        </div>
+
+        <div className="mt-4 grid gap-2 sm:grid-cols-3">
+          <StatusSummary label="Verification" value={mover.readiness.isLive ? "Live" : `${mover.readiness.missingCount} missing`} good={mover.readiness.isLive} />
+          <StatusSummary label="Email" value={mover.emailVerified ? "Verified" : "Pending"} good={mover.emailVerified} />
+          <StatusSummary label="Documents" value={documentsReady ? "On file" : "Required"} good={documentsReady} />
+        </div>
+
+        <StatusMessage state={verifyState} className="mt-4" />
+      </section>
 
       <div className="grid gap-3 sm:gap-4 2xl:grid-cols-[minmax(0,0.95fr)_minmax(340px,1.05fr)]">
         <div className="order-2 space-y-3 sm:space-y-4 2xl:order-1">
@@ -338,7 +335,7 @@ export function MoverSecurityPanel({ mover, onOpenDestination }: Props) {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-[0.16em] text-sky-700">Account status</p>
-                <h2 className="mt-1 text-xl font-black tracking-[-0.05em] text-slate-950 sm:text-2xl">Security at a glance</h2>
+                <h2 className="mt-1 text-xl font-black tracking-[-0.05em] text-slate-950 sm:text-2xl">Verification at a glance</h2>
               </div>
               <div className="rounded-2xl bg-sky-100 p-3 text-sky-700">
                 <ShieldCheck className="h-5 w-5" />
@@ -355,14 +352,18 @@ export function MoverSecurityPanel({ mover, onOpenDestination }: Props) {
               <StatusCard
                 title="Account recovery"
                 value="Email-based recovery"
-                description="Your email is used to recover access to your account."
+                description={mover.emailVerified ? "Your verified email can be used to recover account access." : "Verify your email so recovery links are tied to a confirmed account."}
                 good={mover.emailVerified}
               />
               <StatusCard
                 title="Lead access"
-                value="Restricted to your company"
-                description="Only your company can access the leads assigned to this account."
-                good
+                value={mover.readiness.isLive ? "Enabled for verified profile" : "Paused until verified"}
+                description={
+                  mover.readiness.isLive
+                    ? "Only your verified company account can open leads assigned to this profile."
+                    : "Complete the verification checklist before opening new lead details."
+                }
+                good={mover.readiness.isLive}
               />
               <StatusCard
                 title="Payment security"
@@ -486,9 +487,13 @@ export function MoverSecurityPanel({ mover, onOpenDestination }: Props) {
         </div>
 
         <aside className="order-1 rounded-[24px] border border-slate-200 bg-[linear-gradient(180deg,#f8fbff,#ffffff)] p-4 shadow-sm sm:rounded-[30px] sm:p-5 2xl:order-2">
-          <p className="text-sm font-semibold uppercase tracking-[0.16em] text-sky-700">Secure your account</p>
-          <h2 className="mt-1 text-xl font-black tracking-[-0.05em] text-slate-950 sm:text-2xl">Complete your checklist</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-600">Work through the remaining items to improve trust, recovery, and account readiness.</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.16em] text-sky-700">Verification to go live</p>
+          <h2 className="mt-1 text-xl font-black tracking-[-0.05em] text-slate-950 sm:text-2xl">
+            {mover.readiness.isLive ? "All checks complete" : `${mover.readiness.missingCount} required check${mover.readiness.missingCount === 1 ? "" : "s"} left`}
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            Complete these required checks before the profile is public and new lead access is enabled.
+          </p>
 
           <div className="mt-4 h-3 rounded-full bg-slate-200">
             <div className="h-full rounded-full bg-[linear-gradient(90deg,#0f172a,#0ea5e9)] transition-all duration-300" style={{ width: `${checklistCompletion}%` }} />
@@ -515,6 +520,15 @@ export function MoverSecurityPanel({ mover, onOpenDestination }: Props) {
           {billingError ? <p className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{billingError}</p> : null}
         </aside>
       </div>
+    </div>
+  );
+}
+
+function StatusSummary({ label, value, good }: { label: string; value: string; good: boolean }) {
+  return (
+    <div className={cx("rounded-[18px] border px-3 py-3", good ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50")}>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">{label}</p>
+      <p className={cx("mt-1 text-sm font-black", good ? "text-emerald-800" : "text-amber-900")}>{value}</p>
     </div>
   );
 }

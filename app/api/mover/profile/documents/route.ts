@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { calculateMoverProfileReadiness, requireAuthenticatedMover } from "@/lib/mover-profile";
+import { revalidateAboutPage, revalidatePublicMovers } from "@/lib/public-cache";
 import { moverDocumentTypeSchema, moverDocumentUploadSchema, parseDataUrl, sanitiseFileName } from "@/lib/validators";
 
 const ALLOWED_DOCUMENT_MIME_TYPES = new Set(["application/pdf", "image/png", "image/jpeg", "image/webp"]);
@@ -94,6 +95,9 @@ export async function POST(req: NextRequest) {
   if (!refreshedMover) {
     return NextResponse.json({ error: "Mover profile not found." }, { status: 404 });
   }
+
+  revalidatePublicMovers();
+  revalidateAboutPage();
 
   return NextResponse.json({
     document: serialiseDocument(document),

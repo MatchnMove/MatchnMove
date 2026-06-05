@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { calculateMoverProfileReadiness, requireAuthenticatedMover } from "@/lib/mover-profile";
+import { revalidateAboutPage, revalidatePublicMovers } from "@/lib/public-cache";
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const mover = await requireAuthenticatedMover();
@@ -30,6 +31,9 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   if (!refreshedMover) {
     return NextResponse.json({ error: "Mover profile not found." }, { status: 404 });
   }
+
+  revalidatePublicMovers();
+  revalidateAboutPage();
 
   return NextResponse.json({
     ok: true,

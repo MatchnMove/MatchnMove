@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { expireAndRedistributeLead, isLeadPastExpiry, isLeadUnlockable } from "@/lib/lead-lifecycle";
+import { isMoverProfileLive } from "@/lib/mover-profile";
 import { revalidateAboutPage } from "@/lib/public-cache";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -16,11 +17,30 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         userId: session.user.id,
       },
     },
+    include: {
+      moverCompany: {
+        include: {
+          user: true,
+          documents: {
+            select: {
+              id: true,
+            },
+          },
+        },
+      },
+    },
   });
   if (!lead) return NextResponse.json({ error: "Lead not found" }, { status: 404 });
 
   if (["PURCHASED", "CONTACTED", "WON"].includes(lead.status)) {
     return NextResponse.json({ ok: true, unlockedAt: lead.purchasedAt?.toISOString() ?? null });
+  }
+
+  if (!isMoverProfileLive(lead.moverCompany)) {
+    return NextResponse.json(
+      { error: "Complete mover verification in the dashboard before opening new lead details." },
+      { status: 403 },
+    );
   }
 
   if (!isLeadUnlockable(lead.status)) {

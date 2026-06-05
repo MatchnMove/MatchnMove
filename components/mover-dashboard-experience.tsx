@@ -13,7 +13,6 @@ import {
   CircleHelp,
   Clock3,
   CreditCard,
-  FileCheck2,
   LayoutGrid,
   LoaderCircle,
   MapPinned,
@@ -156,6 +155,9 @@ const tabs = [
   { id: "payments", label: "Billing", shortLabel: "Bill", icon: CreditCard },
   { id: "security", label: "Security", shortLabel: "Secure", icon: ShieldCheck },
 ] as const;
+
+type DashboardTab = (typeof tabs)[number]["id"];
+type DashboardDestination = "profile" | "documents" | "payments" | "security";
 
 const statusTone: Record<string, string> = {
   NEW: "bg-sky-100 text-sky-800",
@@ -305,8 +307,8 @@ export function MoverDashboardExperience({
   billingState?: string;
 }) {
   const [profile, setProfile] = useState(mover);
-  const [activeTab, setActiveTab] = useState<(typeof tabs)[number]["id"]>(
-    tabs.some((tab) => tab.id === initialTab) ? (initialTab as (typeof tabs)[number]["id"]) : "overview",
+  const [activeTab, setActiveTab] = useState<DashboardTab>(
+    tabs.some((tab) => tab.id === initialTab) ? (initialTab as DashboardTab) : "overview",
   );
   const [profileFocusSection, setProfileFocusSection] = useState<"profile" | "documents" | null>(null);
   const [laneFilter, setLaneFilter] = useState<"all" | "hot" | "open" | "won">("all");
@@ -339,15 +341,15 @@ export function MoverDashboardExperience({
     return () => window.clearInterval(timer);
   }, []);
 
-  function openTab(tab: (typeof tabs)[number]["id"]) {
+  function openTab(tab: DashboardTab) {
     setActiveTab(tab);
     if (tab !== "profile") setProfileFocusSection(null);
   }
 
-  function openSecurityDestination(destination: "profile" | "documents" | "payments") {
-    if (destination === "payments") {
+  function openDashboardDestination(destination: DashboardDestination) {
+    if (destination === "payments" || destination === "security") {
       setProfileFocusSection(null);
-      setActiveTab("payments");
+      setActiveTab(destination);
       return;
     }
 
@@ -481,21 +483,28 @@ export function MoverDashboardExperience({
           </aside>
 
           <main className="space-y-3 sm:space-y-4">
+            <VerificationBanner mover={profile} onOpenDestination={openDashboardDestination} />
+
             {activeTab !== "payments" ? (
               <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
                 <TopCard icon={BellRing} label="New demand" value={String(profile.stats.activeLeads)} meta="Needs response" />
                 <TopCard icon={BadgeDollarSign} label="Avg lead price" value={formatCurrency(profile.stats.averageLeadPrice)} meta="Billed month end" />
                 <TopCard icon={Target} label="Wins" value={String(profile.stats.wonLeads)} meta="Tracked jobs" />
-                <TopCard icon={FileCheck2} label="Profile score" value={`${profile.readiness.completion}%`} meta="Trust + readiness" />
+                <TopCard
+                  icon={ShieldCheck}
+                  label="Verification"
+                  value={profile.readiness.isLive ? "Live" : `${profile.readiness.missingCount} left`}
+                  meta={profile.readiness.isLive ? "Profile live" : "Required before lead access"}
+                />
               </div>
             ) : null}
 
-            {activeTab === "overview" ? <OverviewPanel mover={profile} routeFitCount={routeFitCount} onOpenTab={openTab} /> : null}
-            {activeTab === "leads" ? <LeadsPanel filteredLeads={filteredLeads} laneFilter={laneFilter} onLaneFilterChange={setLaneFilter} selectedLead={selectedLead} selectedLeadId={selectedLeadId} onSelectLead={setSelectedLeadId} onUnlockLead={unlockLead} onUpdateLeadStatus={updateLeadStatus} busyLeadId={busyLeadId} actionMessage={leadActionMessage} actionError={leadActionError} nowMs={nowMs} /> : null}
+            {activeTab === "overview" ? <OverviewPanel mover={profile} routeFitCount={routeFitCount} onOpenTab={openTab} onOpenDestination={openDashboardDestination} /> : null}
+            {activeTab === "leads" ? <LeadsPanel filteredLeads={filteredLeads} laneFilter={laneFilter} onLaneFilterChange={setLaneFilter} selectedLead={selectedLead} selectedLeadId={selectedLeadId} onSelectLead={setSelectedLeadId} onUnlockLead={unlockLead} onUpdateLeadStatus={updateLeadStatus} busyLeadId={busyLeadId} actionMessage={leadActionMessage} actionError={leadActionError} nowMs={nowMs} readiness={profile.readiness} onOpenDestination={openDashboardDestination} /> : null}
             {activeTab === "ratings" ? <MoverRatingsPanel ratings={profile.ratings} /> : null}
-            {activeTab === "profile" ? <ProfilePanel mover={profile} focusSection={profileFocusSection} onFocusHandled={() => setProfileFocusSection(null)} onProfileChange={(nextProfile) => setProfile((current) => ({ ...current, ...nextProfile, documentsCount: nextProfile.documents.length, profileCompletion: nextProfile.readiness.completion }))} /> : null}
+            {activeTab === "profile" ? <ProfilePanel mover={profile} focusSection={profileFocusSection} onFocusHandled={() => setProfileFocusSection(null)} onOpenSecurity={() => openDashboardDestination("security")} onProfileChange={(nextProfile) => setProfile((current) => ({ ...current, ...nextProfile, documentsCount: nextProfile.documents.length, profileCompletion: nextProfile.readiness.completion }))} /> : null}
             {activeTab === "payments" ? <PaymentsPanel billingState={billingState} /> : null}
-            {activeTab === "security" ? <MoverSecurityPanel mover={profile} onOpenDestination={openSecurityDestination} /> : null}
+            {activeTab === "security" ? <MoverSecurityPanel mover={profile} onOpenDestination={openDashboardDestination} /> : null}
           </main>
         </div>
       </div>
@@ -531,7 +540,9 @@ function MobileHeader({
             <p className="truncate text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-200">{mover.companyName}</p>
             <div className="mt-1 flex items-center gap-2">
               <h1 className="text-lg font-black tracking-[-0.04em] text-white">{activeTab.label}</h1>
-              <span className="rounded-full bg-emerald-400/15 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-200">{mover.status}</span>
+              <span className="rounded-full bg-emerald-400/15 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-200">
+                {mover.readiness.isLive ? "Profile live" : "Verify profile"}
+              </span>
             </div>
           </div>
 
@@ -549,7 +560,7 @@ function MobileHeader({
         <div className="mt-3 grid grid-cols-3 gap-2">
           <MobileMetaPill label="Hot leads" value={String(mover.stats.activeLeads)} />
           <MobileMetaPill label="Route fit" value={String(routeFitCount)} />
-          <MobileMetaPill label="Profile" value={`${mover.readiness.completion}%`} />
+          <MobileMetaPill label="Verify" value={mover.readiness.isLive ? "Live" : `${mover.readiness.missingCount} left`} />
         </div>
       </div>
 
@@ -603,7 +614,7 @@ function MobileHeader({
 
         <div className="mt-4 grid grid-cols-3 gap-2">
           <SidebarStat label="Hot leads" value={String(mover.stats.activeLeads)} />
-          <SidebarStat label="Profile" value={`${mover.readiness.completion}%`} />
+          <SidebarStat label="Verify" value={mover.readiness.isLive ? "Live" : `${mover.readiness.missingCount} left`} />
           <SidebarStat label="Avg lead price" value={formatCurrency(mover.stats.averageLeadPrice)} />
         </div>
 
@@ -614,6 +625,10 @@ function MobileHeader({
           </Link>
           <button type="button" onClick={() => onOpenTab("profile")} className="flex w-full items-center justify-between rounded-2xl bg-white/[0.08] px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/[0.14]">
             Update profile
+            <ArrowRight className="h-4 w-4" />
+          </button>
+          <button type="button" onClick={() => onOpenTab("security")} className="flex w-full items-center justify-between rounded-2xl bg-white/[0.08] px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/[0.14]">
+            {mover.readiness.isLive ? "Review verification" : "Get profile live"}
             <ArrowRight className="h-4 w-4" />
           </button>
         </div>
@@ -649,7 +664,7 @@ function DesktopSidebar({
             Mover hub
           </span>
           <span className="rounded-full bg-emerald-400/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-200">
-            {mover.status}
+            {mover.readiness.isLive ? "Profile live" : "Verify profile"}
           </span>
         </div>
         <p className="mt-4 text-2xl font-black tracking-[-0.05em] text-white">{mover.companyName}</p>
@@ -681,7 +696,7 @@ function DesktopSidebar({
 
       <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
         <SidebarStat label="Hot leads" value={String(mover.stats.activeLeads)} />
-        <SidebarStat label="Profile" value={`${mover.readiness.completion}%`} />
+        <SidebarStat label="Verify" value={mover.readiness.isLive ? "Live" : `${mover.readiness.missingCount} left`} />
         <SidebarStat label="Avg lead price" value={formatCurrency(mover.stats.averageLeadPrice)} />
       </div>
 
@@ -698,6 +713,10 @@ function DesktopSidebar({
           </button>
           <button type="button" onClick={() => onOpenTab("profile")} className="flex w-full items-center justify-between rounded-2xl bg-white/[0.08] px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/[0.14]">
             Update profile
+            <ArrowRight className="h-4 w-4" />
+          </button>
+          <button type="button" onClick={() => onOpenTab("security")} className="flex w-full items-center justify-between rounded-2xl bg-white/[0.08] px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/[0.14]">
+            {mover.readiness.isLive ? "Review verification" : "Get profile live"}
             <ArrowRight className="h-4 w-4" />
           </button>
         </div>
@@ -745,7 +764,94 @@ function MobileNavigation({
   );
 }
 
-function OverviewPanel({ mover, routeFitCount, onOpenTab }: { mover: DashboardMover; routeFitCount: number; onOpenTab: (value: (typeof tabs)[number]["id"]) => void }) {
+function VerificationBanner({ mover, onOpenDestination }: { mover: DashboardMover; onOpenDestination: (destination: DashboardDestination) => void }) {
+  const nextStep = mover.readiness.nextStep;
+  const primaryDestination = nextStep?.destination ?? "security";
+  const primaryLabel = mover.readiness.isLive
+    ? "Review security"
+    : primaryDestination === "security"
+      ? "Verify email"
+      : primaryDestination === "documents"
+        ? "Upload documents"
+        : "Complete profile";
+
+  return (
+    <section
+      className={cx(
+        "rounded-[24px] border p-4 shadow-sm sm:rounded-[30px] sm:p-5",
+        mover.readiness.isLive
+          ? "border-emerald-200 bg-[linear-gradient(135deg,#ecfdf5,#ffffff)]"
+          : "border-amber-200 bg-[linear-gradient(135deg,#fff8e8,#ffffff)]",
+      )}
+    >
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+        <div className="max-w-3xl">
+          <div
+            className={cx(
+              "inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] sm:text-xs",
+              mover.readiness.isLive ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800",
+            )}
+          >
+            {mover.readiness.isLive ? <CheckCircle2 className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+            {mover.readiness.isLive ? "Profile live" : "Verification required"}
+          </div>
+          <h2 className="mt-3 text-xl font-black tracking-[-0.05em] text-slate-950 sm:text-2xl">
+            {mover.readiness.isLive ? "Your mover profile is live" : "Get verified before your profile goes live"}
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-slate-700">
+            {mover.readiness.isLive
+              ? "All required security, business, profile, and document checks are complete."
+              : "Movers must complete verification before appearing publicly or opening new lead details. Use the next action below, then finish the full checklist in Security."}
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-2 sm:flex-row xl:flex-col 2xl:flex-row">
+          <button
+            type="button"
+            onClick={() => onOpenDestination(mover.readiness.isLive ? "security" : primaryDestination)}
+            className={cx(
+              "inline-flex min-h-[48px] items-center justify-center gap-2 rounded-2xl px-4 py-2 text-sm font-semibold text-white transition hover:translate-y-[-1px]",
+              mover.readiness.isLive ? "bg-emerald-700 hover:bg-emerald-800" : "bg-slate-900 hover:bg-slate-800",
+            )}
+          >
+            {primaryLabel}
+            <ArrowRight className="h-4 w-4" />
+          </button>
+          {!mover.readiness.isLive ? (
+            <button
+              type="button"
+              onClick={() => onOpenDestination("security")}
+              className="inline-flex min-h-[48px] items-center justify-center rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              Security checklist
+            </button>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-7">
+        {mover.readiness.checks.map((check) => (
+          <div key={check.key} className={cx("rounded-[18px] border px-3 py-3", check.complete ? "border-emerald-200 bg-emerald-50" : "border-slate-200 bg-white")}>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">{check.title}</p>
+            <p className={cx("mt-1 text-sm font-black", check.complete ? "text-emerald-800" : "text-slate-950")}>{check.complete ? "Done" : check.label}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function OverviewPanel({
+  mover,
+  routeFitCount,
+  onOpenTab,
+  onOpenDestination,
+}: {
+  mover: DashboardMover;
+  routeFitCount: number;
+  onOpenTab: (value: DashboardTab) => void;
+  onOpenDestination: (destination: DashboardDestination) => void;
+}) {
   return (
     <div className="space-y-3 sm:space-y-4">
       <div className="grid gap-3 sm:gap-4 2xl:grid-cols-[minmax(0,1.15fr)_minmax(22rem,0.85fr)]">
@@ -767,8 +873,8 @@ function OverviewPanel({ mover, routeFitCount, onOpenTab }: { mover: DashboardMo
           </div>
           <div className="mt-3 grid gap-2 sm:mt-4 sm:gap-3 lg:grid-cols-3">
             <JumpCard title="Lead board" action="Open leads" onClickLabel="Go" onClick={() => onOpenTab("leads")} />
-            <JumpCard title="Pricing" action="Check costs" href="/mover/pricing" />
-            <JumpCard title="Profile" action="Tighten trust" onClickLabel="Edit" onClick={() => onOpenTab("profile")} />
+            <JumpCard title="Security" action={mover.readiness.isLive ? "Review checks" : "Get profile live"} onClickLabel="Open" onClick={() => onOpenDestination("security")} />
+            <JumpCard title="Profile" action={mover.readiness.isLive ? "Keep current" : "Finish required details"} onClickLabel="Edit" onClick={() => onOpenDestination("profile")} />
           </div>
         </div>
 
@@ -797,6 +903,8 @@ type LeadsPanelProps = {
   actionMessage: string | null;
   actionError: string | null;
   nowMs: number;
+  readiness: DashboardMover["readiness"];
+  onOpenDestination: (destination: DashboardDestination) => void;
 };
 
 function LeadsPanel({
@@ -812,6 +920,8 @@ function LeadsPanel({
   actionMessage,
   actionError,
   nowMs,
+  readiness,
+  onOpenDestination,
 }: LeadsPanelProps) {
   const detailPanelRef = useRef<HTMLDivElement | null>(null);
   const filters: Array<{ id: LeadsPanelProps["laneFilter"]; label: string }> = [
@@ -910,6 +1020,21 @@ function LeadsPanel({
                 <div className="flex min-h-[48px] flex-1 items-center justify-center rounded-2xl bg-rose-50 px-4 text-sm font-semibold text-rose-700 sm:min-h-[52px] sm:px-5">
                   {selectedLeadExpiry?.tone === "expired" ? "Lead expired" : "Lead unavailable"}
                 </div>
+              ) : !readiness.isLive ? (
+                <div className="flex-1 rounded-[20px] border border-amber-200 bg-amber-50 p-3 sm:rounded-[24px] sm:p-4">
+                  <p className="text-sm font-semibold text-amber-900">Verification required before opening lead details.</p>
+                  <p className="mt-1 text-sm leading-6 text-amber-800">
+                    Finish the Security checklist to make your profile live, then return here to open customer contact details.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => onOpenDestination("security")}
+                    className="mt-3 inline-flex min-h-[44px] items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:translate-y-[-1px]"
+                  >
+                    Complete verification
+                    <ArrowRight className="h-4 w-4" />
+                  </button>
+                </div>
               ) : (
                 <div className="flex-1">
                   <button type="button" disabled={busyLeadId === selectedLead.id} onClick={() => void handleUnlockLead(selectedLead.id)} className="inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl bg-accentOrange px-4 text-sm font-semibold text-white transition hover:translate-y-[-1px] hover:bg-orange-500 disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-[52px] sm:px-5">
@@ -993,13 +1118,15 @@ function ProfilePanel({
   onProfileChange,
   focusSection,
   onFocusHandled,
+  onOpenSecurity,
 }: {
   mover: DashboardMover;
   onProfileChange: (profile: MoverProfileState) => void;
   focusSection?: "profile" | "documents" | null;
   onFocusHandled?: () => void;
+  onOpenSecurity?: () => void;
 }) {
-  return <MoverProfileSettings profile={mover} onProfileChange={onProfileChange} focusSection={focusSection} onFocusHandled={onFocusHandled} />;
+  return <MoverProfileSettings profile={mover} onProfileChange={onProfileChange} focusSection={focusSection} onFocusHandled={onFocusHandled} onOpenSecurity={onOpenSecurity} />;
 }
 
 function PaymentsPanel({ billingState }: { billingState?: string }) {

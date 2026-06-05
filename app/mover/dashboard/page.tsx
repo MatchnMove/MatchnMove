@@ -79,19 +79,7 @@ export default async function MoverDashboardPage({
   const competition = getMoverCompetitionSnapshot(mover.id, ratingsData.summary, leaderboard);
   const moverServiceAreas = sanitiseNzServiceAreas(mover.serviceAreas);
 
-  const completionChecks = [
-    Boolean(mover.companyName),
-    Boolean(mover.nzbn),
-    Boolean(mover.yearsOperating),
-    Boolean(mover.contactPerson),
-    Boolean(mover.phone),
-    moverServiceAreas.length > 0,
-    Boolean(mover.logoUrl),
-    mover.documents.length > 0,
-    Boolean(mover.user.emailVerifiedAt),
-  ];
-
-  const profileCompletion = Math.round((completionChecks.filter(Boolean).length / completionChecks.length) * 100);
+  const readiness = calculateMoverProfileReadiness(mover);
   const activePipelineStatuses = ["NEW", "NOTIFIED", "VIEWED"] as const;
   const wonStatuses = ["WON"] as const;
   const purchasedStatuses = ["PURCHASED", "CONTACTED", "WON"] as const;
@@ -123,8 +111,8 @@ export default async function MoverDashboardPage({
     })),
     logoUrl: mover.logoUrl,
     baseLeadPrice: LEAD_PRICING.basePrice,
-    profileCompletion,
-    readiness: calculateMoverProfileReadiness(mover),
+    profileCompletion: readiness.completion,
+    readiness,
     stats: {
       activeLeads: mover.leads.filter((lead) => activePipelineStatuses.includes(lead.status as (typeof activePipelineStatuses)[number])).length,
       purchasedLeads: mover.leads.filter((lead) => purchasedStatuses.includes(lead.status as (typeof purchasedStatuses)[number])).length,

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { AuthTokenType } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { consumeAuthToken, purgeAuthTokens } from "@/lib/auth-token";
+import { revalidateAboutPage, revalidatePublicMovers } from "@/lib/public-cache";
 
 export async function POST(req: NextRequest) {
   const body = (await req.json().catch(() => ({}))) as { token?: string };
@@ -19,6 +20,8 @@ export async function POST(req: NextRequest) {
     data: { emailVerifiedAt: new Date() }
   });
   await purgeAuthTokens(tokenRecord.userId, AuthTokenType.VERIFY_EMAIL);
+  revalidatePublicMovers();
+  revalidateAboutPage();
 
   return NextResponse.json({ ok: true });
 }

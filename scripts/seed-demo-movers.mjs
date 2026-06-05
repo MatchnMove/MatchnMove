@@ -241,6 +241,18 @@ async function createDemoData() {
       },
     });
 
+    await prisma.moverDocument.create({
+      data: {
+        id: `demo-document-${mover.id}-insurance`,
+        moverCompanyId: mover.id,
+        type: "INSURANCE",
+        fileName: `${mover.companyName} insurance certificate.pdf`,
+        mimeType: "application/pdf",
+        fileSize: 18,
+        fileUrl: "data:application/pdf;base64,JVBERi0xLjQKJUVPRg==",
+      },
+    });
+
     const reviewMetrics = [];
 
     for (const [reviewIndex, [customerName, fromCity, toCity, rating, reviewText]] of mover.reviews.entries()) {

@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { isMoverProfileLive } from "@/lib/mover-profile";
 import { cacheTaggedData, PUBLIC_MOVERS_TAG } from "@/lib/public-cache";
 import { getDisplayedReviewerName, getPublicReviewsForMover } from "@/lib/reviews";
 
@@ -15,17 +16,45 @@ export const publicMoverSelect = Prisma.validator<Prisma.MoverCompanySelect>()({
   leaderboardEligible: true,
 });
 
-type PublicMoverCandidate = Prisma.MoverCompanyGetPayload<{ select: typeof publicMoverSelect }>;
+const publicMoverEligibilitySelect = Prisma.validator<Prisma.MoverCompanySelect>()({
+  ...publicMoverSelect,
+  contactPerson: true,
+  phone: true,
+  nzbn: true,
+  documents: {
+    select: {
+      id: true,
+    },
+  },
+  user: {
+    select: {
+      emailVerifiedAt: true,
+    },
+  },
+});
+
+type PublicMoverCandidate = Prisma.MoverCompanyGetPayload<{ select: typeof publicMoverEligibilitySelect }>;
+type PublicMover = Prisma.MoverCompanyGetPayload<{ select: typeof publicMoverSelect }>;
 
 export function isMoverPubliclyVisible(mover: PublicMoverCandidate) {
-  // Public directory eligibility is intentionally based on the fields this app actually maintains today:
-  // movers must be active, have a company name, and provide at least one service area.
-  // Email verification is not enforced here because current seeded/local mover accounts are active but may
-  // not have emailVerifiedAt populated, which would incorrectly hide legitimate public profiles.
-  return Boolean(mover.companyName.trim() && mover.serviceAreas.length > 0);
+  return Boolean(mover.companyName.trim()) && isMoverProfileLive(mover);
 }
 
-function comparePublicMoversByRating(left: PublicMoverCandidate, right: PublicMoverCandidate) {
+function toPublicMover(mover: PublicMoverCandidate): PublicMover {
+  return {
+    id: mover.id,
+    companyName: mover.companyName,
+    businessDescription: mover.businessDescription,
+    logoUrl: mover.logoUrl,
+    serviceAreas: mover.serviceAreas,
+    yearsOperating: mover.yearsOperating,
+    averageRating: mover.averageRating,
+    totalReviewCount: mover.totalReviewCount,
+    leaderboardEligible: mover.leaderboardEligible,
+  };
+}
+
+function comparePublicMoversByRating(left: PublicMover, right: PublicMover) {
   if (right.averageRating !== left.averageRating) return right.averageRating - left.averageRating;
   if (right.totalReviewCount !== left.totalReviewCount) return right.totalReviewCount - left.totalReviewCount;
   if (Number(right.leaderboardEligible) !== Number(left.leaderboardEligible)) {
@@ -38,16 +67,34 @@ function comparePublicMoversByRating(left: PublicMoverCandidate, right: PublicMo
   return left.companyName.localeCompare(right.companyName);
 }
 
+function getErrorMessage(error: unknown) {
+  if (!(error instanceof Error)) return String(error);
+
+  return error.message
+    .split("\n")
+    .map((line) => line.trim())
+    .find(Boolean) ?? error.name;
+}
+
+function logPublicMoverLoadIssue(scope: string, error: unknown) {
+  if (process.env.NODE_ENV === "production") {
+    console.warn(`${scope} unavailable: ${getErrorMessage(error)}`);
+    return;
+  }
+
+  console.warn(`${scope} unavailable in local/dev runtime. Returning fallback public mover data.`);
+}
+
 const loadPublicMovers = cacheTaggedData(async () => {
   const movers = await prisma.moverCompany.findMany({
     where: {
       status: "ACTIVE",
     },
-    select: publicMoverSelect,
+    select: publicMoverEligibilitySelect,
     orderBy: [{ averageRating: "desc" }, { totalReviewCount: "desc" }, { updatedAt: "desc" }],
   });
 
-  return movers.filter(isMoverPubliclyVisible).sort(comparePublicMoversByRating);
+  return movers.filter(isMoverPubliclyVisible).map(toPublicMover).sort(comparePublicMoversByRating);
 }, ["public-movers-directory"], [PUBLIC_MOVERS_TAG]);
 
 const loadPublicMoverProfile = cacheTaggedData(async (moverId: string) => {
@@ -57,8 +104,8 @@ const loadPublicMoverProfile = cacheTaggedData(async (moverId: string) => {
         id: moverId,
       },
       select: {
-        ...publicMoverSelect,
         status: true,
+        ...publicMoverEligibilitySelect,
         communicationAverage: true,
         punctualityAverage: true,
         careOfBelongingsAverage: true,
@@ -70,7 +117,6 @@ const loadPublicMoverProfile = cacheTaggedData(async (moverId: string) => {
         threeStarCount: true,
         twoStarCount: true,
         oneStarCount: true,
-        contactPerson: true,
       },
     });
 
@@ -79,9 +125,28 @@ const loadPublicMoverProfile = cacheTaggedData(async (moverId: string) => {
     }
 
     const approvedReviews = await getPublicReviewsForMover(mover.id, 8);
-
     return {
-      ...mover,
+      id: mover.id,
+      companyName: mover.companyName,
+      businessDescription: mover.businessDescription,
+      logoUrl: mover.logoUrl,
+      serviceAreas: mover.serviceAreas,
+      yearsOperating: mover.yearsOperating,
+      averageRating: mover.averageRating,
+      totalReviewCount: mover.totalReviewCount,
+      leaderboardEligible: mover.leaderboardEligible,
+      status: mover.status,
+      communicationAverage: mover.communicationAverage,
+      punctualityAverage: mover.punctualityAverage,
+      careOfBelongingsAverage: mover.careOfBelongingsAverage,
+      professionalismAverage: mover.professionalismAverage,
+      valueForMoneyAverage: mover.valueForMoneyAverage,
+      recommendationRate: mover.recommendationRate,
+      fiveStarCount: mover.fiveStarCount,
+      fourStarCount: mover.fourStarCount,
+      threeStarCount: mover.threeStarCount,
+      twoStarCount: mover.twoStarCount,
+      oneStarCount: mover.oneStarCount,
       approvedReviews: approvedReviews.map((review) => ({
         id: review.id,
         overallRating: review.overallRating,
@@ -101,7 +166,7 @@ export async function getPublicMovers() {
   try {
     return await loadPublicMovers();
   } catch (error) {
-    console.error("Failed to load public movers", error);
+    logPublicMoverLoadIssue("Public movers", error);
     return [];
   }
 }
@@ -110,7 +175,7 @@ export async function getPublicMoverProfile(moverId: string) {
   try {
     return await loadPublicMoverProfile(moverId);
   } catch (error) {
-    console.error("Failed to load public mover profile", error);
+    logPublicMoverLoadIssue("Public mover profile", error);
     return null;
   }
 }

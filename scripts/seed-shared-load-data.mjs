@@ -188,6 +188,7 @@ async function cleanupExistingData() {
 function buildMoverRows(passwordHash) {
   const users = [];
   const movers = [];
+  const documents = [];
 
   for (let index = 1; index <= moverCount; index += 1) {
     const userId = `shared-load-user-${pad(index)}`;
@@ -215,9 +216,19 @@ function buildMoverRows(passwordHash) {
       phone: `+64 21 700 ${pad(index)}`,
       baseLeadPrice: 2000,
     });
+
+    documents.push({
+      id: `shared-load-document-${pad(index)}`,
+      moverCompanyId: moverId,
+      type: "INSURANCE",
+      fileName: `Shared Load Movers ${pad(index)} insurance certificate.pdf`,
+      mimeType: "application/pdf",
+      fileSize: 18,
+      fileUrl: "data:application/pdf;base64,JVBERi0xLjQKJUVPRg==",
+    });
   }
 
-  return { users, movers };
+  return { users, movers, documents };
 }
 
 function buildQuoteRows() {
@@ -341,13 +352,14 @@ function buildReviewRows(movers, quotes) {
 async function main() {
   const cleanup = await cleanupExistingData();
   const passwordHash = await hashPassword(password);
-  const { users, movers } = buildMoverRows(passwordHash);
+  const { users, movers, documents } = buildMoverRows(passwordHash);
   const quotes = buildQuoteRows();
   const leads = buildLeadRows(movers, quotes);
   const { reviews, moverStats } = buildReviewRows(movers, quotes);
 
   await prisma.user.createMany({ data: users });
   await prisma.moverCompany.createMany({ data: movers });
+  await prisma.moverDocument.createMany({ data: documents });
   await prisma.quoteRequest.createMany({ data: quotes });
   await prisma.lead.createMany({ data: leads });
   await prisma.review.createMany({ data: reviews });

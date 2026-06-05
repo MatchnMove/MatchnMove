@@ -31,7 +31,7 @@ function VerifyEmailContent() {
       }
 
       setStatus("success");
-      setMessage("Your email is verified. Your Match 'n Move mover account is now fully secured.");
+      setMessage("Your email is verified. Open your mover dashboard to complete any remaining profile and document checks before your profile goes live.");
     }
 
     void verify();

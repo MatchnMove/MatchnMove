@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getLeadExpiryDate, getQuoteMatchedRegions, selectLeadRecipients, sendMoverNewLeadNotification } from "@/lib/lead-lifecycle";
 import { calculateLeadPrice } from "@/lib/lead-pricing";
+import { isMoverProfileLive } from "@/lib/mover-profile";
 import { quoteSchema } from "@/lib/validators";
 import { rateLimit } from "@/lib/rate-limit";
 
@@ -32,7 +33,7 @@ export async function POST(req: NextRequest) {
 
     const matchedRegions = getQuoteMatchedRegions(data);
 
-    const movers = matchedRegions.length
+    const matchedMovers = matchedRegions.length
       ? await prisma.moverCompany.findMany({
           where: {
             serviceAreas: { hasSome: matchedRegions },
@@ -40,10 +41,16 @@ export async function POST(req: NextRequest) {
           },
           include: {
             user: true,
+            documents: {
+              select: {
+                id: true,
+              },
+            },
           },
         })
       : [];
-    const selectedMovers = selectLeadRecipients(movers);
+    const verifiedMovers = matchedMovers.filter(isMoverProfileLive);
+    const selectedMovers = selectLeadRecipients(verifiedMovers);
 
     const pricing = calculateLeadPrice({
       bedrooms: data.bedrooms,
@@ -104,7 +111,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       id: quote.id,
       distributedTo: selectedMovers.length,
-      matchingMovers: movers.length,
+      matchingMovers: verifiedMovers.length,
     });
   } catch (error) {
     console.error("quote POST failed", error);

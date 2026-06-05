@@ -14,6 +14,34 @@ async function updateCustomerDefaultPaymentMethod(customerId: string, paymentMet
   });
 }
 
+async function handleCompletedSetupSession(session: Stripe.Checkout.Session) {
+  if (!stripe || session.metadata?.purpose !== "billing_payment_method") return;
+
+  const moverCompanyId = session.metadata?.moverCompanyId;
+  const customerId = typeof session.customer === "string" ? session.customer : session.customer?.id;
+  if (!moverCompanyId || !customerId || !session.setup_intent) return;
+
+  const mover = await prisma.moverCompany.findUnique({
+    where: { id: moverCompanyId },
+    select: { stripeCustomerId: true },
+  });
+  if (!mover || (mover.stripeCustomerId && mover.stripeCustomerId !== customerId)) return;
+
+  const setupIntent = await stripe.setupIntents.retrieve(String(session.setup_intent));
+  const paymentMethodId =
+    typeof setupIntent.payment_method === "string"
+      ? setupIntent.payment_method
+      : setupIntent.payment_method?.id ?? null;
+
+  if (!paymentMethodId) return;
+
+  await updateCustomerDefaultPaymentMethod(customerId, paymentMethodId);
+  await prisma.moverCompany.update({
+    where: { id: moverCompanyId },
+    data: { stripeCustomerId: customerId },
+  });
+}
+
 export async function POST(req: NextRequest) {
   if (!stripe) {
     return NextResponse.json({ error: "Stripe is not configured." }, { status: 503 });
@@ -21,34 +49,23 @@ export async function POST(req: NextRequest) {
 
   const body = await req.text();
   const signature = (await headers()).get("stripe-signature");
-  if (!signature || !process.env.STRIPE_WEBHOOK_SECRET) {
-    return NextResponse.json({ error: "Missing webhook signature" }, { status: 400 });
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (!signature || !webhookSecret) {
+    return NextResponse.json({ error: "Missing webhook signature configuration" }, { status: 400 });
   }
 
-  const event = stripe.webhooks.constructEvent(body, signature, process.env.STRIPE_WEBHOOK_SECRET);
+  let event: Stripe.Event;
+  try {
+    event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+  } catch {
+    return NextResponse.json({ error: "Invalid webhook signature" }, { status: 400 });
+  }
 
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
 
     if (session.mode === "setup") {
-      const moverCompanyId = session.metadata?.moverCompanyId;
-      const customerId = typeof session.customer === "string" ? session.customer : session.customer?.id;
-
-      if (moverCompanyId && customerId && session.setup_intent) {
-        const setupIntent = await stripe.setupIntents.retrieve(String(session.setup_intent));
-        const paymentMethodId =
-          typeof setupIntent.payment_method === "string"
-            ? setupIntent.payment_method
-            : setupIntent.payment_method?.id ?? null;
-
-        if (paymentMethodId) {
-          await updateCustomerDefaultPaymentMethod(customerId, paymentMethodId);
-          await prisma.moverCompany.update({
-            where: { id: moverCompanyId },
-            data: { stripeCustomerId: customerId },
-          });
-        }
-      }
+      await handleCompletedSetupSession(session);
     }
 
     if (session.mode === "payment") {

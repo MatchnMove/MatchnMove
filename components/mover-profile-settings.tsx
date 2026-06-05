@@ -8,9 +8,12 @@ import { formatServiceAreaLabel, sanitiseNzServiceAreas } from "@/lib/nz-regions
 import { cx } from "@/lib/utils";
 
 type ReadinessCheck = {
-  key: string;
+  key: "email" | "contact" | "business" | "description" | "serviceAreas" | "logo" | "docs";
   complete: boolean;
   label: string;
+  title: string;
+  description: string;
+  destination: "security" | "profile" | "documents";
 };
 
 type ProfileDocument = {
@@ -38,6 +41,14 @@ export type MoverProfileState = {
   readiness: {
     completion: number;
     checks: ReadinessCheck[];
+    isLive: boolean;
+    missingCount: number;
+    nextStep: {
+      key: ReadinessCheck["key"];
+      title: string;
+      destination: ReadinessCheck["destination"];
+      label: string;
+    } | null;
   };
 };
 
@@ -46,6 +57,7 @@ type Props = {
   onProfileChange: (profile: MoverProfileState) => void;
   focusSection?: "profile" | "documents" | null;
   onFocusHandled?: () => void;
+  onOpenSecurity?: () => void;
 };
 
 const phonePattern = /^[+\d][\d\s()-]{6,24}$/;
@@ -83,18 +95,80 @@ function formatFileSize(fileSize: number | null) {
 }
 
 function inferReadiness(profile: MoverProfileState) {
-  const checks = [
-    { key: "email", complete: profile.emailVerified, label: profile.emailVerified ? "Verified" : "Needs action" },
-    { key: "contact", complete: Boolean(profile.contactPerson && profile.phone), label: profile.contactPerson && profile.phone ? "Ready" : "Missing details" },
-    { key: "business", complete: Boolean(profile.nzbn && profile.yearsOperating !== null), label: profile.nzbn && profile.yearsOperating !== null ? "Ready" : "Needs action" },
-    { key: "serviceAreas", complete: profile.serviceAreas.length > 0, label: profile.serviceAreas.length ? `${profile.serviceAreas.length} selected` : "Add regions" },
-    { key: "logo", complete: Boolean(profile.logoUrl), label: profile.logoUrl ? "Uploaded" : "Missing" },
-    { key: "docs", complete: profile.documents.length > 0, label: profile.documents.length ? `${profile.documents.length} on file` : "0 on file" },
+  const checks: ReadinessCheck[] = [
+    {
+      key: "email",
+      complete: profile.emailVerified,
+      label: profile.emailVerified ? "Verified" : "Verify email",
+      title: "Verify email",
+      description: "Confirm the account email so profile changes and account recovery are protected.",
+      destination: "security",
+    },
+    {
+      key: "contact",
+      complete: Boolean(profile.contactPerson && profile.phone),
+      label: profile.contactPerson && profile.phone ? "Ready" : "Add contact",
+      title: "Add contact details",
+      description: "Save a contact name and phone number customers and Match 'n Move can trust.",
+      destination: "profile",
+    },
+    {
+      key: "business",
+      complete: Boolean(profile.nzbn && profile.yearsOperating !== null),
+      label: profile.nzbn && profile.yearsOperating !== null ? "Ready" : "Add NZBN",
+      title: "Verify business identity",
+      description: "Add your NZBN and years operating so the business profile can be checked.",
+      destination: "profile",
+    },
+    {
+      key: "description",
+      complete: Boolean(profile.businessDescription.trim()),
+      label: profile.businessDescription.trim() ? "Ready" : "Add summary",
+      title: "Write public profile",
+      description: "Add a public business description so customers can understand who they are choosing.",
+      destination: "profile",
+    },
+    {
+      key: "serviceAreas",
+      complete: profile.serviceAreas.length > 0,
+      label: profile.serviceAreas.length ? `${profile.serviceAreas.length} selected` : "Add regions",
+      title: "Choose service areas",
+      description: "Select the NZ regions your team actively covers so leads are matched correctly.",
+      destination: "profile",
+    },
+    {
+      key: "logo",
+      complete: Boolean(profile.logoUrl),
+      label: profile.logoUrl ? "Uploaded" : "Upload logo",
+      title: "Upload company logo",
+      description: "Add a logo so the public profile looks legitimate and easy to recognise.",
+      destination: "profile",
+    },
+    {
+      key: "docs",
+      complete: profile.documents.length > 0,
+      label: profile.documents.length ? `${profile.documents.length} on file` : "Upload docs",
+      title: "Upload verification documents",
+      description: "Upload proof such as insurance, NZBN proof, or transport/business documentation.",
+      destination: "documents",
+    },
   ];
+  const missingChecks = checks.filter((check) => !check.complete);
+  const nextStep = missingChecks[0]
+    ? {
+        key: missingChecks[0].key,
+        title: missingChecks[0].title,
+        destination: missingChecks[0].destination,
+        label: missingChecks[0].label,
+      }
+    : null;
 
   return {
     completion: Math.round((checks.filter((check) => check.complete).length / checks.length) * 100),
     checks,
+    isLive: missingChecks.length === 0,
+    missingCount: missingChecks.length,
+    nextStep,
   };
 }
 
@@ -102,7 +176,7 @@ function withReadiness(profile: MoverProfileState, readiness?: MoverProfileState
   return { ...profile, readiness: readiness ?? inferReadiness(profile) };
 }
 
-export function MoverProfileSettings({ profile, onProfileChange, focusSection, onFocusHandled }: Props) {
+export function MoverProfileSettings({ profile, onProfileChange, focusSection, onFocusHandled, onOpenSecurity }: Props) {
   const editableServiceAreas = sanitiseNzServiceAreas(profile.serviceAreas);
   const profileSectionRef = useRef<HTMLElement | null>(null);
   const documentsSectionRef = useRef<HTMLElement | null>(null);
@@ -127,17 +201,7 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
   const [removingId, setRemovingId] = useState<string | null>(null);
   const selectedDocumentType = DOCUMENT_TYPE_DETAILS[documentType];
 
-  const readinessItems = useMemo(() => {
-    const readinessMap = new Map(profile.readiness.checks.map((check) => [check.key, check]));
-    return [
-      { title: "Email", key: "email" },
-      { title: "Contact", key: "contact" },
-      { title: "Business", key: "business" },
-      { title: "Areas", key: "serviceAreas" },
-      { title: "Logo", key: "logo" },
-      { title: "Docs", key: "docs" },
-    ].map((item) => ({ ...item, check: readinessMap.get(item.key) }));
-  }, [profile.readiness.checks]);
+  const readinessItems = useMemo(() => profile.readiness.checks, [profile.readiness.checks]);
 
   useEffect(() => {
     let active = true;
@@ -201,6 +265,24 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
       yearsOperating: profile.yearsOperating === null ? "" : String(profile.yearsOperating),
       serviceAreas: editableServiceAreas,
     });
+  }
+
+  function openReadinessDestination(destination: ReadinessCheck["destination"]) {
+    if (destination === "security") {
+      onOpenSecurity?.();
+      return;
+    }
+
+    const target = destination === "documents" ? documentsSectionRef.current : profileSectionRef.current;
+    target?.scrollIntoView({ behavior: "smooth", block: "start" });
+    target?.focus({ preventScroll: true });
+
+    if (destination === "profile") {
+      setEditing(true);
+      setError(null);
+      setSuccess(null);
+      resetForm();
+    }
   }
 
   function saveProfile() {
@@ -533,22 +615,47 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
       <aside className="order-1 rounded-[24px] border border-slate-200 bg-[linear-gradient(180deg,#fff8ef,#ffffff)] p-4 shadow-sm sm:rounded-[30px] sm:p-5 2xl:order-2">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-orange-600 sm:text-sm">Profile readiness</p>
-            <h2 className="mt-1 text-xl font-black tracking-[-0.05em] text-slate-950 sm:text-2xl">{profile.readiness.completion}% ready</h2>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-orange-600 sm:text-sm">Verification readiness</p>
+            <h2 className="mt-1 text-xl font-black tracking-[-0.05em] text-slate-950 sm:text-2xl">
+              {profile.readiness.isLive ? "Profile live" : `${profile.readiness.missingCount} to go live`}
+            </h2>
           </div>
           <div className="rounded-2xl bg-white p-3 text-emerald-700 shadow-sm">
             <ShieldCheck className="h-5 w-5" />
           </div>
         </div>
 
+        <p className="mt-3 text-sm leading-6 text-slate-600">
+          {profile.readiness.isLive
+            ? "Your verification checks are complete. Your profile is eligible for public visibility and lead access."
+            : "Complete every verification check before your mover profile can go live or open new leads."}
+        </p>
+
         <div className="mt-4 h-3 rounded-full bg-slate-200">
           <div className="h-full rounded-full bg-[linear-gradient(90deg,#f97316,#fb923c)]" style={{ width: `${profile.readiness.completion}%` }} />
         </div>
 
+        {profile.readiness.nextStep ? (
+          <button
+            type="button"
+            onClick={() => openReadinessDestination(profile.readiness.nextStep!.destination)}
+            className="mt-4 inline-flex w-full items-center justify-center rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:translate-y-[-1px]"
+          >
+            Next: {profile.readiness.nextStep.title}
+          </button>
+        ) : null}
+
         <div className="mt-4 space-y-2 sm:mt-5 sm:space-y-3">
-          <ReadinessCard title="Email" value={profile.email} status={readinessItems.find((item) => item.key === "email")?.check?.label ?? (profile.emailVerified ? "Verified" : "Needs action")} complete={profile.emailVerified} />
-          {readinessItems.filter((item) => item.key !== "email").map((item) => (
-            <ReadinessCard key={item.key} title={item.title} value={item.check?.label ?? "Pending"} status={item.check?.complete ? "Complete" : "Needs work"} complete={Boolean(item.check?.complete)} />
+          {readinessItems.map((item) => (
+            <ReadinessCard
+              key={item.key}
+              title={item.title}
+              value={item.key === "email" ? profile.email : item.label}
+              status={item.complete ? "Complete" : item.description}
+              complete={item.complete}
+              actionLabel={item.complete ? undefined : item.destination === "security" ? "Open security" : item.destination === "documents" ? "Upload docs" : "Edit profile"}
+              onClick={item.complete ? undefined : () => openReadinessDestination(item.destination)}
+            />
           ))}
         </div>
       </aside>
@@ -589,12 +696,31 @@ function EditableField({
   );
 }
 
-function ReadinessCard({ title, value, status, complete }: { title: string; value: string; status: string; complete: boolean }) {
+function ReadinessCard({
+  title,
+  value,
+  status,
+  complete,
+  actionLabel,
+  onClick,
+}: {
+  title: string;
+  value: string;
+  status: string;
+  complete: boolean;
+  actionLabel?: string;
+  onClick?: () => void;
+}) {
   return (
     <div className={cx("rounded-[20px] border p-3 sm:rounded-[24px] sm:p-4", complete ? "border-emerald-200 bg-emerald-50" : "border-slate-200 bg-white")}>
       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{title}</p>
       <p className="mt-2 break-words text-sm font-semibold text-slate-900">{value}</p>
       <p className={cx("mt-1 text-sm", complete ? "text-emerald-700" : "text-slate-500")}>{status}</p>
+      {actionLabel && onClick ? (
+        <button type="button" onClick={onClick} className="mt-3 rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">
+          {actionLabel}
+        </button>
+      ) : null}
     </div>
   );
 }

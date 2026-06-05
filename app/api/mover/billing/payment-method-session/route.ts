@@ -3,6 +3,11 @@ import Stripe from "stripe";
 import { getOrCreateStripeCustomer, requireAuthenticatedMoverWithBilling } from "@/lib/mover-billing";
 import { stripe } from "@/lib/stripe";
 
+function getCheckoutReturnOrigin(req: NextRequest) {
+  if (process.env.NODE_ENV !== "production") return req.nextUrl.origin;
+  return process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || req.nextUrl.origin;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const mover = await requireAuthenticatedMoverWithBilling();
@@ -12,13 +17,20 @@ export async function POST(req: NextRequest) {
     const customerId = await getOrCreateStripeCustomer(mover);
     if (!customerId) return NextResponse.json({ error: "Could not create a billing customer." }, { status: 500 });
 
-    const origin = process.env.NEXTAUTH_URL || req.nextUrl.origin;
+    const origin = getCheckoutReturnOrigin(req);
     const session = await stripe.checkout.sessions.create({
       mode: "setup",
       customer: customerId,
       success_url: `${origin}/mover/dashboard?tab=payments&billing=updated`,
       cancel_url: `${origin}/mover/dashboard?tab=payments`,
       payment_method_types: ["card"],
+      client_reference_id: mover.id,
+      setup_intent_data: {
+        metadata: {
+          moverCompanyId: mover.id,
+          purpose: "billing_payment_method",
+        },
+      },
       metadata: {
         moverCompanyId: mover.id,
         purpose: "billing_payment_method",

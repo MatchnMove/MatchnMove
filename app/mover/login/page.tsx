@@ -45,8 +45,8 @@ const trustPoints = [
 
 const onboardingSteps = [
   { label: "Create account", detail: "Business details, secure password, coverage regions" },
-  { label: "Complete profile", detail: "Logo, documents, company basics, contact settings" },
-  { label: "Start receiving leads", detail: "Unlock high-intent enquiries from your dashboard" }
+  { label: "Verify profile", detail: "Confirm email, add NZBN details, upload logo and documents" },
+  { label: "Go live", detail: "Verified movers can appear publicly and open lead details" }
 ];
 
 type Mode = "login" | "signup";
@@ -57,6 +57,10 @@ function getSafeRedirectPath(value: string | null) {
   }
 
   return value;
+}
+
+function getNetworkErrorMessage(action: string) {
+  return `${action} could not reach the server. Check that the local dev server is running, then try again.`;
 }
 
 export default function MoverLoginPage() {
@@ -122,6 +126,8 @@ export default function MoverLoginPage() {
 
       setSuccess("Signed in with Google. Redirecting to your mover dashboard...");
       startTransition(() => router.push(redirectPath));
+    } catch {
+      setError(getNetworkErrorMessage("Google sign-in"));
     } finally {
       setSubmitting(false);
     }
@@ -177,6 +183,8 @@ export default function MoverLoginPage() {
 
       setSuccess("Welcome back. Taking you to your dashboard...");
       startTransition(() => router.push(redirectPath));
+    } catch {
+      setError(getNetworkErrorMessage("Login"));
     } finally {
       setSubmitting(false);
     }
@@ -210,6 +218,8 @@ export default function MoverLoginPage() {
           : "Your Match 'n Move mover account is ready. Email verification is available once SMTP is configured, and we're taking you to the dashboard now..."
       );
       startTransition(() => router.push(redirectPath));
+    } catch {
+      setError(getNetworkErrorMessage("Account creation"));
     } finally {
       setSubmitting(false);
     }
