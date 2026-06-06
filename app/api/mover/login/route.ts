@@ -5,6 +5,7 @@ import { establishMoverSession } from "@/lib/mover-auth";
 import { hashPassword, needsPasswordRehash, verifyPassword } from "@/lib/password";
 import { rateLimit } from "@/lib/rate-limit";
 import { getDatabaseUnavailableMessage, logRuntimeWarning } from "@/lib/runtime-errors";
+import { isAdminUser } from "@/lib/admin-auth";
 
 export async function POST(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for") ?? "local";
@@ -32,7 +33,7 @@ export async function POST(req: NextRequest) {
     }
 
     await establishMoverSession(user);
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, adminMfaRequired: isAdminUser({ ...user, mfaVerified: false }) });
   } catch (error) {
     logRuntimeWarning("Mover login unavailable", error);
     return NextResponse.json({ error: getDatabaseUnavailableMessage("Mover login") }, { status: 503 });

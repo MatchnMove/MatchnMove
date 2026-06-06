@@ -23,6 +23,10 @@ type DocumentReview = {
   fileName: string;
   mimeType: string | null;
   fileSize: number | null;
+  expiresAt: string | null;
+  scanStatus: string;
+  detectedMimeType: string | null;
+  sha256: string | null;
   viewUrl: string;
   createdAt: string;
   moverCompany: {
@@ -251,7 +255,11 @@ export function AdminMoverVerificationPanel({ initialNzbnReviews, initialDocumen
                     <Detail label="NZBN" value={document.moverCompany.nzbn ?? "Not supplied"} />
                     <Detail label="File size" value={formatFileSize(document.fileSize)} />
                     <Detail label="Mime type" value={document.mimeType ?? "Unknown"} />
+                    <Detail label="Detected type" value={document.detectedMimeType ?? "Not validated"} />
+                    <Detail label="Malware scan" value={document.scanStatus.replaceAll("_", " ")} />
+                    <Detail label="Expires" value={document.expiresAt ? new Intl.DateTimeFormat("en-NZ", { dateStyle: "medium" }).format(new Date(document.expiresAt)) : "Not supplied"} />
                     <Detail label="Uploaded" value={new Intl.DateTimeFormat("en-NZ", { dateStyle: "medium" }).format(new Date(document.createdAt))} />
+                    <Detail label="SHA-256" value={document.sha256 ?? "Legacy upload"} />
                   </div>
                   <a href={document.viewUrl} target="_blank" rel="noreferrer" className="mt-3 inline-flex rounded-2xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
                     View submitted file
@@ -306,7 +314,7 @@ function StatusPill({ label, tone }: { label: string; tone: "amber" | "slate" })
 function ReviewNote({ value, onChange }: { value: string; onChange: (value: string) => void }) {
   return (
     <label className="mt-3 block">
-      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Review note</span>
+      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Review note (required for a decision)</span>
       <textarea
         value={value}
         onChange={(event) => onChange(event.target.value)}

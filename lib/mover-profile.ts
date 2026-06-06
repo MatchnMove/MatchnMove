@@ -52,20 +52,38 @@ export function calculateMoverProfileReadiness(mover: {
   businessDescription: string | null;
   contactPerson: string | null;
   phone: string | null;
+  phoneVerifiedAt?: Date | null;
+  authorizedRepresentativeName?: string | null;
+  authorizedRepresentativeRole?: string | null;
+  authorityDeclaredAt?: Date | null;
   nzbn: string | null;
   nzbnVerificationStatus?: string | null;
   nzbnVerificationError?: string | null;
   yearsOperating: number | null;
   logoUrl: string | null;
   serviceAreas: string[];
-  documents: Array<{ id: string; type?: string | null; verificationStatus?: string | null }>;
+  documents: Array<{
+    id: string;
+    type?: string | null;
+    verificationStatus?: string | null;
+    expiresAt?: Date | null;
+    scanStatus?: string | null;
+    detectedMimeType?: string | null;
+  }>;
   user: { emailVerifiedAt: Date | null };
 }): MoverProfileReadiness {
   const nzbnVerified = mover.nzbnVerificationStatus === NZBN_VERIFICATION.VERIFIED;
   const requiredDocumentTypes = ["INSURANCE", "NZBN_PROOF"] as const;
   const approvedDocumentTypes = new Set(
     mover.documents
-      .filter((document) => document.verificationStatus === DOCUMENT_VERIFICATION.APPROVED)
+      .filter(
+        (document) =>
+          document.verificationStatus === DOCUMENT_VERIFICATION.APPROVED &&
+          Boolean(document.detectedMimeType) &&
+          (document.scanStatus === "CLEAN" ||
+            (process.env.NODE_ENV !== "production" && document.scanStatus === "NOT_CONFIGURED")) &&
+          (!document.expiresAt || document.expiresAt > new Date()),
+      )
       .map((document) => document.type)
       .filter((type): type is string => Boolean(type)),
   );
@@ -83,15 +101,21 @@ export function calculateMoverProfileReadiness(mover: {
     },
     {
       key: "contact",
-      complete: hasText(mover.contactPerson) && hasText(mover.phone),
-      label: hasText(mover.contactPerson) && hasText(mover.phone) ? "Ready" : "Add contact",
-      title: "Add contact details",
-      description: "Save a contact name and phone number customers and Match 'n Move can trust.",
+      complete: hasText(mover.contactPerson) && hasText(mover.phone) && Boolean(mover.phoneVerifiedAt),
+      label: mover.phoneVerifiedAt ? "Phone verified" : hasText(mover.phone) ? "Verify phone" : "Add contact",
+      title: "Verify contact details",
+      description: "Save a contact name and confirm the phone number with a one-time SMS code.",
       destination: "profile",
     },
     {
       key: "business",
-      complete: hasText(mover.nzbn) && mover.yearsOperating !== null && nzbnVerified,
+      complete:
+        hasText(mover.nzbn) &&
+        mover.yearsOperating !== null &&
+        nzbnVerified &&
+        hasText(mover.authorizedRepresentativeName) &&
+        hasText(mover.authorizedRepresentativeRole) &&
+        Boolean(mover.authorityDeclaredAt),
       label: nzbnVerified
         ? "NZBN verified"
         : mover.nzbnVerificationStatus === NZBN_VERIFICATION.PENDING_REVIEW
@@ -100,7 +124,9 @@ export function calculateMoverProfileReadiness(mover: {
             ? "NZBN failed"
             : "Verify NZBN",
       title: "Verify business identity",
-      description: mover.nzbnVerificationError || "Add an NZBN that matches an active NZBN Register entity and your mover profile name.",
+      description:
+        mover.nzbnVerificationError ||
+        "Verify the NZBN and confirm the authorised person responsible for the submitted business details.",
       destination: "profile",
     },
     {
@@ -132,7 +158,7 @@ export function calculateMoverProfileReadiness(mover: {
       complete: requiredDocumentsApproved,
       label: requiredDocumentsApproved ? "Approved" : `${approvedRequiredDocumentCount}/${requiredDocumentTypes.length} approved`,
       title: "Upload verification documents",
-      description: "Upload insurance and NZBN proof. They must be reviewed and approved before the profile can go live.",
+      description: "Upload current insurance and NZBN proof. Both must be approved, and insurance must remain unexpired.",
       destination: "documents",
     },
   ];

@@ -20,6 +20,7 @@ export default async function AdminVerificationPage() {
       </section>
     );
   }
+  if (!session.user.mfaVerified) redirect("/admin/mfa");
 
   const [nzbnReviews, documentReviews] = await Promise.all([
     prisma.moverCompany.findMany({
@@ -98,6 +99,10 @@ export default async function AdminVerificationPage() {
             fileName: document.fileName ?? "Document",
             mimeType: document.mimeType,
             fileSize: document.fileSize,
+            expiresAt: document.expiresAt?.toISOString() ?? null,
+            scanStatus: document.scanStatus,
+            detectedMimeType: document.detectedMimeType,
+            sha256: document.sha256,
             viewUrl: `/api/admin/mover-verification/documents/${document.id}/file`,
             createdAt: document.createdAt.toISOString(),
             moverCompany: {

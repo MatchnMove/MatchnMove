@@ -3,19 +3,10 @@ import { MoverDashboardExperience } from "@/components/mover-dashboard-experienc
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { LEAD_PRICING } from "@/lib/lead-pricing";
+import { serializeMoverLeadQuoteRequest } from "@/lib/mover-lead-visibility";
 import { calculateMoverProfileReadiness } from "@/lib/mover-profile";
 import { canonicaliseServiceArea, sanitiseNzServiceAreas } from "@/lib/nz-regions";
 import { getMoverCompetitionSnapshot, getMoverLeaderboard, getMoverRatingsDashboardData } from "@/lib/reviews";
-
-function formatDate(value: Date | null) {
-  if (!value) return "Flexible timing";
-
-  return new Intl.DateTimeFormat("en-NZ", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  }).format(value);
-}
 
 function matchesServiceArea(serviceAreas: string[], lead: { fromCity: string; fromRegion: string; toCity: string; toRegion: string }) {
   if (!serviceAreas.length) return false;
@@ -96,6 +87,10 @@ export default async function MoverDashboardPage({
     emailVerified: Boolean(mover.user.emailVerifiedAt),
     contactPerson: mover.contactPerson ?? "Add your lead contact",
     phone: mover.phone ?? "Add your phone number",
+    phoneVerifiedAt: mover.phoneVerifiedAt?.toISOString() ?? null,
+    authorizedRepresentativeName: mover.authorizedRepresentativeName ?? "",
+    authorizedRepresentativeRole: mover.authorizedRepresentativeRole ?? "",
+    authorityDeclaredAt: mover.authorityDeclaredAt?.toISOString() ?? null,
     nzbn: mover.nzbn ?? "Add your NZBN",
     nzbnVerificationStatus: mover.nzbnVerificationStatus,
     nzbnRegisteredName: mover.nzbnRegisteredName,
@@ -115,6 +110,9 @@ export default async function MoverDashboardPage({
       verificationNote: document.verificationNote,
       reviewedAt: document.reviewedAt?.toISOString() ?? null,
       reviewedBy: document.reviewedBy,
+      expiresAt: document.expiresAt?.toISOString() ?? null,
+      scanStatus: document.scanStatus,
+      detectedMimeType: document.detectedMimeType,
       viewUrl: `/api/mover/profile/documents/${document.id}/file`,
       createdAt: document.createdAt.toISOString(),
     })),
@@ -150,26 +148,10 @@ export default async function MoverDashboardPage({
       paymentReference: lead.payment?.stripeCheckoutId ?? null,
       lastAction: lead.auditLogs[0]?.action ?? null,
       routeMatch: matchesServiceArea(moverServiceAreas, lead.quoteRequest),
-      quoteRequest: {
-        id: lead.quoteRequest.id,
-        name: lead.quoteRequest.name,
-        email: lead.quoteRequest.email,
-        phone: lead.quoteRequest.phone,
-        movingWhat: lead.quoteRequest.movingWhat,
-        bedrooms: lead.quoteRequest.bedrooms,
-        fromAddress: lead.quoteRequest.fromAddress,
-        fromCity: lead.quoteRequest.fromCity,
-        fromRegion: lead.quoteRequest.fromRegion,
-        fromPostcode: lead.quoteRequest.fromPostcode,
-        toAddress: lead.quoteRequest.toAddress,
-        toCity: lead.quoteRequest.toCity,
-        toRegion: lead.quoteRequest.toRegion,
-        toPostcode: lead.quoteRequest.toPostcode,
-        fromPropertyType: lead.quoteRequest.fromPropertyType,
-        toPropertyType: lead.quoteRequest.toPropertyType,
-        moveDateLabel: formatDate(lead.quoteRequest.moveDate),
-        dateFlexible: lead.quoteRequest.dateFlexible,
-      },
+      quoteRequest: serializeMoverLeadQuoteRequest(
+        mover.status === "ACTIVE" && readiness.isLive ? lead.status : "VERIFICATION_REQUIRED",
+        lead.quoteRequest,
+      ),
     })),
   };
 

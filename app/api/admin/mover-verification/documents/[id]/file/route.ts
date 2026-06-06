@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminRequest } from "@/lib/admin-auth";
 import { prisma } from "@/lib/db";
+import { getPrivateDocumentUrl } from "@/lib/private-storage";
 import { parseDataUrl } from "@/lib/validators";
 
 const INLINE_PREVIEW_MIME_TYPES = new Set(["application/pdf", "image/png", "image/jpeg", "image/webp"]);
@@ -24,7 +25,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: "Document not found." }, { status: 404 });
   }
 
-  const data = parseDataUrl(document.fileUrl);
+  if (document.storageKey) {
+    const url = await getPrivateDocumentUrl(document.storageKey, document.fileName ?? "document");
+    return NextResponse.redirect(url, 302);
+  }
+
+  const data = document.fileUrl ? parseDataUrl(document.fileUrl) : null;
   if (!data) {
     return NextResponse.json({ error: "Stored document is invalid." }, { status: 500 });
   }

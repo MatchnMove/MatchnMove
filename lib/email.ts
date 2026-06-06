@@ -35,13 +35,34 @@ type MoverLeadEmailInput = {
   expiresAt: Date;
 };
 
+type VerificationReviewInput = {
+  moverCompanyName: string;
+  moverEmail: string;
+  item: string;
+  detail: string;
+  adminUrl?: string;
+};
+
+type VerificationDecisionInput = {
+  email: string;
+  moverName?: string | null;
+  moverCompanyName: string;
+  item: string;
+  status: string;
+  note?: string | null;
+  dashboardUrl: string;
+};
+
 type EmailKind =
   | "contact_notification"
   | "mover_verification"
   | "mover_password_reset"
   | "review_survey"
   | "mover_new_lead"
-  | "mover_lead_expiry_warning";
+  | "mover_lead_expiry_warning"
+  | "verification_review_submitted"
+  | "verification_decision"
+  | "verification_expiry_warning";
 
 type EmailMessage = {
   kind: EmailKind;
@@ -191,6 +212,21 @@ function getLeadEmailConfig() {
   return {
     configured: isSmtpConfigured() && Boolean(from),
     from,
+  };
+}
+
+function getVerificationEmailConfig() {
+  const base = getLeadEmailConfig();
+  const reviewTo = getFirstConfiguredValue(
+    process.env.VERIFICATION_REVIEW_TO_EMAIL,
+    process.env.CONTACT_TO_EMAIL,
+    process.env.SUPPORT_EMAIL,
+    SITE_EMAILS.support,
+  );
+  return {
+    ...base,
+    reviewTo,
+    configuredForReview: base.configured && Boolean(reviewTo),
   };
 }
 
@@ -1067,6 +1103,74 @@ export async function sendReviewSurveyEmail(input: ReviewSurveyEmailInput) {
         label: "Leave your review",
       },
       footerNote: "This secure review link can only be used once. If you have already shared feedback, you can ignore this email.",
+    }),
+  };
+
+  return queueAndTrySend(message, config.configured);
+}
+
+export async function sendVerificationReviewSubmitted(input: VerificationReviewInput) {
+  const config = getVerificationEmailConfig();
+  const theme = getMoverLeadTheme();
+  const adminUrl = input.adminUrl || `${process.env.NEXTAUTH_URL?.replace(/\/$/, "") || "http://localhost:3000"}/admin/verification`;
+  const message: EmailMessage = {
+    kind: "verification_review_submitted",
+    from: config.from,
+    to: config.reviewTo,
+    subject: `Verification review required: ${input.moverCompanyName}`,
+    text: [
+      `${input.moverCompanyName} submitted ${input.item} for verification review.`,
+      `Mover email: ${input.moverEmail}`,
+      input.detail,
+      `Review: ${adminUrl}`,
+    ].join("\n"),
+    html: renderEmailShell({
+      theme,
+      preheader: `${input.moverCompanyName} submitted ${input.item} for review.`,
+      eyebrow: "Verification review",
+      title: "A mover is waiting for approval",
+      intro: `${escapeHtml(input.moverCompanyName)} submitted new verification evidence.`,
+      bodyHtml: renderDetailTable(`
+        ${renderDetailRow("Mover", input.moverCompanyName)}
+        ${renderDetailRow("Account", input.moverEmail)}
+        ${renderDetailRow("Item", input.item)}
+        ${renderDetailRow("Details", input.detail)}
+      `),
+      cta: { href: adminUrl, label: "Review verification" },
+      footerNote: "Only approve evidence after checking the business identity, validity, and expiry date.",
+    }),
+  };
+
+  return queueAndTrySend(message, config.configuredForReview);
+}
+
+export async function sendVerificationDecision(input: VerificationDecisionInput) {
+  const config = getVerificationEmailConfig();
+  const theme = getMoverLeadTheme();
+  const message: EmailMessage = {
+    kind: input.status === "EXPIRING" ? "verification_expiry_warning" : "verification_decision",
+    from: config.from,
+    to: input.email,
+    subject: `${input.item} verification update`,
+    text: [
+      `Hi ${input.moverName?.trim() || "there"},`,
+      `${input.item} for ${input.moverCompanyName}: ${input.status}.`,
+      input.note || "",
+      `Dashboard: ${input.dashboardUrl}`,
+    ].filter(Boolean).join("\n\n"),
+    html: renderEmailShell({
+      theme,
+      preheader: `${input.item} is ${input.status.toLowerCase()}.`,
+      eyebrow: "Verification update",
+      title: `${input.item}: ${input.status}`,
+      intro: `There is an update to the verification for ${escapeHtml(input.moverCompanyName)}.`,
+      bodyHtml: renderDetailTable(`
+        ${renderDetailRow("Verification item", input.item)}
+        ${renderDetailRow("Status", input.status)}
+        ${input.note ? renderDetailRow("Reviewer note", input.note) : ""}
+      `),
+      cta: { href: input.dashboardUrl, label: "Open mover dashboard" },
+      footerNote: "Keep your business and insurance details current so your profile remains eligible for leads.",
     }),
   };
 

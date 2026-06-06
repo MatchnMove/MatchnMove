@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { expireAndRedistributeLead, isLeadPastExpiry, isLeadUnlockable } from "@/lib/lead-lifecycle";
+import { serializeMoverLeadQuoteRequest } from "@/lib/mover-lead-visibility";
 import { isMoverProfileLive } from "@/lib/mover-profile";
 import { revalidateAboutPage } from "@/lib/public-cache";
 
@@ -18,6 +19,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       },
     },
     include: {
+      quoteRequest: true,
       moverCompany: {
         include: {
           user: true,
@@ -33,9 +35,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     },
   });
   if (!lead) return NextResponse.json({ error: "Lead not found" }, { status: 404 });
-
-  if (["PURCHASED", "CONTACTED", "WON"].includes(lead.status)) {
-    return NextResponse.json({ ok: true, unlockedAt: lead.purchasedAt?.toISOString() ?? null });
+  if (lead.moverCompany.status !== "ACTIVE") {
+    return NextResponse.json({ error: "This mover account is suspended and cannot open leads." }, { status: 403 });
   }
 
   if (!isMoverProfileLive(lead.moverCompany)) {
@@ -43,6 +44,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       { error: "Complete mover verification in the dashboard before opening new lead details." },
       { status: 403 },
     );
+  }
+
+  if (["PURCHASED", "CONTACTED", "WON"].includes(lead.status)) {
+    return NextResponse.json({
+      ok: true,
+      unlockedAt: lead.purchasedAt?.toISOString() ?? null,
+      quoteRequest: serializeMoverLeadQuoteRequest(lead.status, lead.quoteRequest),
+    });
   }
 
   if (!isLeadUnlockable(lead.status)) {
@@ -87,5 +96,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   revalidateAboutPage();
 
-  return NextResponse.json({ ok: true, unlockedAt: unlockedAt.toISOString() });
+  return NextResponse.json({
+    ok: true,
+    unlockedAt: unlockedAt.toISOString(),
+    quoteRequest: serializeMoverLeadQuoteRequest("PURCHASED", lead.quoteRequest),
+  });
 }

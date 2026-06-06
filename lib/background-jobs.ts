@@ -1,5 +1,6 @@
 import { processEmailQueue } from "@/lib/email";
 import { processLeadLifecycle } from "@/lib/lead-lifecycle";
+import { processDocumentExpiry } from "@/lib/document-expiry";
 
 type BackgroundJobState = {
   started: boolean;
@@ -42,12 +43,13 @@ async function runBackgroundJobTick(state: BackgroundJobState) {
 
   try {
     const limit = getNumberEnv("BACKGROUND_JOBS_PROCESS_LIMIT", DEFAULT_PROCESS_LIMIT, 1);
-    const [email, leads] = await Promise.all([
+    const [email, leads, documents] = await Promise.all([
       processEmailQueue(limit),
       processLeadLifecycle(limit),
+      processDocumentExpiry(limit),
     ]);
 
-    if (email.processed || leads.warnings.claimed || leads.expirations.checked) {
+    if (email.processed || leads.warnings.claimed || leads.expirations.checked || documents.checked) {
       console.log("background jobs processed", {
         email: {
           processed: email.processed,
@@ -60,6 +62,7 @@ async function runBackgroundJobTick(state: BackgroundJobState) {
           expirationsChecked: leads.expirations.checked,
           redistributed: leads.expirations.redistributed,
         },
+        documents,
       });
     }
   } catch (error) {

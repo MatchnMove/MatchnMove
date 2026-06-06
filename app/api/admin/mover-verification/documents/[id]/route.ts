@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminRequest } from "@/lib/admin-auth";
 import { prisma } from "@/lib/db";
+import { sendVerificationDecision } from "@/lib/email";
 import { calculateMoverProfileReadiness } from "@/lib/mover-profile";
 import { DOCUMENT_VERIFICATION } from "@/lib/nzbn-verification";
 import { revalidateAboutPage, revalidatePublicMovers } from "@/lib/public-cache";
@@ -30,11 +31,30 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const { id } = await params;
   const document = await prisma.moverDocument.findUnique({
     where: { id },
-    select: { id: true, moverCompanyId: true },
+    select: {
+      id: true,
+      moverCompanyId: true,
+      verificationStatus: true,
+      type: true,
+      expiresAt: true,
+      scanStatus: true,
+      detectedMimeType: true,
+    },
   });
 
   if (!document) {
     return NextResponse.json({ error: "Document not found." }, { status: 404 });
+  }
+  if (parsed.data.status === DOCUMENT_VERIFICATION.APPROVED) {
+    const scanPassed =
+      document.scanStatus === "CLEAN" ||
+      (process.env.NODE_ENV !== "production" && document.scanStatus === "NOT_CONFIGURED");
+    if (!scanPassed || !document.detectedMimeType) {
+      return NextResponse.json({ error: "This file has not passed content validation and malware scanning." }, { status: 400 });
+    }
+    if (document.type === "INSURANCE" && (!document.expiresAt || document.expiresAt <= new Date())) {
+      return NextResponse.json({ error: "Insurance cannot be approved without a future expiry date." }, { status: 400 });
+    }
   }
 
   const now = new Date();
@@ -46,6 +66,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       verificationNote: parsed.data.note,
       reviewedAt: reviewed ? now : null,
       reviewedBy: reviewed ? admin.reviewerId : null,
+    },
+  });
+  await prisma.verificationAudit.create({
+    data: {
+      moverCompanyId: document.moverCompanyId,
+      documentId: document.id,
+      actorId: admin.reviewerId,
+      actorType: "ADMIN",
+      action: "DOCUMENT_REVIEWED",
+      previousStatus: document.verificationStatus,
+      nextStatus: parsed.data.status,
+      reason: parsed.data.note,
     },
   });
 
@@ -61,6 +93,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   revalidatePublicMovers();
   revalidateAboutPage();
+
+  if (refreshedMover && parsed.data.status !== DOCUMENT_VERIFICATION.PENDING_REVIEW) {
+    await sendVerificationDecision({
+      email: refreshedMover.user.email,
+      moverName: refreshedMover.user.name,
+      moverCompanyName: refreshedMover.companyName,
+      item: document.type.replaceAll("_", " "),
+      status: parsed.data.status,
+      note: parsed.data.note,
+      dashboardUrl: `${process.env.NEXTAUTH_URL?.replace(/\/$/, "") || "http://localhost:3000"}/mover/dashboard?tab=profile`,
+    }).catch((error) => console.error("Could not queue document decision email", error));
+  }
 
   return NextResponse.json({
     document: {

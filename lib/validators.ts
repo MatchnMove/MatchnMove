@@ -137,6 +137,19 @@ export const moverProfileSchema = z.object({
 
       return normalized.length ? normalized : null;
     }),
+  authorizedRepresentativeName: z
+    .string()
+    .trim()
+    .min(2, "Enter the authorised representative's name")
+    .max(100, "Representative name is too long"),
+  authorizedRepresentativeRole: z
+    .string()
+    .trim()
+    .min(2, "Enter the representative's role")
+    .max(100, "Representative role is too long"),
+  authorityConfirmed: z.literal(true, {
+    errorMap: () => ({ message: "Confirm that you are authorised to submit and maintain these business details" }),
+  }),
 });
 
 export const moverLogoSchema = z.object({
@@ -145,15 +158,47 @@ export const moverLogoSchema = z.object({
 
 export const moverDocumentTypeSchema = z.enum(["INSURANCE", "NZBN_PROOF", "LICENCE", "OTHER"]);
 
-export const moverDocumentUploadSchema = z.object({
-  type: moverDocumentTypeSchema,
-  fileName: z
-    .string()
-    .trim()
-    .min(1, "A file name is required")
-    .max(120, "File name is too long")
-    .regex(/^[a-zA-Z0-9][a-zA-Z0-9._ -]*$/, "Use a safe file name"),
-  fileDataUrl: z.string().trim().min(1, "A file is required"),
+export const moverDocumentUploadSchema = z
+  .object({
+    type: moverDocumentTypeSchema,
+    fileName: z
+      .string()
+      .trim()
+      .min(1, "A file name is required")
+      .max(120, "File name is too long")
+      .regex(/^[a-zA-Z0-9][a-zA-Z0-9._ -]*$/, "Use a safe file name"),
+    fileDataUrl: z.string().trim().min(1, "A file is required"),
+    expiresAt: z
+      .string()
+      .trim()
+      .optional()
+      .nullable()
+      .transform((value) => value || null),
+  })
+  .superRefine((data, context) => {
+    if (data.type === "INSURANCE" && !data.expiresAt) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["expiresAt"],
+        message: "Enter the insurance policy expiry date",
+      });
+      return;
+    }
+
+    if (data.expiresAt) {
+      const expiresAt = new Date(`${data.expiresAt}T23:59:59.999Z`);
+      if (Number.isNaN(expiresAt.getTime()) || expiresAt <= new Date()) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["expiresAt"],
+          message: "Document expiry must be a future date",
+        });
+      }
+    }
+  });
+
+export const phoneVerificationCodeSchema = z.object({
+  code: z.string().trim().regex(/^\d{6}$/, "Enter the 6-digit verification code"),
 });
 
 const optionalReviewTextSchema = z
@@ -164,29 +209,52 @@ const optionalReviewTextSchema = z
   .nullable()
   .transform((value) => value || null);
 
-export const adminDocumentReviewSchema = z.object({
-  status: z.enum(["PENDING_REVIEW", "APPROVED", "REJECTED"]),
-  note: optionalReviewTextSchema,
-});
+export const adminDocumentReviewSchema = z
+  .object({
+    status: z.enum(["PENDING_REVIEW", "APPROVED", "REJECTED"]),
+    note: optionalReviewTextSchema,
+  })
+  .superRefine((data, context) => {
+    if (data.status !== "PENDING_REVIEW" && (!data.note || data.note.length < 10)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["note"],
+        message: "Record at least 10 characters describing the evidence checked or rejection reason",
+      });
+    }
+  });
 
-export const adminNzbnReviewSchema = z.object({
-  status: z.enum(["UNVERIFIED", "PENDING_REVIEW", "VERIFIED", "FAILED"]),
-  registeredName: z
-    .string()
-    .trim()
-    .max(160, "Registered name is too long")
-    .optional()
-    .nullable()
-    .transform((value) => value || null),
-  entityStatus: z
-    .string()
-    .trim()
-    .max(80, "Entity status is too long")
-    .optional()
-    .nullable()
-    .transform((value) => value || null),
-  note: optionalReviewTextSchema,
-});
+export const adminNzbnReviewSchema = z
+  .object({
+    status: z.enum(["UNVERIFIED", "PENDING_REVIEW", "VERIFIED", "FAILED"]),
+    registeredName: z
+      .string()
+      .trim()
+      .max(160, "Registered name is too long")
+      .optional()
+      .nullable()
+      .transform((value) => value || null),
+    entityStatus: z
+      .string()
+      .trim()
+      .max(80, "Entity status is too long")
+      .optional()
+      .nullable()
+      .transform((value) => value || null),
+    note: optionalReviewTextSchema,
+  })
+  .superRefine((data, context) => {
+    if (
+      !["UNVERIFIED", "PENDING_REVIEW"].includes(data.status) &&
+      (!data.note || data.note.length < 10)
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["note"],
+        message: "Record at least 10 characters describing the register evidence checked or rejection reason",
+      });
+    }
+  });
 
 const optionalRatingSchema = z
   .union([z.number(), z.string()])

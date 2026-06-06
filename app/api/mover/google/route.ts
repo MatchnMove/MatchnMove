@@ -6,6 +6,7 @@ import { createMoverAccount, ensureMoverCompanyProfile, establishMoverSession } 
 import { revalidatePublicSite } from "@/lib/public-cache";
 import { rateLimit } from "@/lib/rate-limit";
 import { getDatabaseUnavailableMessage, logRuntimeWarning } from "@/lib/runtime-errors";
+import { isAdminUser } from "@/lib/admin-auth";
 
 const googleClient = new OAuth2Client();
 
@@ -109,7 +110,7 @@ export async function POST(req: NextRequest) {
     }
 
     await establishMoverSession(sessionUser);
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, adminMfaRequired: isAdminUser({ ...sessionUser, mfaVerified: false }) });
   } catch (error) {
     logRuntimeWarning("Mover Google sign-in unavailable", error);
     return NextResponse.json({ error: getDatabaseUnavailableMessage("Mover Google sign-in") }, { status: 503 });

@@ -118,14 +118,14 @@ export default function MoverLoginPage() {
         body: JSON.stringify({ credential })
       });
 
-      const payload = (await res.json().catch(() => ({}))) as { error?: string };
+      const payload = (await res.json().catch(() => ({}))) as { error?: string; adminMfaRequired?: boolean };
       if (!res.ok) {
         setError(payload.error || "Google sign-in failed");
         return;
       }
 
-      setSuccess("Signed in with Google. Redirecting to your mover dashboard...");
-      startTransition(() => router.push(redirectPath));
+      setSuccess(payload.adminMfaRequired ? "Admin sign-in accepted. Complete authenticator verification..." : "Signed in with Google. Redirecting to your mover dashboard...");
+      startTransition(() => router.push(payload.adminMfaRequired ? "/admin/mfa" : redirectPath));
     } catch {
       setError(getNetworkErrorMessage("Google sign-in"));
     } finally {
@@ -175,14 +175,14 @@ export default function MoverLoginPage() {
         body: JSON.stringify(loginForm)
       });
 
-      const payload = (await res.json().catch(() => ({}))) as { error?: string };
+      const payload = (await res.json().catch(() => ({}))) as { error?: string; adminMfaRequired?: boolean };
       if (!res.ok) {
         setError(payload.error || "Unable to log in");
         return;
       }
 
-      setSuccess("Welcome back. Taking you to your dashboard...");
-      startTransition(() => router.push(redirectPath));
+      setSuccess(payload.adminMfaRequired ? "Password accepted. Complete authenticator verification..." : "Welcome back. Taking you to your dashboard...");
+      startTransition(() => router.push(payload.adminMfaRequired ? "/admin/mfa" : redirectPath));
     } catch {
       setError(getNetworkErrorMessage("Login"));
     } finally {

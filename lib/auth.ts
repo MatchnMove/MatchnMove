@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
-import { createHmac } from "crypto";
+import { createHmac, timingSafeEqual } from "crypto";
 
-type SessionPayload = { userId: string; email: string; role: string; exp: number };
+type SessionPayload = { userId: string; email: string; role: string; mfaVerified: boolean; exp: number };
 
 const SESSION_COOKIE = "mm_session";
 
@@ -18,10 +18,18 @@ export function createSessionToken(data: Omit<SessionPayload, "exp">) {
 export function parseSessionToken(token?: string): SessionPayload | null {
   if (!token) return null;
   const [payload, sig] = token.split(".");
-  if (!payload || !sig || sign(payload) !== sig) return null;
-  const parsed = JSON.parse(Buffer.from(payload, "base64url").toString()) as SessionPayload;
-  if (parsed.exp < Date.now()) return null;
-  return parsed;
+  if (!payload || !sig) return null;
+  const expected = Buffer.from(sign(payload));
+  const received = Buffer.from(sig);
+  if (expected.length !== received.length || !timingSafeEqual(expected, received)) return null;
+
+  try {
+    const parsed = JSON.parse(Buffer.from(payload, "base64url").toString()) as SessionPayload;
+    if (parsed.exp < Date.now()) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
 }
 
 export async function setSessionCookie(token: string) {
@@ -36,5 +44,5 @@ export async function auth() {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   const session = parseSessionToken(token);
   if (!session) return null;
-  return { user: { id: session.userId, email: session.email, role: session.role } };
+  return { user: { id: session.userId, email: session.email, role: session.role, mfaVerified: session.mfaVerified } };
 }

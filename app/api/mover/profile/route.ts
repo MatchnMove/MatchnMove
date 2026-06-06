@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { rateLimit } from "@/lib/rate-limit";
 import { prisma } from "@/lib/db";
+import { sendVerificationReviewSubmitted } from "@/lib/email";
 import { calculateMoverProfileReadiness, requireAuthenticatedMover } from "@/lib/mover-profile";
 import { NZBN_VERIFICATION, verifyNzbnAgainstRegister } from "@/lib/nzbn-verification";
 import { revalidateAboutPage, revalidatePublicMovers } from "@/lib/public-cache";
@@ -14,6 +15,10 @@ function serialiseProfile(mover: NonNullable<Awaited<ReturnType<typeof requireAu
     businessDescription: mover.businessDescription ?? "",
     contactPerson: mover.contactPerson ?? "",
     phone: mover.phone ?? "",
+    phoneVerifiedAt: mover.phoneVerifiedAt?.toISOString() ?? null,
+    authorizedRepresentativeName: mover.authorizedRepresentativeName ?? "",
+    authorizedRepresentativeRole: mover.authorizedRepresentativeRole ?? "",
+    authorityDeclaredAt: mover.authorityDeclaredAt?.toISOString() ?? null,
     nzbn: mover.nzbn ?? "",
     nzbnVerificationStatus: mover.nzbnVerificationStatus,
     nzbnRegisteredName: mover.nzbnRegisteredName,
@@ -35,6 +40,9 @@ function serialiseProfile(mover: NonNullable<Awaited<ReturnType<typeof requireAu
       verificationNote: document.verificationNote,
       reviewedAt: document.reviewedAt?.toISOString() ?? null,
       reviewedBy: document.reviewedBy,
+      expiresAt: document.expiresAt?.toISOString() ?? null,
+      scanStatus: document.scanStatus,
+      detectedMimeType: document.detectedMimeType,
       viewUrl: `/api/mover/profile/documents/${document.id}/file`,
       createdAt: document.createdAt.toISOString(),
     })),
@@ -64,6 +72,7 @@ export async function PATCH(req: NextRequest) {
 
   const serviceAreas = sanitiseServiceAreas(parsed.data.serviceAreas);
   const nzbnChanged = (mover.nzbn ?? null) !== parsed.data.nzbn;
+  const phoneChanged = mover.phone !== parsed.data.phone;
   let nzbnVerificationData = {};
 
   if (!parsed.data.nzbn) {
@@ -107,6 +116,10 @@ export async function PATCH(req: NextRequest) {
     data: {
       contactPerson: parsed.data.contactPerson,
       phone: parsed.data.phone,
+      phoneVerifiedAt: phoneChanged ? null : mover.phoneVerifiedAt,
+      authorizedRepresentativeName: parsed.data.authorizedRepresentativeName,
+      authorizedRepresentativeRole: parsed.data.authorizedRepresentativeRole,
+      authorityDeclaredAt: new Date(),
       nzbn: parsed.data.nzbn,
       yearsOperating: parsed.data.yearsOperating,
       serviceAreas,
@@ -120,6 +133,32 @@ export async function PATCH(req: NextRequest) {
       },
     },
   });
+
+  if (nzbnChanged || Object.keys(nzbnVerificationData).length > 0) {
+    await prisma.verificationAudit.create({
+      data: {
+        moverCompanyId: mover.id,
+        actorId: mover.userId,
+        actorType: "MOVER",
+        action: "NZBN_SUBMITTED",
+        previousStatus: mover.nzbnVerificationStatus,
+        nextStatus: updatedMover.nzbnVerificationStatus,
+        meta: {
+          nzbn: updatedMover.nzbn,
+          source: updatedMover.nzbnVerificationSource,
+        },
+      },
+    });
+
+    if (updatedMover.nzbnVerificationStatus === NZBN_VERIFICATION.PENDING_REVIEW) {
+      await sendVerificationReviewSubmitted({
+        moverCompanyName: updatedMover.companyName,
+        moverEmail: updatedMover.user.email,
+        item: "NZBN",
+        detail: `NZBN ${updatedMover.nzbn || "not supplied"} requires manual review.`,
+      }).catch((error) => console.error("Could not queue NZBN review email", error));
+    }
+  }
 
   if (publicFieldsChanged) {
     revalidatePublicMovers();

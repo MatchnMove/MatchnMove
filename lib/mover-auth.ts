@@ -20,8 +20,23 @@ function normalizeServiceAreas(serviceAreas: string[]) {
   return sanitiseNzServiceAreas(serviceAreas);
 }
 
-export async function establishMoverSession(user: { id: string; email: string; role: string }) {
-  const token = createSessionToken({ userId: user.id, email: user.email, role: user.role });
+function isAdminAccount(user: { email: string; role: string }) {
+  const configuredAdmins = (process.env.MOVER_ADMIN_EMAILS || "")
+    .split(",")
+    .map((email) => email.trim().toLowerCase());
+  return user.role === "ADMIN" || configuredAdmins.includes(user.email.trim().toLowerCase());
+}
+
+export async function establishMoverSession(
+  user: { id: string; email: string; role: string },
+  mfaVerified = false,
+) {
+  const token = createSessionToken({
+    userId: user.id,
+    email: user.email,
+    role: user.role,
+    mfaVerified: isAdminAccount(user) ? mfaVerified : true,
+  });
   await setSessionCookie(token);
 }
 

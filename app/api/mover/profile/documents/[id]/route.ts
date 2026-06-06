@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { calculateMoverProfileReadiness, requireAuthenticatedMover } from "@/lib/mover-profile";
+import { deletePrivateDocument } from "@/lib/private-storage";
 import { revalidateAboutPage, revalidatePublicMovers } from "@/lib/public-cache";
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -17,6 +18,11 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   }
 
   await prisma.moverDocument.delete({ where: { id: document.id } });
+  if (document.storageKey) {
+    await deletePrivateDocument(document.storageKey).catch((error) => {
+      console.error("Could not remove private mover document", error);
+    });
+  }
 
   const refreshedMover = await prisma.moverCompany.findUnique({
     where: { id: mover.id },

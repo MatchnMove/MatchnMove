@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { timingSafeEqual } from "crypto";
 import { auth } from "@/lib/auth";
 
 type AdminContext = {
@@ -9,6 +10,7 @@ type AdminUser = {
   id: string;
   email: string;
   role: string;
+  mfaVerified?: boolean;
 };
 
 function getConfiguredAdminEmails() {
@@ -31,15 +33,21 @@ function extractBearerToken(req: NextRequest) {
   return bearerMatch?.[1]?.trim() || req.headers.get("x-admin-token")?.trim() || null;
 }
 
+function adminTokensMatch(expected: string, received: string) {
+  const expectedBuffer = Buffer.from(expected);
+  const receivedBuffer = Buffer.from(received);
+  return expectedBuffer.length === receivedBuffer.length && timingSafeEqual(expectedBuffer, receivedBuffer);
+}
+
 export async function requireAdminRequest(req: NextRequest): Promise<AdminContext | null> {
   const session = await auth();
-  if (isAdminUser(session?.user)) {
+  if (isAdminUser(session?.user) && session.user.mfaVerified) {
     return { reviewerId: session.user.id };
   }
 
   const configuredToken = process.env.MOVER_VERIFICATION_ADMIN_TOKEN;
   const requestToken = extractBearerToken(req);
-  if (configuredToken && requestToken && requestToken === configuredToken) {
+  if (configuredToken && requestToken && adminTokensMatch(configuredToken, requestToken)) {
     return { reviewerId: "admin-token" };
   }
 

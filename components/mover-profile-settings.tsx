@@ -26,6 +26,9 @@ type ProfileDocument = {
   verificationNote: string | null;
   reviewedAt: string | null;
   reviewedBy: string | null;
+  expiresAt: string | null;
+  scanStatus: string;
+  detectedMimeType: string | null;
   viewUrl: string;
   createdAt: string;
 };
@@ -35,6 +38,10 @@ export type MoverProfileState = {
   businessDescription: string;
   contactPerson: string;
   phone: string;
+  phoneVerifiedAt?: string | null;
+  authorizedRepresentativeName: string;
+  authorizedRepresentativeRole: string;
+  authorityDeclaredAt?: string | null;
   nzbn: string;
   nzbnVerificationStatus?: string | null;
   nzbnRegisteredName?: string | null;
@@ -105,7 +112,15 @@ function formatFileSize(fileSize: number | null) {
 
 function inferReadiness(profile: MoverProfileState) {
   const approvedDocumentTypes = new Set(
-    profile.documents.filter((document) => document.verificationStatus === "APPROVED").map((document) => document.type),
+    profile.documents
+      .filter(
+        (document) =>
+          document.verificationStatus === "APPROVED" &&
+          Boolean(document.detectedMimeType) &&
+          ["CLEAN", "NOT_CONFIGURED"].includes(document.scanStatus) &&
+          (!document.expiresAt || new Date(document.expiresAt).getTime() > Date.now()),
+      )
+      .map((document) => document.type),
   );
   const requiredDocumentCount = ["INSURANCE", "NZBN_PROOF"].filter((type) => approvedDocumentTypes.has(type)).length;
   const nzbnVerified = profile.nzbnVerificationStatus === "VERIFIED";
@@ -120,18 +135,25 @@ function inferReadiness(profile: MoverProfileState) {
     },
     {
       key: "contact",
-      complete: Boolean(profile.contactPerson && profile.phone),
-      label: profile.contactPerson && profile.phone ? "Ready" : "Add contact",
-      title: "Add contact details",
-      description: "Save a contact name and phone number customers and Match 'n Move can trust.",
+      complete: Boolean(profile.contactPerson && profile.phone && profile.phoneVerifiedAt),
+      label: profile.phoneVerifiedAt ? "Phone verified" : profile.phone ? "Verify phone" : "Add contact",
+      title: "Verify contact details",
+      description: "Save a contact name and confirm the phone number with a one-time SMS code.",
       destination: "profile",
     },
     {
       key: "business",
-      complete: Boolean(profile.nzbn && profile.yearsOperating !== null && nzbnVerified),
+      complete: Boolean(
+        profile.nzbn &&
+          profile.yearsOperating !== null &&
+          nzbnVerified &&
+          profile.authorizedRepresentativeName &&
+          profile.authorizedRepresentativeRole &&
+          profile.authorityDeclaredAt,
+      ),
       label: nzbnVerified ? "NZBN verified" : profile.nzbnVerificationStatus === "PENDING_REVIEW" ? "NZBN in review" : profile.nzbnVerificationStatus === "FAILED" ? "NZBN failed" : "Verify NZBN",
       title: "Verify business identity",
-      description: profile.nzbnVerificationError || "Add an NZBN that matches an active NZBN Register entity and your mover profile name.",
+      description: profile.nzbnVerificationError || "Verify the NZBN and confirm who is authorised to maintain these business details.",
       destination: "profile",
     },
     {
@@ -205,6 +227,9 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
     contactPerson: profile.contactPerson,
     phone: profile.phone,
     nzbn: profile.nzbn,
+    authorizedRepresentativeName: profile.authorizedRepresentativeName,
+    authorizedRepresentativeRole: profile.authorizedRepresentativeRole,
+    authorityConfirmed: Boolean(profile.authorityDeclaredAt),
     yearsOperating: profile.yearsOperating === null ? "" : String(profile.yearsOperating),
     serviceAreas: editableServiceAreas,
   });
@@ -212,6 +237,7 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [documentType, setDocumentType] = useState<"INSURANCE" | "NZBN_PROOF" | "LICENCE" | "OTHER">("INSURANCE");
+  const [documentExpiry, setDocumentExpiry] = useState("");
   const [categoryDocuments, setCategoryDocuments] = useState<ProfileDocument[]>(profile.documents.filter((document) => document.type === "INSURANCE"));
   const [isLoadingDocuments, startLoadingDocuments] = useTransition();
   const [documentError, setDocumentError] = useState<string | null>(null);
@@ -219,6 +245,11 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
   const [isSaving, startSaving] = useTransition();
   const [isUploading, startUploading] = useTransition();
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [phoneCode, setPhoneCode] = useState("");
+  const [phoneVerificationMessage, setPhoneVerificationMessage] = useState<string | null>(null);
+  const [phoneVerificationError, setPhoneVerificationError] = useState<string | null>(null);
+  const [isSendingPhoneCode, setIsSendingPhoneCode] = useState(false);
+  const [isVerifyingPhone, setIsVerifyingPhone] = useState(false);
   const selectedDocumentType = DOCUMENT_TYPE_DETAILS[documentType];
 
   const readinessItems = useMemo(() => profile.readiness.checks, [profile.readiness.checks]);
@@ -264,6 +295,9 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
     if (form.contactPerson.trim().length < 2) return "Enter a contact name.";
     if (!phonePattern.test(form.phone.trim())) return "Enter a valid phone number.";
     if (form.nzbn.trim() && !nzbnPattern.test(form.nzbn.trim())) return "NZBN must be 13 digits.";
+    if (form.authorizedRepresentativeName.trim().length < 2) return "Enter the authorised representative's name.";
+    if (form.authorizedRepresentativeRole.trim().length < 2) return "Enter the authorised representative's role.";
+    if (!form.authorityConfirmed) return "Confirm that you are authorised to submit these business details.";
 
     if (form.yearsOperating.trim()) {
       const years = Number(form.yearsOperating.trim());
@@ -282,6 +316,9 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
       contactPerson: profile.contactPerson,
       phone: profile.phone,
       nzbn: profile.nzbn,
+      authorizedRepresentativeName: profile.authorizedRepresentativeName,
+      authorizedRepresentativeRole: profile.authorizedRepresentativeRole,
+      authorityConfirmed: Boolean(profile.authorityDeclaredAt),
       yearsOperating: profile.yearsOperating === null ? "" : String(profile.yearsOperating),
       serviceAreas: editableServiceAreas,
     });
@@ -321,6 +358,9 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
       contactPerson: form.contactPerson.trim(),
       phone: form.phone.trim(),
       nzbn: form.nzbn.trim(),
+      authorizedRepresentativeName: form.authorizedRepresentativeName.trim(),
+      authorizedRepresentativeRole: form.authorizedRepresentativeRole.trim(),
+      authorityConfirmed: form.authorityConfirmed,
       yearsOperating: form.yearsOperating.trim(),
       serviceAreas: form.serviceAreas,
     };
@@ -344,6 +384,10 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
           businessDescription: data?.businessDescription ?? payload.businessDescription,
           contactPerson: data?.contactPerson ?? payload.contactPerson,
           phone: data?.phone ?? payload.phone,
+          phoneVerifiedAt: data?.phoneVerifiedAt ?? null,
+          authorizedRepresentativeName: data?.authorizedRepresentativeName ?? payload.authorizedRepresentativeName,
+          authorizedRepresentativeRole: data?.authorizedRepresentativeRole ?? payload.authorizedRepresentativeRole,
+          authorityDeclaredAt: data?.authorityDeclaredAt ?? new Date().toISOString(),
           nzbn: data?.nzbn ?? payload.nzbn,
           nzbnVerificationStatus: data?.nzbnVerificationStatus ?? profile.nzbnVerificationStatus,
           nzbnRegisteredName: data?.nzbnRegisteredName ?? profile.nzbnRegisteredName,
@@ -375,6 +419,11 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
     setDocumentError(null);
     setDocumentSuccess(null);
 
+    if (documentType === "INSURANCE" && !documentExpiry) {
+      setDocumentError("Choose the insurance policy expiry date before uploading.");
+      return;
+    }
+
     if (!ALLOWED_DOCUMENT_TYPES.includes(file.type)) {
       setDocumentError("Upload a PDF, PNG, JPG, or WEBP file.");
       return;
@@ -401,6 +450,7 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
             type: documentType,
             fileName: file.name,
             fileDataUrl: result,
+            expiresAt: documentExpiry || null,
           }),
         });
 
@@ -423,10 +473,55 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
           setCategoryDocuments((current) => [data.document!, ...current.filter((document) => document.id !== data.document!.id)]);
         }
         setDocumentSuccess("Document uploaded for verification review.");
+        setDocumentExpiry("");
       });
     };
 
     reader.readAsDataURL(file);
+  }
+
+  async function sendPhoneCode() {
+    setIsSendingPhoneCode(true);
+    setPhoneVerificationError(null);
+    setPhoneVerificationMessage(null);
+    try {
+      const response = await fetch("/api/mover/phone/send", { method: "POST" });
+      const data = (await response.json().catch(() => null)) as { error?: string; developmentCode?: string } | null;
+      if (!response.ok) {
+        setPhoneVerificationError(data?.error ?? "Could not send the verification SMS.");
+        return;
+      }
+      setPhoneVerificationMessage(
+        data?.developmentCode
+          ? `Development code: ${data.developmentCode}`
+          : "A 6-digit code was sent to the saved phone number.",
+      );
+    } finally {
+      setIsSendingPhoneCode(false);
+    }
+  }
+
+  async function verifyPhoneCode() {
+    setIsVerifyingPhone(true);
+    setPhoneVerificationError(null);
+    try {
+      const response = await fetch("/api/mover/phone/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: phoneCode }),
+      });
+      const data = (await response.json().catch(() => null)) as { error?: string; phoneVerifiedAt?: string } | null;
+      if (!response.ok || !data?.phoneVerifiedAt) {
+        setPhoneVerificationError(data?.error ?? "Could not verify that code.");
+        return;
+      }
+      const nextProfile = { ...profile, phoneVerifiedAt: data.phoneVerifiedAt };
+      onProfileChange(withReadiness(nextProfile));
+      setPhoneCode("");
+      setPhoneVerificationMessage("Phone number verified.");
+    } finally {
+      setIsVerifyingPhone(false);
+    }
   }
 
   async function removeDocument(id: string) {
@@ -495,6 +590,33 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
           </div>
 
           <div className="mt-3 rounded-[20px] border border-slate-200 bg-slate-50 p-3 sm:mt-4 sm:rounded-[24px] sm:p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Phone verification</p>
+                <p className="mt-2 text-sm font-semibold text-slate-900">
+                  {profile.phoneVerifiedAt ? "Verified" : "Verification required"}
+                </p>
+              </div>
+              {!profile.phoneVerifiedAt ? (
+                <button type="button" onClick={() => void sendPhoneCode()} disabled={isSendingPhoneCode || editing} className="rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50">
+                  {isSendingPhoneCode ? "Sending..." : "Send SMS code"}
+                </button>
+              ) : null}
+            </div>
+            {!profile.phoneVerifiedAt ? (
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                <input value={phoneCode} onChange={(event) => setPhoneCode(event.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" placeholder="6-digit code" className="min-h-[44px] flex-1 rounded-2xl border border-slate-300 bg-white px-4 text-sm outline-none focus:border-sky-500" />
+                <button type="button" onClick={() => void verifyPhoneCode()} disabled={isVerifyingPhone || phoneCode.length !== 6} className="min-h-[44px] rounded-2xl bg-slate-900 px-4 text-sm font-semibold text-white disabled:opacity-50">
+                  {isVerifyingPhone ? "Checking..." : "Verify phone"}
+                </button>
+              </div>
+            ) : null}
+            {editing ? <p className="mt-2 text-xs text-amber-700">Save phone changes before requesting a code. Changing the number removes its verified status.</p> : null}
+            {phoneVerificationMessage ? <p className="mt-2 text-sm font-semibold text-emerald-700">{phoneVerificationMessage}</p> : null}
+            {phoneVerificationError ? <p className="mt-2 text-sm font-semibold text-rose-700">{phoneVerificationError}</p> : null}
+          </div>
+
+          <div className="mt-3 rounded-[20px] border border-slate-200 bg-slate-50 p-3 sm:mt-4 sm:rounded-[24px] sm:p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">NZBN verification</p>
             <p className="mt-2 text-sm font-semibold text-slate-900">
               {profile.nzbnVerificationStatus === "VERIFIED"
@@ -509,6 +631,23 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
               {profile.nzbnVerificationError ||
                 "Your NZBN is checked against the NZBN Register. If the name cannot be matched automatically, Match 'n Move will review the submitted business evidence before the profile goes live."}
             </p>
+          </div>
+
+          <div className="mt-3 rounded-[20px] border border-slate-200 bg-slate-50 p-3 sm:mt-4 sm:rounded-[24px] sm:p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Authorised representative</p>
+            <p className="mt-2 text-sm leading-6 text-slate-600">Name the person authorised to submit, update, and certify this mover&apos;s business information.</p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <EditableField label="Representative name" value={form.authorizedRepresentativeName} editing={editing} onChange={(value) => setForm((current) => ({ ...current, authorizedRepresentativeName: value }))} placeholder="Full legal name" />
+              <EditableField label="Role or title" value={form.authorizedRepresentativeRole} editing={editing} onChange={(value) => setForm((current) => ({ ...current, authorizedRepresentativeRole: value }))} placeholder="Director, owner, manager..." />
+            </div>
+            {editing ? (
+              <label className="mt-3 flex items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-700">
+                <input type="checkbox" checked={form.authorityConfirmed} onChange={(event) => setForm((current) => ({ ...current, authorityConfirmed: event.target.checked }))} className="mt-1 h-4 w-4 rounded border-slate-300" />
+                I confirm I am authorised by this business to submit and maintain these verification details.
+              </label>
+            ) : (
+              <p className="mt-3 text-sm font-semibold text-emerald-700">{profile.authorityDeclaredAt ? "Authority declaration recorded" : "Authority declaration required"}</p>
+            )}
           </div>
 
           <div className="mt-3 rounded-[20px] border border-slate-200 bg-slate-50 p-3 sm:mt-4 sm:rounded-[24px] sm:p-4">
@@ -588,6 +727,12 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
                 <option value="LICENCE">Licence</option>
                 <option value="OTHER">Other</option>
               </select>
+              {documentType === "INSURANCE" ? (
+                <label className="flex items-center gap-2 rounded-2xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700">
+                  Expires
+                  <input type="date" value={documentExpiry} min={new Date(Date.now() + 86_400_000).toISOString().slice(0, 10)} onChange={(event) => setDocumentExpiry(event.target.value)} className="bg-transparent text-sm outline-none" />
+                </label>
+              ) : null}
               <label className="inline-flex cursor-pointer items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:translate-y-[-1px]">
                 {isUploading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                 {isUploading ? "Uploading..." : "Upload document"}
@@ -627,6 +772,7 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
                       <p className="text-sm font-semibold text-slate-900">{document.fileName}</p>
                       <p className="mt-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{document.type.replaceAll("_", " ")}</p>
                       <p className="mt-1 text-sm text-slate-500">{formatFileSize(document.fileSize)}</p>
+                      {document.expiresAt ? <p className="mt-1 text-xs text-slate-500">Expires {new Intl.DateTimeFormat("en-NZ", { dateStyle: "medium" }).format(new Date(document.expiresAt))}</p> : null}
                       <div className="mt-2 flex flex-wrap items-center gap-2">
                         <span
                           className={cx(

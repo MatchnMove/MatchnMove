@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminRequest } from "@/lib/admin-auth";
 import { prisma } from "@/lib/db";
+import { sendVerificationDecision } from "@/lib/email";
 import { calculateMoverProfileReadiness } from "@/lib/mover-profile";
 import { NZBN_VERIFICATION } from "@/lib/nzbn-verification";
 import { revalidateAboutPage, revalidatePublicMovers } from "@/lib/public-cache";
@@ -43,6 +44,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       companyName: true,
       nzbnRegisteredName: true,
       nzbnEntityStatus: true,
+      nzbnVerificationStatus: true,
     },
   });
 
@@ -69,9 +71,39 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       },
     },
   });
+  await prisma.verificationAudit.create({
+    data: {
+      moverCompanyId: mover.id,
+      actorId: admin.reviewerId,
+      actorType: "ADMIN",
+      action: "NZBN_REVIEWED",
+      previousStatus: mover.nzbnVerificationStatus,
+      nextStatus: parsed.data.status,
+      reason: parsed.data.note,
+      meta: {
+        registeredName: updatedMover.nzbnRegisteredName,
+        entityStatus: updatedMover.nzbnEntityStatus,
+      },
+    },
+  });
 
   revalidatePublicMovers();
   revalidateAboutPage();
+
+  if (
+    parsed.data.status !== NZBN_VERIFICATION.PENDING_REVIEW &&
+    parsed.data.status !== NZBN_VERIFICATION.UNVERIFIED
+  ) {
+    await sendVerificationDecision({
+      email: updatedMover.user.email,
+      moverName: updatedMover.user.name,
+      moverCompanyName: updatedMover.companyName,
+      item: "NZBN",
+      status: parsed.data.status,
+      note: parsed.data.note,
+      dashboardUrl: `${process.env.NEXTAUTH_URL?.replace(/\/$/, "") || "http://localhost:3000"}/mover/dashboard?tab=profile`,
+    }).catch((error) => console.error("Could not queue NZBN decision email", error));
+  }
 
   return NextResponse.json({
     mover: {

@@ -40,6 +40,10 @@ type DashboardMover = {
   emailVerified: boolean;
   contactPerson: string;
   phone: string;
+  phoneVerifiedAt?: string | null;
+  authorizedRepresentativeName: string;
+  authorizedRepresentativeRole: string;
+  authorityDeclaredAt?: string | null;
   nzbn: string;
   nzbnVerificationStatus?: string | null;
   nzbnRegisteredName?: string | null;
@@ -131,19 +135,19 @@ type DashboardMover = {
     routeMatch: boolean;
     quoteRequest: {
       id: string;
-      name: string;
-      email: string;
-      phone: string;
+      name: string | null;
+      email: string | null;
+      phone: string | null;
       movingWhat: string | null;
       bedrooms: string;
-      fromAddress: string;
+      fromAddress: string | null;
       fromCity: string;
       fromRegion: string;
-      fromPostcode: string;
-      toAddress: string;
+      fromPostcode: string | null;
+      toAddress: string | null;
       toCity: string;
       toRegion: string;
-      toPostcode: string;
+      toPostcode: string | null;
       fromPropertyType: string;
       toPropertyType: string;
       moveDateLabel: string;
@@ -233,7 +237,7 @@ function formatRelativeDate(value: string) {
   return relative.format(Math.round(diffHours / 24), "day");
 }
 
-function formatLeadAddress(address: string, city: string, region: string, postcode: string) {
+function formatLeadAddress(address: string | null, city: string, region: string, postcode: string | null) {
   return [address, city, region, postcode].filter(Boolean).join(", ");
 }
 
@@ -326,12 +330,12 @@ export function MoverDashboardExperience({
   const [busyLeadId, setBusyLeadId] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
 
-  const filteredLeads = profile.leads.filter((lead) => {
+  const filteredLeads = profile.status === "ACTIVE" ? profile.leads.filter((lead) => {
     if (laneFilter === "hot") return ["NEW", "NOTIFIED", "VIEWED"].includes(lead.status);
     if (laneFilter === "open") return ["PURCHASED", "CONTACTED"].includes(lead.status);
     if (laneFilter === "won") return lead.status === "WON";
     return true;
-  });
+  }) : [];
 
   const selectedLead = filteredLeads.find((lead) => lead.id === selectedLeadId) ?? filteredLeads[0] ?? null;
   const routeFitCount = profile.leads.filter((lead) => lead.routeMatch).length;
@@ -372,7 +376,11 @@ export function MoverDashboardExperience({
         method: "POST",
       });
 
-      const data = (await response.json().catch(() => null)) as { error?: string; unlockedAt?: string } | null;
+      const data = (await response.json().catch(() => null)) as {
+        error?: string;
+        unlockedAt?: string;
+        quoteRequest?: DashboardMover["leads"][number]["quoteRequest"];
+      } | null;
 
       if (!response.ok) {
         setLeadActionError(data?.error ?? "Could not open that lead.");
@@ -390,6 +398,7 @@ export function MoverDashboardExperience({
                   purchasedAt: data?.unlockedAt ?? new Date().toISOString(),
                   paymentStatus: "PENDING",
                   lastAction: "lead_unlocked_for_invoice",
+                  quoteRequest: data?.quoteRequest ?? lead.quoteRequest,
                 }
               : lead,
           ),
@@ -488,6 +497,13 @@ export function MoverDashboardExperience({
           </aside>
 
           <main className="space-y-3 sm:space-y-4">
+            {profile.status !== "ACTIVE" ? (
+              <div className="rounded-[24px] border border-rose-200 bg-rose-50 p-4 text-rose-900 shadow-sm sm:rounded-[30px] sm:p-5">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-rose-700">Account suspended</p>
+                <p className="mt-2 text-lg font-black">Lead access and lead actions are disabled</p>
+                <p className="mt-2 text-sm leading-6 text-rose-800">Contact Match &apos;n Move support to resolve the account review. Customer contact details are withheld while suspended.</p>
+              </div>
+            ) : null}
             {!profile.readiness.isLive ? <VerificationBanner mover={profile} onOpenDestination={openDashboardDestination} /> : null}
 
             {activeTab !== "payments" ? (
@@ -1021,7 +1037,7 @@ function LeadsPanel({
               {selectedLeadExpiry ? <ExpiryStatusChip state={selectedLeadExpiry} /> : null}
             </div>
             <div className="mt-4 flex flex-col gap-2 sm:mt-5 sm:gap-3 sm:flex-row">
-              {isUnlockedStatus(selectedLead.status) ? (
+              {isUnlockedStatus(selectedLead.status) && readiness.isLive ? (
                 <div className="flex min-h-[48px] flex-1 items-center justify-center rounded-2xl bg-emerald-50 px-4 text-sm font-semibold text-emerald-700 sm:min-h-[52px] sm:px-5">Lead open</div>
               ) : !canOpenLead(selectedLead, nowMs) ? (
                 <div className="flex min-h-[48px] flex-1 items-center justify-center rounded-2xl bg-rose-50 px-4 text-sm font-semibold text-rose-700 sm:min-h-[52px] sm:px-5">
@@ -1062,14 +1078,14 @@ function LeadsPanel({
                 {actionMessage}
               </div>
             ) : null}
-            {isUnlockedStatus(selectedLead.status) ? (
+            {isUnlockedStatus(selectedLead.status) && readiness.isLive ? (
               <div className="mt-4 grid gap-3 sm:mt-5 sm:gap-4 xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
                 <div className="rounded-[20px] border border-emerald-200 bg-emerald-50 p-4 sm:rounded-[24px] sm:p-5">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-700 sm:text-sm">Customer details</p>
                   <div className="mt-3 space-y-3">
-                    <StatusChip label="Customer" value={selectedLead.quoteRequest.name} good />
-                    <StatusChip label="Phone" value={selectedLead.quoteRequest.phone} good />
-                    <StatusChip label="Email" value={selectedLead.quoteRequest.email} good />
+                    <StatusChip label="Customer" value={selectedLead.quoteRequest.name ?? "Unavailable"} good />
+                    <StatusChip label="Phone" value={selectedLead.quoteRequest.phone ?? "Unavailable"} good />
+                    <StatusChip label="Email" value={selectedLead.quoteRequest.email ?? "Unavailable"} good />
                   </div>
                 </div>
 
@@ -1084,7 +1100,7 @@ function LeadsPanel({
                 </div>
               </div>
             ) : null}
-            {isUnlockedStatus(selectedLead.status) ? (
+            {isUnlockedStatus(selectedLead.status) && readiness.isLive ? (
               <div className="mt-4 rounded-[20px] border border-slate-200 bg-slate-50 p-4 sm:mt-5 sm:rounded-[24px] sm:p-5">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700 sm:text-sm">Move progress</p>
                 <div className="mt-3 flex flex-wrap gap-2">
