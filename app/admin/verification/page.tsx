@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { AdminMoverVerificationPanel } from "@/components/admin-mover-verification-panel";
+import { isAdminUser } from "@/lib/admin-auth";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { DOCUMENT_VERIFICATION, NZBN_VERIFICATION } from "@/lib/nzbn-verification";
@@ -8,7 +9,7 @@ export default async function AdminVerificationPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/mover/login");
 
-  if (session.user.role !== "ADMIN") {
+  if (!isAdminUser(session.user)) {
     return (
       <section className="min-h-screen bg-slate-100 px-4 py-16">
         <div className="mx-auto max-w-3xl rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">

@@ -5,6 +5,26 @@ type AdminContext = {
   reviewerId: string;
 };
 
+type AdminUser = {
+  id: string;
+  email: string;
+  role: string;
+};
+
+function getConfiguredAdminEmails() {
+  return new Set(
+    (process.env.MOVER_ADMIN_EMAILS || "")
+      .split(",")
+      .map((email) => email.trim().toLowerCase())
+      .filter(Boolean),
+  );
+}
+
+export function isAdminUser(user: AdminUser | null | undefined): user is AdminUser {
+  if (!user) return false;
+  return user.role === "ADMIN" || getConfiguredAdminEmails().has(user.email.trim().toLowerCase());
+}
+
 function extractBearerToken(req: NextRequest) {
   const authorization = req.headers.get("authorization");
   const bearerMatch = authorization?.match(/^Bearer\s+(.+)$/i);
@@ -13,7 +33,7 @@ function extractBearerToken(req: NextRequest) {
 
 export async function requireAdminRequest(req: NextRequest): Promise<AdminContext | null> {
   const session = await auth();
-  if (session?.user?.role === "ADMIN") {
+  if (isAdminUser(session?.user)) {
     return { reviewerId: session.user.id };
   }
 
