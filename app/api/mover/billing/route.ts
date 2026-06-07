@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { LEAD_PRICING } from "@/lib/lead-pricing";
 import { requireAuthenticatedMoverWithBilling, getCustomerPaymentMethod } from "@/lib/mover-billing";
+import { getMoverLaunchTrialSetting } from "@/lib/platform-settings";
 import { SITE_EMAILS } from "@/lib/site-emails";
 import { stripe } from "@/lib/stripe";
 
@@ -20,18 +21,21 @@ export async function GET() {
   const mover = await requireAuthenticatedMoverWithBilling();
   if (!mover) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const payments = await prisma.payment.findMany({
-    where: { lead: { moverCompanyId: mover.id } },
-    include: {
-      lead: {
-        include: {
-          quoteRequest: true,
+  const [launchTrial, payments] = await Promise.all([
+    getMoverLaunchTrialSetting(),
+    prisma.payment.findMany({
+      where: { lead: { moverCompanyId: mover.id } },
+      include: {
+        lead: {
+          include: {
+            quoteRequest: true,
+          },
         },
       },
-    },
-    orderBy: { createdAt: "desc" },
-    take: 25,
-  });
+      orderBy: { createdAt: "desc" },
+      take: 25,
+    }),
+  ]);
 
   let paymentMethod = null;
   if (mover.stripeCustomerId && stripe) {
@@ -46,7 +50,7 @@ export async function GET() {
 
   const transactions = await Promise.all(
     payments.map(async (payment) => {
-      let status = payment.status === "SUCCEEDED" ? "paid" : payment.status === "FAILED" ? "issue" : "queued";
+      let status = payment.status === "SUCCEEDED" ? "paid" : payment.status === "FAILED" ? "issue" : payment.status === "WAIVED" ? "trial" : "queued";
       let receiptUrl = payment.receiptUrl;
       let receiptNumber: string | null = payment.stripeChargeId ?? payment.stripePaymentIntentId ?? null;
       let gstAmount: number | null = null;
@@ -80,7 +84,12 @@ export async function GET() {
         amount: payment.amount,
         status,
         leadReference: formatLeadReference(payment),
-        description: payment.status === "PENDING" ? "Queued for month-end invoice" : "Lead access charge",
+        description:
+          payment.status === "WAIVED"
+            ? "Launch trial lead access"
+            : payment.status === "PENDING"
+              ? "Queued for month-end invoice"
+              : "Lead access charge",
         receiptAvailable: Boolean(receiptUrl),
         receiptNumber,
         receiptUrl: receiptUrl ? `/api/mover/billing/receipts/${payment.id}` : null,
@@ -127,14 +136,19 @@ export async function GET() {
     pricingSummary: {
       baseLeadPrice: LEAD_PRICING.basePrice,
       factors: ["Large home +$10", "Urgent move +$20", "Across island +$20", "Between islands +$45"],
-      note: "Leads unlock instantly and are invoiced at the end of the month.",
+      note: launchTrial.enabled
+        ? "Launch trial active: lead opens are waived until Match 'n Move turns paid billing on."
+        : "Leads unlock instantly and are invoiced at the end of the month.",
     },
-    howItWorks: ["Open the lead immediately", "Charges are queued during the month", "One invoice is issued at month end"],
+    howItWorks: launchTrial.enabled
+      ? ["Open the lead immediately", "Launch-trial opens are recorded at $0", "Paid billing starts only after Match 'n Move turns the trial off"]
+      : ["Open the lead immediately", "Charges are queued during the month", "One invoice is issued at month end"],
     support: {
       email: SITE_EMAILS.support,
       billingFaqUrl: "/faq",
       contactUrl: "/contact",
     },
     stripeEnabled: Boolean(stripe),
+    launchTrial,
   });
 }

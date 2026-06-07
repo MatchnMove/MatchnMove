@@ -4,6 +4,7 @@ import { isAdminUser } from "@/lib/admin-auth";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { DOCUMENT_VERIFICATION, NZBN_VERIFICATION } from "@/lib/nzbn-verification";
+import { getMoverLaunchTrialSetting } from "@/lib/platform-settings";
 
 export default async function AdminVerificationPage() {
   const session = await auth();
@@ -22,7 +23,8 @@ export default async function AdminVerificationPage() {
   }
   if (!session.user.mfaVerified) redirect("/admin/mfa");
 
-  const [nzbnReviews, documentReviews] = await Promise.all([
+  const [launchTrial, nzbnReviews, documentReviews] = await Promise.all([
+    getMoverLaunchTrialSetting(),
     prisma.moverCompany.findMany({
       where: {
         nzbnVerificationStatus: NZBN_VERIFICATION.PENDING_REVIEW,
@@ -81,6 +83,7 @@ export default async function AdminVerificationPage() {
         </div>
 
         <AdminMoverVerificationPanel
+          initialLaunchTrial={launchTrial}
           initialNzbnReviews={nzbnReviews.map((mover) => ({
             id: mover.id,
             companyName: mover.companyName,

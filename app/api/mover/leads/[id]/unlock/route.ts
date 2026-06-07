@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { expireAndRedistributeLead, isLeadPastExpiry, isLeadUnlockable } from "@/lib/lead-lifecycle";
 import { serializeMoverLeadQuoteRequest } from "@/lib/mover-lead-visibility";
 import { isMoverProfileLive } from "@/lib/mover-profile";
+import { getMoverLaunchTrialSetting } from "@/lib/platform-settings";
 import { revalidateAboutPage } from "@/lib/public-cache";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -65,6 +66,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   const unlockedAt = new Date();
+  const launchTrial = await getMoverLaunchTrialSetting();
+  const paymentAmount = launchTrial.enabled ? 0 : lead.price;
+  const paymentStatus = launchTrial.enabled ? "WAIVED" : "PENDING";
+  const auditAction = launchTrial.enabled ? "lead_unlocked_launch_trial" : "lead_unlocked_for_invoice";
 
   await prisma.lead.update({
     where: { id: lead.id },
@@ -73,8 +78,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   await prisma.payment.upsert({
     where: { leadId: lead.id },
     update: {
-      amount: lead.price,
-      status: "PENDING",
+      amount: paymentAmount,
+      status: paymentStatus,
       stripeCheckoutId: null,
       stripePaymentIntentId: null,
       stripeChargeId: null,
@@ -82,15 +87,21 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     },
     create: {
       leadId: lead.id,
-      amount: lead.price,
-      status: "PENDING",
+      amount: paymentAmount,
+      status: paymentStatus,
     },
   });
   await prisma.auditLog.create({
     data: {
       leadId: lead.id,
-      action: "lead_unlocked_for_invoice",
-      meta: { unlockedAt: unlockedAt.toISOString(), moverCompanyId: lead.moverCompanyId, amount: lead.price },
+      action: auditAction,
+      meta: {
+        unlockedAt: unlockedAt.toISOString(),
+        moverCompanyId: lead.moverCompanyId,
+        amount: paymentAmount,
+        standardAmount: lead.price,
+        launchTrial: launchTrial.enabled,
+      },
     },
   });
 
@@ -99,6 +110,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   return NextResponse.json({
     ok: true,
     unlockedAt: unlockedAt.toISOString(),
+    paymentStatus,
+    launchTrial,
     quoteRequest: serializeMoverLeadQuoteRequest("PURCHASED", lead.quoteRequest),
   });
 }

@@ -28,6 +28,7 @@ enum PaymentStatus {
   PENDING
   SUCCEEDED
   FAILED
+  WAIVED
 }
 
 enum AuthTokenType {
@@ -287,6 +288,24 @@ model PricingRule {
   bedroomModifier  Int    @default(1000)
   urgentModifier   Int    @default(2000)
   distanceModifier Int    @default(2000)
+}
+
+model PlatformSetting {
+  key       String   @id
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AdminAuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  action    String
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([actorId, createdAt])
+  @@index([action, createdAt])
 }
 
 model Payment {

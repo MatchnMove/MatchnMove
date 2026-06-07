@@ -48,6 +48,9 @@ type BillingSnapshot = {
     expYear: number;
   } | null;
   stripeEnabled: boolean;
+  launchTrial?: {
+    enabled: boolean;
+  };
 };
 
 type AsyncActionState = {
@@ -110,6 +113,7 @@ export function MoverSecurityPanel({ mover, onOpenDestination }: Props) {
       setBilling({
         paymentMethod: data?.paymentMethod ?? null,
         stripeEnabled: Boolean(data?.stripeEnabled),
+        launchTrial: data?.launchTrial,
       });
       setBillingLoading(false);
     }
@@ -352,15 +356,17 @@ export function MoverSecurityPanel({ mover, onOpenDestination }: Props) {
               />
               <StatusCard
                 title="Payment security"
-                value={paymentMethodReady ? "Billing card ready" : "Invoice billing available"}
+                value={billing?.launchTrial?.enabled ? "Launch trial active" : paymentMethodReady ? "Billing card ready" : "Invoice billing available"}
                 description={
                   billingLoading
                     ? "Checking your billing setup..."
+                    : billing?.launchTrial?.enabled
+                      ? "Lead access is waived during the launch trial. A billing card is optional for later."
                     : paymentMethodReady
                       ? `Card ending in ${billing?.paymentMethod?.last4} is available for invoice payments.`
                       : "A card is optional. Leads can still be opened and billed later by invoice."
                 }
-                good={paymentMethodReady}
+                good={Boolean(billing?.launchTrial?.enabled) || paymentMethodReady}
               />
             </div>
           </section>
@@ -435,6 +441,8 @@ export function MoverSecurityPanel({ mover, onOpenDestination }: Props) {
                   description={
                     billingLoading
                       ? "Checking your Stripe billing setup."
+                      : billing?.launchTrial?.enabled
+                        ? "Launch trial access is active, so movers can open assigned leads with no charge while the trial is on."
                       : paymentMethodReady
                         ? `Stripe is ready with your ${formatCardBrand(billing?.paymentMethod?.brand ?? "card")} card ending in ${billing?.paymentMethod?.last4} for invoice payments.`
                         : "Invoices can still be issued without a card on file. Add or update a card anytime."

@@ -1,8 +1,12 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { Check, FileText, LoaderCircle, RefreshCw, ShieldCheck, X } from "lucide-react";
+import { BadgeDollarSign, Check, FileText, LoaderCircle, RefreshCw, ShieldCheck, X } from "lucide-react";
 import { cx } from "@/lib/utils";
+
+type LaunchTrial = {
+  enabled: boolean;
+};
 
 type NzbnReview = {
   id: string;
@@ -39,6 +43,7 @@ type DocumentReview = {
 };
 
 type Props = {
+  initialLaunchTrial: LaunchTrial;
   initialNzbnReviews: NzbnReview[];
   initialDocumentReviews: DocumentReview[];
 };
@@ -61,7 +66,8 @@ function formatDocumentType(type: string) {
   return type.replaceAll("_", " ").toLowerCase();
 }
 
-export function AdminMoverVerificationPanel({ initialNzbnReviews, initialDocumentReviews }: Props) {
+export function AdminMoverVerificationPanel({ initialLaunchTrial, initialNzbnReviews, initialDocumentReviews }: Props) {
+  const [launchTrial, setLaunchTrial] = useState(initialLaunchTrial);
   const [nzbnReviews, setNzbnReviews] = useState(initialNzbnReviews);
   const [documentReviews, setDocumentReviews] = useState(initialDocumentReviews);
   const [nzbnNotes, setNzbnNotes] = useState<Record<string, string>>({});
@@ -69,6 +75,31 @@ export function AdminMoverVerificationPanel({ initialNzbnReviews, initialDocumen
   const [busyId, setBusyId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  async function toggleLaunchTrial(nextEnabled: boolean) {
+    setBusyId("launch-trial");
+    setMessage(null);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/admin/settings/launch-trial", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled: nextEnabled }),
+      });
+      const data = (await response.json().catch(() => null)) as { launchTrial?: LaunchTrial; error?: string } | null;
+
+      if (!response.ok || !data?.launchTrial) {
+        setError(data?.error ?? "Could not update the launch trial.");
+        return;
+      }
+
+      setLaunchTrial(data.launchTrial);
+      setMessage(data.launchTrial.enabled ? "Mover launch trial is on." : "Mover launch trial is off. New lead opens will be billed.");
+    } finally {
+      setBusyId(null);
+    }
+  }
 
   async function refreshQueue() {
     setBusyId("refresh");
@@ -169,6 +200,38 @@ export function AdminMoverVerificationPanel({ initialNzbnReviews, initialDocumen
 
   return (
     <div className="space-y-4">
+      <section className={cx("rounded-[28px] border p-4 shadow-sm sm:p-5", launchTrial.enabled ? "border-emerald-200 bg-[linear-gradient(135deg,#ecfdf5,#ffffff)]" : "border-slate-200 bg-white")}>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="max-w-3xl">
+            <div className={cx("inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em]", launchTrial.enabled ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-700")}>
+              <BadgeDollarSign className="h-4 w-4" />
+              {launchTrial.enabled ? "Launch trial active" : "Paid lead billing active"}
+            </div>
+            <h2 className="mt-3 text-2xl font-black tracking-[-0.05em] text-slate-950">
+              {launchTrial.enabled ? "Movers can open leads free during launch" : "New lead opens are queued for billing"}
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              {launchTrial.enabled
+                ? "This global switch applies to every mover. Verified movers can open assigned leads with a $0 launch-trial charge until you turn this off."
+                : "The free launch trial is off for every mover. Verified movers can still open leads, but new opens create normal month-end invoice records."}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => toggleLaunchTrial(!launchTrial.enabled)}
+            disabled={busyId === "launch-trial"}
+            className={cx(
+              "inline-flex min-h-[48px] items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold transition disabled:opacity-70",
+              launchTrial.enabled ? "bg-slate-900 text-white hover:bg-slate-800" : "bg-emerald-700 text-white hover:bg-emerald-800",
+            )}
+          >
+            {busyId === "launch-trial" ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <BadgeDollarSign className="h-4 w-4" />}
+            {launchTrial.enabled ? "Turn off free trial" : "Turn on free trial"}
+          </button>
+        </div>
+      </section>
+
       <div className="grid gap-3 sm:grid-cols-3">
         <SummaryTile label="Pending NZBN" value={String(nzbnReviews.length)} />
         <SummaryTile label="Pending docs" value={String(documentReviews.length)} />

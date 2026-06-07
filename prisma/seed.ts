@@ -21,6 +21,9 @@ async function main() {
     logoUrl: "/images/movers/mover-partner-preview.svg",
     contactPerson: "Mark Henderson",
     phone: "+64 555 342 6578",
+    authorizedRepresentativeName: "Mark Henderson",
+    authorizedRepresentativeRole: "Owner",
+    authorityDeclaredAt: now,
     serviceAreas: ["Auckland", "Wellington"],
   };
 
@@ -61,6 +64,8 @@ async function main() {
           mimeType: "application/pdf",
           fileSize: 18,
           fileUrl: "data:application/pdf;base64,JVBERi0xLjQKJUVPRg==",
+          detectedMimeType: "application/pdf",
+          scanStatus: "CLEAN",
           verificationStatus: "APPROVED",
           verificationNote: "Approved demo verification document.",
           reviewedAt: now,
@@ -73,6 +78,8 @@ async function main() {
           mimeType: "application/pdf",
           fileSize: 18,
           fileUrl: "data:application/pdf;base64,JVBERi0xLjQKJUVPRg==",
+          detectedMimeType: "application/pdf",
+          scanStatus: "CLEAN",
           verificationStatus: "APPROVED",
           verificationNote: "Approved demo NZBN proof.",
           reviewedAt: now,

@@ -57,6 +57,9 @@ type DashboardMover = {
   documents: MoverProfileState["documents"];
   logoUrl: string | null;
   baseLeadPrice: number;
+  launchTrial: {
+    enabled: boolean;
+  };
   profileCompletion: number;
   readiness: MoverProfileState["readiness"];
   stats: {
@@ -226,6 +229,9 @@ type BillingResponse = {
     contactUrl: string;
   };
   stripeEnabled: boolean;
+  launchTrial: {
+    enabled: boolean;
+  };
 };
 
 function formatCurrency(cents: number) {
@@ -380,6 +386,8 @@ export function MoverDashboardExperience({
       const data = (await response.json().catch(() => null)) as {
         error?: string;
         unlockedAt?: string;
+        paymentStatus?: string;
+        launchTrial?: DashboardMover["launchTrial"];
         quoteRequest?: DashboardMover["leads"][number]["quoteRequest"];
       } | null;
 
@@ -391,14 +399,15 @@ export function MoverDashboardExperience({
       setProfile((current) => {
         const nextProfile = {
           ...current,
+          launchTrial: data?.launchTrial ?? current.launchTrial,
           leads: current.leads.map((lead) =>
             lead.id === leadId
               ? {
                   ...lead,
                   status: "PURCHASED",
                   purchasedAt: data?.unlockedAt ?? new Date().toISOString(),
-                  paymentStatus: "PENDING",
-                  lastAction: "lead_unlocked_for_invoice",
+                  paymentStatus: data?.paymentStatus ?? "PENDING",
+                  lastAction: data?.paymentStatus === "WAIVED" ? "lead_unlocked_launch_trial" : "lead_unlocked_for_invoice",
                   quoteRequest: data?.quoteRequest ?? lead.quoteRequest,
                 }
               : lead,
@@ -411,7 +420,11 @@ export function MoverDashboardExperience({
         };
       });
 
-      setLeadActionMessage("Lead opened and queued for month-end invoicing.");
+      setLeadActionMessage(
+        data?.paymentStatus === "WAIVED"
+          ? "Lead opened under the launch trial. No charge was queued."
+          : "Lead opened and queued for month-end invoicing.",
+      );
       return true;
     } catch {
       setLeadActionError("Could not open that lead.");
@@ -510,7 +523,12 @@ export function MoverDashboardExperience({
             {activeTab !== "payments" ? (
               <div className={cx("grid grid-cols-2 gap-2 sm:gap-3", profile.readiness.isLive ? "sm:grid-cols-3" : "xl:grid-cols-4")}>
                 <TopCard icon={BellRing} label="New demand" value={String(profile.stats.activeLeads)} meta="Needs response" />
-                <TopCard icon={BadgeDollarSign} label="Avg lead price" value={formatCurrency(profile.stats.averageLeadPrice)} meta="Billed month end" />
+                <TopCard
+                  icon={BadgeDollarSign}
+                  label={profile.launchTrial.enabled ? "Lead trial" : "Avg lead price"}
+                  value={profile.launchTrial.enabled ? "$0" : formatCurrency(profile.stats.averageLeadPrice)}
+                  meta={profile.launchTrial.enabled ? "No charge while active" : "Billed month end"}
+                />
                 <TopCard icon={Target} label="Wins" value={String(profile.stats.wonLeads)} meta="Tracked jobs" />
                 {!profile.readiness.isLive ? (
                   <TopCard
@@ -524,7 +542,7 @@ export function MoverDashboardExperience({
             ) : null}
 
             {activeTab === "overview" ? <OverviewPanel mover={profile} routeFitCount={routeFitCount} onOpenTab={openTab} onOpenDestination={openDashboardDestination} /> : null}
-            {activeTab === "leads" ? <LeadsPanel filteredLeads={filteredLeads} laneFilter={laneFilter} onLaneFilterChange={setLaneFilter} selectedLead={selectedLead} selectedLeadId={selectedLeadId} onSelectLead={setSelectedLeadId} onUnlockLead={unlockLead} onUpdateLeadStatus={updateLeadStatus} busyLeadId={busyLeadId} actionMessage={leadActionMessage} actionError={leadActionError} nowMs={nowMs} readiness={profile.readiness} onOpenDestination={openDashboardDestination} /> : null}
+            {activeTab === "leads" ? <LeadsPanel filteredLeads={filteredLeads} laneFilter={laneFilter} onLaneFilterChange={setLaneFilter} selectedLead={selectedLead} selectedLeadId={selectedLeadId} onSelectLead={setSelectedLeadId} onUnlockLead={unlockLead} onUpdateLeadStatus={updateLeadStatus} busyLeadId={busyLeadId} actionMessage={leadActionMessage} actionError={leadActionError} nowMs={nowMs} readiness={profile.readiness} launchTrial={profile.launchTrial} onOpenDestination={openDashboardDestination} /> : null}
             {activeTab === "ratings" ? <MoverRatingsPanel ratings={profile.ratings} /> : null}
             {activeTab === "profile" ? <ProfilePanel mover={profile} focusSection={profileFocusSection} onFocusHandled={() => setProfileFocusSection(null)} onOpenSecurity={() => openDashboardDestination("security")} onProfileChange={(nextProfile) => setProfile((current) => ({ ...current, ...nextProfile, documentsCount: nextProfile.documents.length, profileCompletion: nextProfile.readiness.completion }))} /> : null}
             {activeTab === "payments" ? <PaymentsPanel billingState={billingState} /> : null}
@@ -639,7 +657,7 @@ function MobileHeader({
         <div className="mt-4 grid grid-cols-3 gap-2">
           <SidebarStat label="Hot leads" value={String(mover.stats.activeLeads)} />
           <SidebarStat label="Verify" value={mover.readiness.isLive ? "Live" : `${mover.readiness.missingCount} left`} />
-          <SidebarStat label="Avg lead price" value={formatCurrency(mover.stats.averageLeadPrice)} />
+          <SidebarStat label={mover.launchTrial.enabled ? "Lead trial" : "Avg lead price"} value={mover.launchTrial.enabled ? "$0" : formatCurrency(mover.stats.averageLeadPrice)} />
         </div>
 
         <div className="mt-4 grid gap-2">
@@ -721,7 +739,7 @@ function DesktopSidebar({
       <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
         <SidebarStat label="Hot leads" value={String(mover.stats.activeLeads)} />
         <SidebarStat label="Verify" value={mover.readiness.isLive ? "Live" : `${mover.readiness.missingCount} left`} />
-        <SidebarStat label="Avg lead price" value={formatCurrency(mover.stats.averageLeadPrice)} />
+        <SidebarStat label={mover.launchTrial.enabled ? "Lead trial" : "Avg lead price"} value={mover.launchTrial.enabled ? "$0" : formatCurrency(mover.stats.averageLeadPrice)} />
       </div>
 
       <div className="rounded-[26px] border border-white/10 bg-white/[0.06] p-4 xl:mt-auto">
@@ -928,6 +946,7 @@ type LeadsPanelProps = {
   actionError: string | null;
   nowMs: number;
   readiness: DashboardMover["readiness"];
+  launchTrial: DashboardMover["launchTrial"];
   onOpenDestination: (destination: DashboardDestination) => void;
 };
 
@@ -945,6 +964,7 @@ function LeadsPanel({
   actionError,
   nowMs,
   readiness,
+  launchTrial,
   onOpenDestination,
 }: LeadsPanelProps) {
   const detailPanelRef = useRef<HTMLDivElement | null>(null);
@@ -1003,7 +1023,7 @@ function LeadsPanel({
                 <p className="mt-2 text-sm font-bold text-slate-950 sm:mt-3 sm:text-base">{lead.quoteRequest.fromCity} to {lead.quoteRequest.toCity}</p>
                 <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-semibold text-slate-500 sm:text-xs">
                   <span>{lead.quoteRequest.bedrooms}</span>
-                  <span>{formatCurrency(lead.price)}</span>
+                  <span>{lead.paymentStatus === "WAIVED" ? "Trial waived" : launchTrial.enabled && canOpenLead(lead, nowMs) ? "Trial free" : formatCurrency(lead.price)}</span>
                   <span>{lead.routeMatch ? "Match" : "Check route"}</span>
                   <span className={cx("inline-flex items-center gap-1 rounded-full px-2 py-1", expiry.tone === "expired" ? "bg-rose-100 text-rose-700" : expiry.tone === "warning" ? "bg-amber-100 text-amber-800" : expiry.tone === "good" ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600")}>
                     <Clock3 className="h-3 w-3" />
@@ -1030,7 +1050,19 @@ function LeadsPanel({
               <ActionTile title="Move size" value={selectedLead.quoteRequest.bedrooms} meta="home size" />
               <ActionTile title="Move date" value={selectedLead.quoteRequest.moveDateLabel} meta={selectedLead.quoteRequest.dateFlexible ? "flexible" : "fixed"} />
               <ActionTile title="Property" value={selectedLead.quoteRequest.fromPropertyType} meta={`to ${selectedLead.quoteRequest.toPropertyType}`} />
-              <ActionTile title="Lead price" value={formatCurrency(selectedLead.price)} meta={selectedLead.paymentStatus === "SUCCEEDED" ? "paid" : "invoice later"} />
+              <ActionTile
+                title={launchTrial.enabled || selectedLead.paymentStatus === "WAIVED" ? "Lead access" : "Lead price"}
+                value={selectedLead.paymentStatus === "WAIVED" || (launchTrial.enabled && canOpenLead(selectedLead, nowMs)) ? "$0" : formatCurrency(selectedLead.price)}
+                meta={
+                  selectedLead.paymentStatus === "WAIVED"
+                    ? `standard ${formatCurrency(selectedLead.price)}`
+                    : launchTrial.enabled && canOpenLead(selectedLead, nowMs)
+                      ? `standard ${formatCurrency(selectedLead.price)}`
+                      : selectedLead.paymentStatus === "SUCCEEDED"
+                        ? "paid"
+                        : "invoice later"
+                }
+              />
             </div>
             <div className="mt-3 grid gap-2 sm:mt-4 sm:gap-3 md:grid-cols-3">
               <StatusChip label="Coverage" value={selectedLead.routeMatch ? "Good fit" : "Manual review"} good={selectedLead.routeMatch} />
@@ -1062,7 +1094,7 @@ function LeadsPanel({
               ) : (
                 <div className="flex-1">
                   <button type="button" disabled={busyLeadId === selectedLead.id} onClick={() => void handleUnlockLead(selectedLead.id)} className="inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl bg-accentOrange px-4 text-sm font-semibold text-white transition hover:translate-y-[-1px] hover:bg-orange-500 disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-[52px] sm:px-5">
-                    {busyLeadId === selectedLead.id ? "Opening lead..." : "Open lead now"}
+                    {busyLeadId === selectedLead.id ? "Opening lead..." : launchTrial.enabled ? "Open lead free" : "Open lead now"}
                     <ArrowRight className="h-4 w-4" />
                   </button>
                 </div>
@@ -1230,7 +1262,9 @@ function PaymentsPanel({ billingState }: { billingState?: string }) {
   }
 
   const statusMessage =
-    billing.paymentHealth === "active"
+    billing.launchTrial.enabled
+      ? "Launch trial is active. New lead opens are waived at $0 until Match 'n Move turns paid billing on."
+      : billing.paymentHealth === "active"
       ? "Billing is set up and a card is available if you want faster invoice settlement."
       : billing.paymentHealth === "action_required"
         ? "A billing action needs attention before future invoice payments can be processed."
@@ -1280,7 +1314,11 @@ function PaymentsPanel({ billingState }: { billingState?: string }) {
                 <AlertTriangle className="mt-0.5 h-5 w-5 text-amber-600" />
                 <div>
                   <p className="font-semibold text-slate-900">No card on file</p>
-                  <p className="mt-1 text-sm text-slate-600">Lead access still works without a card. Add one if you want invoice payments to be easier later.</p>
+                  <p className="mt-1 text-sm text-slate-600">
+                    {billing.launchTrial.enabled
+                      ? "No card is needed while the launch trial is active. You can add one later when paid billing starts."
+                      : "Lead access still works without a card. Add one if you want invoice payments to be easier later."}
+                  </p>
                 </div>
               </div>
             )}
@@ -1288,7 +1326,7 @@ function PaymentsPanel({ billingState }: { billingState?: string }) {
         </section>
 
         <section className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm sm:rounded-[30px] sm:p-5">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700 sm:text-sm">Invoice status</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700 sm:text-sm">{billing.launchTrial.enabled ? "Launch trial status" : "Invoice status"}</p>
           <div className={cx("mt-3 rounded-[20px] border p-3 sm:mt-4 sm:rounded-[24px] sm:p-4", billing.paymentHealth === "active" ? "border-emerald-200 bg-emerald-50" : billing.paymentHealth === "billing_unavailable" || billing.paymentHealth === "no_payment_method" ? "border-slate-200 bg-slate-50" : "border-amber-200 bg-amber-50")}>
             <p className="font-semibold text-slate-900">{statusMessage}</p>
             {billing.paymentHealth !== "active" && billing.paymentHealth !== "billing_unavailable" && billing.paymentHealth !== "no_payment_method" ? (
@@ -1324,7 +1362,7 @@ function PaymentsPanel({ billingState }: { billingState?: string }) {
                     <p className="text-sm font-semibold text-slate-900">{transaction.leadReference}</p>
                     <p className="mt-1 text-xs text-slate-500">{new Intl.DateTimeFormat("en-NZ", { dateStyle: "medium" }).format(new Date(transaction.date))}</p>
                   </div>
-                  <span className={cx("rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em]", transaction.status === "paid" ? "bg-emerald-100 text-emerald-700" : transaction.status === "issue" ? "bg-rose-100 text-rose-700" : transaction.status === "refunded" ? "bg-slate-200 text-slate-700" : "bg-amber-100 text-amber-800")}>
+                  <span className={cx("rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em]", transaction.status === "paid" || transaction.status === "trial" ? "bg-emerald-100 text-emerald-700" : transaction.status === "issue" ? "bg-rose-100 text-rose-700" : transaction.status === "refunded" ? "bg-slate-200 text-slate-700" : "bg-amber-100 text-amber-800")}>
                     {transaction.status}
                   </span>
                 </div>
@@ -1350,7 +1388,7 @@ function PaymentsPanel({ billingState }: { billingState?: string }) {
                     <td className="py-3 pr-4 text-slate-700">{new Intl.DateTimeFormat("en-NZ", { dateStyle: "medium" }).format(new Date(transaction.date))}</td>
                     <td className="py-3 pr-4 font-semibold text-slate-900">{formatCurrency(transaction.amount)}</td>
                     <td className="py-3 pr-4">
-                      <span className={cx("rounded-full px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.16em]", transaction.status === "paid" ? "bg-emerald-100 text-emerald-700" : transaction.status === "issue" ? "bg-rose-100 text-rose-700" : transaction.status === "refunded" ? "bg-slate-200 text-slate-700" : "bg-amber-100 text-amber-800")}>
+                      <span className={cx("rounded-full px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.16em]", transaction.status === "paid" || transaction.status === "trial" ? "bg-emerald-100 text-emerald-700" : transaction.status === "issue" ? "bg-rose-100 text-rose-700" : transaction.status === "refunded" ? "bg-slate-200 text-slate-700" : "bg-amber-100 text-amber-800")}>
                         {transaction.status}
                       </span>
                     </td>
@@ -1365,7 +1403,11 @@ function PaymentsPanel({ billingState }: { billingState?: string }) {
         ) : (
           <div className="mt-3 rounded-[20px] border border-dashed border-slate-300 bg-slate-50 px-4 py-7 text-center sm:mt-4 sm:rounded-[24px] sm:py-8">
             <p className="font-semibold text-slate-900">No charges yet</p>
-            <p className="mt-2 text-sm text-slate-500">Unlocked leads queued for invoicing will appear here once your team starts opening opportunities.</p>
+            <p className="mt-2 text-sm text-slate-500">
+              {billing.launchTrial.enabled
+                ? "Trial lead opens will appear here as $0 waived records once your team starts opening opportunities."
+                : "Unlocked leads queued for invoicing will appear here once your team starts opening opportunities."}
+            </p>
           </div>
         )}
       </section>
@@ -1409,7 +1451,8 @@ function PaymentsPanel({ billingState }: { billingState?: string }) {
           <section className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm sm:rounded-[30px] sm:p-5">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700 sm:text-sm">Pricing summary</p>
             <div className="mt-3 grid gap-2 sm:mt-4 sm:gap-3">
-              <StatusChip label="Base lead price" value={formatCurrency(billing.pricingSummary.baseLeadPrice)} good />
+              <StatusChip label={billing.launchTrial.enabled ? "Current lead access" : "Base lead price"} value={billing.launchTrial.enabled ? "$0" : formatCurrency(billing.pricingSummary.baseLeadPrice)} good />
+              {billing.launchTrial.enabled ? <StatusChip label="Standard base lead price" value={formatCurrency(billing.pricingSummary.baseLeadPrice)} /> : null}
               <StatusChip label="Pricing factors" value={billing.pricingSummary.factors.join(", ")} />
               <StatusChip label="Billing note" value={billing.pricingSummary.note} good />
             </div>

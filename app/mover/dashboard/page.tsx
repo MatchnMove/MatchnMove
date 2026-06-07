@@ -6,6 +6,7 @@ import { LEAD_PRICING } from "@/lib/lead-pricing";
 import { serializeMoverLeadQuoteRequest } from "@/lib/mover-lead-visibility";
 import { calculateMoverProfileReadiness, isPhoneVerificationRequired } from "@/lib/mover-profile";
 import { canonicaliseServiceArea, sanitiseNzServiceAreas } from "@/lib/nz-regions";
+import { getMoverLaunchTrialSetting } from "@/lib/platform-settings";
 import { getMoverCompetitionSnapshot, getMoverLeaderboard, getMoverRatingsDashboardData } from "@/lib/reviews";
 
 function matchesServiceArea(serviceAreas: string[], lead: { fromCity: string; fromRegion: string; toCity: string; toRegion: string }) {
@@ -63,9 +64,10 @@ export default async function MoverDashboardPage({
     );
   }
 
-  const [ratingsData, leaderboard] = await Promise.all([
+  const [ratingsData, leaderboard, launchTrial] = await Promise.all([
     getMoverRatingsDashboardData(mover.id),
     getMoverLeaderboard(mover.id),
+    getMoverLaunchTrialSetting(),
   ]);
   const competition = getMoverCompetitionSnapshot(mover.id, ratingsData.summary, leaderboard);
   const moverServiceAreas = sanitiseNzServiceAreas(mover.serviceAreas);
@@ -119,6 +121,7 @@ export default async function MoverDashboardPage({
     })),
     logoUrl: mover.logoUrl,
     baseLeadPrice: LEAD_PRICING.basePrice,
+    launchTrial,
     profileCompletion: readiness.completion,
     readiness,
     stats: {

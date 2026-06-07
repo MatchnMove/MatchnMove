@@ -20,14 +20,21 @@ const publicMoverEligibilitySelect = Prisma.validator<Prisma.MoverCompanySelect>
   ...publicMoverSelect,
   contactPerson: true,
   phone: true,
+  phoneVerifiedAt: true,
   nzbn: true,
   nzbnVerificationStatus: true,
   nzbnVerificationError: true,
+  authorizedRepresentativeName: true,
+  authorizedRepresentativeRole: true,
+  authorityDeclaredAt: true,
   documents: {
     select: {
       id: true,
       type: true,
       verificationStatus: true,
+      expiresAt: true,
+      scanStatus: true,
+      detectedMimeType: true,
     },
   },
   user: {
