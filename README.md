@@ -86,8 +86,8 @@ Default seeded mover login:
 - `STORAGE_SECRET_KEY`
 - `STORAGE_BUCKET`
 - `STORAGE_REGION`
-- `STORAGE_PUBLIC_URL`
-  Required only if you want uploads backed by real object storage.
+- `STORAGE_ENDPOINT`
+  Required for private verification-document storage. Leave the endpoint blank only when using AWS S3.
 
 ## Notes
 - No watermark references are included in the UI.
