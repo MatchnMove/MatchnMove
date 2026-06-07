@@ -10,6 +10,10 @@ type SetupState = {
   manualKey: string | null;
 };
 
+async function readJsonResponse<T>(response: Response) {
+  return (await response.json().catch(() => null)) as (T & { error?: string }) | null;
+}
+
 export function AdminMfaSetup() {
   const [setup, setSetup] = useState<SetupState | null>(null);
   const [code, setCode] = useState("");
@@ -19,8 +23,9 @@ export function AdminMfaSetup() {
   useEffect(() => {
     void fetch("/api/admin/mfa/setup", { cache: "no-store" })
       .then(async (response) => {
-        const data = (await response.json()) as SetupState & { error?: string };
-        if (!response.ok) throw new Error(data.error || "Could not load MFA setup.");
+        const data = await readJsonResponse<SetupState>(response);
+        if (!response.ok) throw new Error(data?.error || "Could not load MFA setup.");
+        if (!data) throw new Error("Could not load MFA setup.");
         setSetup(data);
       })
       .catch((caught) => setError(caught instanceof Error ? caught.message : "Could not load MFA setup."));
@@ -35,7 +40,7 @@ export function AdminMfaSetup() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code }),
       });
-      const data = (await response.json().catch(() => null)) as { error?: string } | null;
+      const data = await readJsonResponse<Record<string, never>>(response);
       if (!response.ok) {
         setError(data?.error ?? "Could not verify that code.");
         return;
