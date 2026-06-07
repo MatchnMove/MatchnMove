@@ -74,6 +74,15 @@ export async function PATCH(req: NextRequest) {
   const serviceAreas = sanitiseServiceAreas(parsed.data.serviceAreas);
   const nzbnChanged = (mover.nzbn ?? null) !== parsed.data.nzbn;
   const phoneChanged = mover.phone !== parsed.data.phone;
+  const authorityComplete = Boolean(
+    parsed.data.authorizedRepresentativeName &&
+      parsed.data.authorizedRepresentativeRole &&
+      parsed.data.authorityConfirmed,
+  );
+  const authorityChanged =
+    mover.authorizedRepresentativeName !== parsed.data.authorizedRepresentativeName ||
+    mover.authorizedRepresentativeRole !== parsed.data.authorizedRepresentativeRole ||
+    Boolean(mover.authorityDeclaredAt) !== authorityComplete;
   let nzbnVerificationData = {};
 
   if (!parsed.data.nzbn) {
@@ -106,6 +115,7 @@ export async function PATCH(req: NextRequest) {
     mover.contactPerson !== parsed.data.contactPerson ||
     mover.phone !== parsed.data.phone ||
     nzbnChanged ||
+    authorityChanged ||
     Object.keys(nzbnVerificationData).length > 0 ||
     mover.businessDescription !== parsed.data.businessDescription ||
     mover.yearsOperating !== parsed.data.yearsOperating ||
@@ -120,7 +130,11 @@ export async function PATCH(req: NextRequest) {
       phoneVerifiedAt: phoneChanged ? null : mover.phoneVerifiedAt,
       authorizedRepresentativeName: parsed.data.authorizedRepresentativeName,
       authorizedRepresentativeRole: parsed.data.authorizedRepresentativeRole,
-      authorityDeclaredAt: new Date(),
+      authorityDeclaredAt: authorityComplete
+        ? authorityChanged
+          ? new Date()
+          : mover.authorityDeclaredAt
+        : null,
       nzbn: parsed.data.nzbn,
       yearsOperating: parsed.data.yearsOperating,
       serviceAreas,

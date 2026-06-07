@@ -308,9 +308,17 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
     if (form.contactPerson.trim().length < 2) return "Enter a contact name.";
     if (!phonePattern.test(form.phone.trim())) return "Enter a valid phone number.";
     if (form.nzbn.trim() && !nzbnPattern.test(form.nzbn.trim())) return "NZBN must be 13 digits.";
-    if (form.authorizedRepresentativeName.trim().length < 2) return "Enter the authorised representative's name.";
-    if (form.authorizedRepresentativeRole.trim().length < 2) return "Enter the authorised representative's role.";
-    if (!form.authorityConfirmed) return "Confirm that you are authorised to submit these business details.";
+
+    const hasAuthorityInput = Boolean(
+      form.authorizedRepresentativeName.trim() ||
+        form.authorizedRepresentativeRole.trim() ||
+        form.authorityConfirmed,
+    );
+    if (hasAuthorityInput) {
+      if (form.authorizedRepresentativeName.trim().length < 2) return "Enter the authorised representative's name.";
+      if (form.authorizedRepresentativeRole.trim().length < 2) return "Enter the authorised representative's role.";
+      if (!form.authorityConfirmed) return "Confirm that you are authorised to submit these business details.";
+    }
 
     if (form.yearsOperating.trim()) {
       const years = Number(form.yearsOperating.trim());
@@ -399,9 +407,9 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
           phone: data?.phone ?? payload.phone,
           phoneVerifiedAt: data?.phoneVerifiedAt ?? null,
           phoneVerificationRequired: typeof data?.phoneVerificationRequired === "boolean" ? data.phoneVerificationRequired : profile.phoneVerificationRequired,
-          authorizedRepresentativeName: data?.authorizedRepresentativeName ?? payload.authorizedRepresentativeName,
-          authorizedRepresentativeRole: data?.authorizedRepresentativeRole ?? payload.authorizedRepresentativeRole,
-          authorityDeclaredAt: data?.authorityDeclaredAt ?? new Date().toISOString(),
+          authorizedRepresentativeName: data?.authorizedRepresentativeName ?? "",
+          authorizedRepresentativeRole: data?.authorizedRepresentativeRole ?? "",
+          authorityDeclaredAt: data?.authorityDeclaredAt ?? null,
           nzbn: data?.nzbn ?? payload.nzbn,
           nzbnVerificationStatus: data?.nzbnVerificationStatus ?? profile.nzbnVerificationStatus,
           nzbnRegisteredName: data?.nzbnRegisteredName ?? profile.nzbnRegisteredName,
@@ -595,6 +603,8 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
               </div>
             )}
           </div>
+          {success ? <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">{success}</p> : null}
+          {error ? <p className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{error}</p> : null}
 
           <div className="mt-3 grid gap-2 sm:mt-4 sm:gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <EditableField label="Contact name" value={form.contactPerson} editing={editing} onChange={(value) => setForm((current) => ({ ...current, contactPerson: value }))} placeholder="Primary contact" />
@@ -710,9 +720,6 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
             )}
             {!editing ? <p className="mt-2 text-xs text-slate-500">Coverage is now managed by official NZ region selection.</p> : null}
           </div>
-
-          {success ? <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">{success}</p> : null}
-          {error ? <p className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{error}</p> : null}
         </section>
 
         <MoverLogoUpload

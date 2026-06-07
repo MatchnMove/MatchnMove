@@ -140,16 +140,43 @@ export const moverProfileSchema = z.object({
   authorizedRepresentativeName: z
     .string()
     .trim()
-    .min(2, "Enter the authorised representative's name")
-    .max(100, "Representative name is too long"),
+    .max(100, "Representative name is too long")
+    .optional()
+    .or(z.literal(""))
+    .transform((value) => value || null),
   authorizedRepresentativeRole: z
     .string()
     .trim()
-    .min(2, "Enter the representative's role")
-    .max(100, "Representative role is too long"),
-  authorityConfirmed: z.literal(true, {
-    errorMap: () => ({ message: "Confirm that you are authorised to submit and maintain these business details" }),
-  }),
+    .max(100, "Representative role is too long")
+    .optional()
+    .or(z.literal(""))
+    .transform((value) => value || null),
+  authorityConfirmed: z.boolean().optional().default(false),
+}).superRefine((data, context) => {
+  const hasAuthorityDetails = Boolean(data.authorizedRepresentativeName || data.authorizedRepresentativeRole || data.authorityConfirmed);
+  if (!hasAuthorityDetails) return;
+
+  if (!data.authorizedRepresentativeName || data.authorizedRepresentativeName.length < 2) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["authorizedRepresentativeName"],
+      message: "Enter the authorised representative's name",
+    });
+  }
+  if (!data.authorizedRepresentativeRole || data.authorizedRepresentativeRole.length < 2) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["authorizedRepresentativeRole"],
+      message: "Enter the representative's role",
+    });
+  }
+  if (!data.authorityConfirmed) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["authorityConfirmed"],
+      message: "Confirm that you are authorised to submit and maintain these business details",
+    });
+  }
 });
 
 export const moverLogoSchema = z.object({
