@@ -52,10 +52,12 @@ export async function putPrivateDocument(params: {
 }) {
   const { bucket, client } = getStorageClient();
   const configuredEncryption = process.env.STORAGE_SERVER_SIDE_ENCRYPTION;
-  const serverSideEncryption: ServerSideEncryption =
-    configuredEncryption === "aws:kms" || configuredEncryption === "aws:kms:dsse"
+  const serverSideEncryption: ServerSideEncryption | undefined =
+    configuredEncryption === "AES256" ||
+    configuredEncryption === "aws:kms" ||
+    configuredEncryption === "aws:kms:dsse"
       ? configuredEncryption
-      : "AES256";
+      : undefined;
   await client.send(
     new PutObjectCommand({
       Bucket: bucket,
@@ -66,7 +68,7 @@ export async function putPrivateDocument(params: {
         originalname: encodeURIComponent(params.fileName),
         sha256: params.sha256,
       },
-      ServerSideEncryption: serverSideEncryption,
+      ...(serverSideEncryption ? { ServerSideEncryption: serverSideEncryption } : {}),
     }),
   );
 }

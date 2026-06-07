@@ -52,10 +52,10 @@ STORAGE_REGION=
 STORAGE_ENDPOINT=
 STORAGE_FORCE_PATH_STYLE=false
 STORAGE_SIGNED_URL_TTL_SECONDS=300
-STORAGE_SERVER_SIDE_ENCRYPTION=AES256
+STORAGE_SERVER_SIDE_ENCRYPTION=
 ```
 
-`STORAGE_ENDPOINT` can be blank for AWS S3. Set it for another S3-compatible provider. Document links are signed for five minutes and only issued after mover/admin authorization.
+`STORAGE_ENDPOINT` can be blank for AWS S3. Set it for another S3-compatible provider. Leave `STORAGE_SERVER_SIDE_ENCRYPTION` blank for Railway Buckets; AWS S3 users can set it to `AES256`. Document links are signed for five minutes and only issued after mover/admin authorization.
 
 ## ACTION REQUIRED 5: Connect malware scanning
 
