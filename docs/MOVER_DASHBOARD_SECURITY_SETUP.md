@@ -23,22 +23,29 @@ For another host, run that command once against the production `DATABASE_URL`.
 These values have already been generated in the local `.env`. Add the same values to Railway Variables:
 
 - `MFA_ENCRYPTION_KEY`
-- `PHONE_VERIFICATION_SECRET`
 - `MOVER_VERIFICATION_ADMIN_TOKEN`
 
 Do not generate a different `MFA_ENCRYPTION_KEY` after admin MFA has been enrolled. Changing it makes the stored authenticator secret unreadable.
 
-## ACTION REQUIRED 3: Configure Twilio SMS
+## Optional Later: Configure Twilio SMS
 
-Create a Twilio account, obtain an SMS-capable New Zealand number, and add:
+SMS phone verification is disabled for initial launch to avoid extra costs:
 
 ```env
+MOVER_PHONE_VERIFICATION_REQUIRED=false
+```
+
+When you are ready to require SMS verification, create a Twilio account, obtain an SMS-capable New Zealand number, then add:
+
+```env
+MOVER_PHONE_VERIFICATION_REQUIRED=true
+PHONE_VERIFICATION_SECRET=
 TWILIO_ACCOUNT_SID=
 TWILIO_AUTH_TOKEN=
 TWILIO_FROM_NUMBER=+64...
 ```
 
-Production phone verification fails closed until these are present. Local development prints and returns the test code.
+With the flag set to `true`, production phone verification fails closed until Twilio is configured. With the flag set to `false`, movers still need a saved phone number but do not need an SMS code to go live.
 
 ## ACTION REQUIRED 4: Configure private document storage
 

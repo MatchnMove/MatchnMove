@@ -39,6 +39,7 @@ export type MoverProfileState = {
   contactPerson: string;
   phone: string;
   phoneVerifiedAt?: string | null;
+  phoneVerificationRequired: boolean;
   authorizedRepresentativeName: string;
   authorizedRepresentativeRole: string;
   authorityDeclaredAt?: string | null;
@@ -124,6 +125,8 @@ function inferReadiness(profile: MoverProfileState) {
   );
   const requiredDocumentCount = ["INSURANCE", "NZBN_PROOF"].filter((type) => approvedDocumentTypes.has(type)).length;
   const nzbnVerified = profile.nzbnVerificationStatus === "VERIFIED";
+  const phoneVerificationRequired = profile.phoneVerificationRequired;
+  const contactComplete = Boolean(profile.contactPerson && profile.phone);
   const checks: ReadinessCheck[] = [
     {
       key: "email",
@@ -135,10 +138,20 @@ function inferReadiness(profile: MoverProfileState) {
     },
     {
       key: "contact",
-      complete: Boolean(profile.contactPerson && profile.phone && profile.phoneVerifiedAt),
-      label: profile.phoneVerifiedAt ? "Phone verified" : profile.phone ? "Verify phone" : "Add contact",
-      title: "Verify contact details",
-      description: "Save a contact name and confirm the phone number with a one-time SMS code.",
+      complete: contactComplete && (!phoneVerificationRequired || Boolean(profile.phoneVerifiedAt)),
+      label: phoneVerificationRequired
+        ? profile.phoneVerifiedAt
+          ? "Phone verified"
+          : profile.phone
+            ? "Verify phone"
+            : "Add contact"
+        : contactComplete
+          ? "Ready"
+          : "Add contact",
+      title: phoneVerificationRequired ? "Verify contact details" : "Add contact details",
+      description: phoneVerificationRequired
+        ? "Save a contact name and confirm the phone number with a one-time SMS code."
+        : "Save a contact name and phone number customers and Match 'n Move can use.",
       destination: "profile",
     },
     {
@@ -385,6 +398,7 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
           contactPerson: data?.contactPerson ?? payload.contactPerson,
           phone: data?.phone ?? payload.phone,
           phoneVerifiedAt: data?.phoneVerifiedAt ?? null,
+          phoneVerificationRequired: typeof data?.phoneVerificationRequired === "boolean" ? data.phoneVerificationRequired : profile.phoneVerificationRequired,
           authorizedRepresentativeName: data?.authorizedRepresentativeName ?? payload.authorizedRepresentativeName,
           authorizedRepresentativeRole: data?.authorizedRepresentativeRole ?? payload.authorizedRepresentativeRole,
           authorityDeclaredAt: data?.authorityDeclaredAt ?? new Date().toISOString(),
@@ -589,7 +603,7 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
             <EditableField label="Years operating" value={form.yearsOperating} editing={editing} onChange={(value) => setForm((current) => ({ ...current, yearsOperating: value }))} placeholder="0" inputMode="numeric" />
           </div>
 
-          <div className="mt-3 rounded-[20px] border border-slate-200 bg-slate-50 p-3 sm:mt-4 sm:rounded-[24px] sm:p-4">
+          {profile.phoneVerificationRequired ? <div className="mt-3 rounded-[20px] border border-slate-200 bg-slate-50 p-3 sm:mt-4 sm:rounded-[24px] sm:p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Phone verification</p>
@@ -614,7 +628,7 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
             {editing ? <p className="mt-2 text-xs text-amber-700">Save phone changes before requesting a code. Changing the number removes its verified status.</p> : null}
             {phoneVerificationMessage ? <p className="mt-2 text-sm font-semibold text-emerald-700">{phoneVerificationMessage}</p> : null}
             {phoneVerificationError ? <p className="mt-2 text-sm font-semibold text-rose-700">{phoneVerificationError}</p> : null}
-          </div>
+          </div> : null}
 
           <div className="mt-3 rounded-[20px] border border-slate-200 bg-slate-50 p-3 sm:mt-4 sm:rounded-[24px] sm:p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">NZBN verification</p>

@@ -41,6 +41,7 @@ type DashboardMover = {
   contactPerson: string;
   phone: string;
   phoneVerifiedAt?: string | null;
+  phoneVerificationRequired: boolean;
   authorizedRepresentativeName: string;
   authorizedRepresentativeRole: string;
   authorityDeclaredAt?: string | null;

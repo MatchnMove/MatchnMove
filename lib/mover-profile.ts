@@ -48,6 +48,10 @@ function hasText(value: string | null | undefined) {
   return Boolean(value?.trim());
 }
 
+export function isPhoneVerificationRequired() {
+  return process.env.MOVER_PHONE_VERIFICATION_REQUIRED === "true";
+}
+
 export function calculateMoverProfileReadiness(mover: {
   businessDescription: string | null;
   contactPerson: string | null;
@@ -73,6 +77,8 @@ export function calculateMoverProfileReadiness(mover: {
   user: { emailVerifiedAt: Date | null };
 }): MoverProfileReadiness {
   const nzbnVerified = mover.nzbnVerificationStatus === NZBN_VERIFICATION.VERIFIED;
+  const phoneVerificationRequired = isPhoneVerificationRequired();
+  const contactComplete = hasText(mover.contactPerson) && hasText(mover.phone);
   const requiredDocumentTypes = ["INSURANCE", "NZBN_PROOF"] as const;
   const approvedDocumentTypes = new Set(
     mover.documents
@@ -101,10 +107,20 @@ export function calculateMoverProfileReadiness(mover: {
     },
     {
       key: "contact",
-      complete: hasText(mover.contactPerson) && hasText(mover.phone) && Boolean(mover.phoneVerifiedAt),
-      label: mover.phoneVerifiedAt ? "Phone verified" : hasText(mover.phone) ? "Verify phone" : "Add contact",
-      title: "Verify contact details",
-      description: "Save a contact name and confirm the phone number with a one-time SMS code.",
+      complete: contactComplete && (!phoneVerificationRequired || Boolean(mover.phoneVerifiedAt)),
+      label: phoneVerificationRequired
+        ? mover.phoneVerifiedAt
+          ? "Phone verified"
+          : hasText(mover.phone)
+            ? "Verify phone"
+            : "Add contact"
+        : contactComplete
+          ? "Ready"
+          : "Add contact",
+      title: phoneVerificationRequired ? "Verify contact details" : "Add contact details",
+      description: phoneVerificationRequired
+        ? "Save a contact name and confirm the phone number with a one-time SMS code."
+        : "Save a contact name and phone number customers and Match 'n Move can use.",
       destination: "profile",
     },
     {

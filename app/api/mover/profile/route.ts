@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { rateLimit } from "@/lib/rate-limit";
 import { prisma } from "@/lib/db";
 import { sendVerificationReviewSubmitted } from "@/lib/email";
-import { calculateMoverProfileReadiness, requireAuthenticatedMover } from "@/lib/mover-profile";
+import { calculateMoverProfileReadiness, isPhoneVerificationRequired, requireAuthenticatedMover } from "@/lib/mover-profile";
 import { NZBN_VERIFICATION, verifyNzbnAgainstRegister } from "@/lib/nzbn-verification";
 import { revalidateAboutPage, revalidatePublicMovers } from "@/lib/public-cache";
 import { moverProfileSchema, sanitiseServiceAreas } from "@/lib/validators";
@@ -16,6 +16,7 @@ function serialiseProfile(mover: NonNullable<Awaited<ReturnType<typeof requireAu
     contactPerson: mover.contactPerson ?? "",
     phone: mover.phone ?? "",
     phoneVerifiedAt: mover.phoneVerifiedAt?.toISOString() ?? null,
+    phoneVerificationRequired: isPhoneVerificationRequired(),
     authorizedRepresentativeName: mover.authorizedRepresentativeName ?? "",
     authorizedRepresentativeRole: mover.authorizedRepresentativeRole ?? "",
     authorityDeclaredAt: mover.authorityDeclaredAt?.toISOString() ?? null,

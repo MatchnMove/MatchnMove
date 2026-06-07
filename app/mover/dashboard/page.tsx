@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { LEAD_PRICING } from "@/lib/lead-pricing";
 import { serializeMoverLeadQuoteRequest } from "@/lib/mover-lead-visibility";
-import { calculateMoverProfileReadiness } from "@/lib/mover-profile";
+import { calculateMoverProfileReadiness, isPhoneVerificationRequired } from "@/lib/mover-profile";
 import { canonicaliseServiceArea, sanitiseNzServiceAreas } from "@/lib/nz-regions";
 import { getMoverCompetitionSnapshot, getMoverLeaderboard, getMoverRatingsDashboardData } from "@/lib/reviews";
 
@@ -88,6 +88,7 @@ export default async function MoverDashboardPage({
     contactPerson: mover.contactPerson ?? "Add your lead contact",
     phone: mover.phone ?? "Add your phone number",
     phoneVerifiedAt: mover.phoneVerifiedAt?.toISOString() ?? null,
+    phoneVerificationRequired: isPhoneVerificationRequired(),
     authorizedRepresentativeName: mover.authorizedRepresentativeName ?? "",
     authorizedRepresentativeRole: mover.authorizedRepresentativeRole ?? "",
     authorityDeclaredAt: mover.authorityDeclaredAt?.toISOString() ?? null,
