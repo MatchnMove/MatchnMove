@@ -1,43 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import {
-  BadgeDollarSign,
-  ClipboardList,
-  SearchCheck,
-  ShieldCheck,
-  Sparkles,
-  WalletCards,
-  type LucideIcon,
-} from "lucide-react";
+import { ShieldCheck, Sparkles, WalletCards, type LucideIcon } from "lucide-react";
 import { motion, useInView, useMotionValueEvent, useScroll, useSpring, useTransform } from "framer-motion";
 import { useRef, useState } from "react";
 
 const steps = [
-  {
-    number: "1",
-    title: "Tell Us About Your Move",
-    description: "Share your route, home size, timing, and any access notes in one quick request.",
-    detail: "Takes 2-3 minutes",
-    meta: "One form",
-    icon: ClipboardList,
-  },
-  {
-    number: "2",
-    title: "Compare Quotes",
-    description: "Receive clear mover responses side by side, including price, availability, and service fit.",
-    detail: "Matched movers",
-    meta: "No chasing calls",
-    icon: SearchCheck,
-  },
-  {
-    number: "3",
-    title: "Choose & Save",
-    description: "Pick the moving team that suits your budget, schedule, and confidence level.",
-    detail: "Free to compare",
-    meta: "No obligation",
-    icon: BadgeDollarSign,
-  },
+  { number: "1", title: "Tell Us About Your Move" },
+  { number: "2", title: "Compare Quotes" },
+  { number: "3", title: "Choose & Save" },
 ] as const;
 
 const benefits = [
@@ -94,27 +65,16 @@ function getStepState(progress: number, index: number, total: number) {
 function StepCard({
   number,
   title,
-  description,
-  detail,
-  meta,
-  icon: Icon,
   state,
 }: {
   number: string;
   title: string;
-  description: string;
-  detail: string;
-  meta: string;
-  icon: LucideIcon;
   state: "active" | "complete" | "upcoming";
 }) {
   const stateClasses = {
     active: {
-      card: "border-white/24 bg-white/[0.13] shadow-[0_26px_80px_-34px_rgba(222,122,58,0.95)]",
-      ring: "border-white/35 bg-white/[0.08] text-white shadow-[0_14px_35px_-22px_rgba(255,255,255,0.95)]",
-      icon: "border-orange-200/25 bg-orange-200/12 text-orange-100",
-      copy: "text-slate-200",
-      pill: "border-orange-200/18 bg-orange-200/10 text-orange-100",
+      card: "border-white/20 bg-white/[0.12] shadow-[0_24px_70px_-30px_rgba(222,122,58,0.85)]",
+      ring: "border-white/35 bg-white/[0.06] text-white",
       title: "text-white",
       number: "text-white",
       scale: 1.015,
@@ -124,9 +84,6 @@ function StepCard({
     complete: {
       card: "border-white/12 bg-white/[0.08]",
       ring: "border-white/15 bg-white/[0.04] text-white/90",
-      icon: "border-emerald-200/15 bg-emerald-200/8 text-emerald-100",
-      copy: "text-slate-300",
-      pill: "border-white/10 bg-white/[0.06] text-slate-200",
       title: "text-slate-100",
       number: "text-white/85",
       scale: 1,
@@ -136,13 +93,10 @@ function StepCard({
     upcoming: {
       card: "border-white/10 bg-white/[0.04]",
       ring: "border-white/10 bg-white/[0.04] text-slate-400",
-      icon: "border-white/8 bg-white/[0.035] text-slate-400",
-      copy: "text-slate-500",
-      pill: "border-white/8 bg-white/[0.035] text-slate-500",
       title: "text-slate-400",
       number: "text-slate-500",
-      scale: 0.985,
-      opacity: 0.66,
+      scale: 0.98,
+      opacity: 0.58,
       y: 6,
     },
   }[state];
@@ -151,38 +105,15 @@ function StepCard({
     <motion.article
       animate={{ scale: stateClasses.scale, opacity: stateClasses.opacity, y: stateClasses.y }}
       transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-      className={`group relative overflow-hidden rounded-[22px] border px-4 py-4 backdrop-blur-xl transition-colors duration-300 md:rounded-[28px] md:px-6 md:py-6 ${stateClasses.card}`}
+      className={`rounded-[22px] border px-4 py-4 backdrop-blur-xl md:rounded-[28px] md:px-6 md:py-6 ${stateClasses.card}`}
     >
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.08),transparent_42%,rgba(255,255,255,0.035))] opacity-80 transition duration-500 group-hover:opacity-100" />
-      <div className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-sky-300/10 blur-3xl" />
-      <div className="relative flex items-start gap-3 md:gap-5">
+      <div className="flex items-center gap-3 md:gap-4">
         <div
           className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border text-sm font-semibold md:h-12 md:w-12 md:rounded-2xl md:text-base ${stateClasses.ring}`}
         >
-          <span className={stateClasses.number}>{number}</span>
+          {number}
         </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h3 className={`text-base font-semibold tracking-[-0.01em] md:text-[1.35rem] md:tracking-[-0.02em] ${stateClasses.title}`}>{title}</h3>
-              <p className={`mt-2 max-w-[42rem] text-sm leading-6 md:text-[0.98rem] ${stateClasses.copy}`}>
-                {description}
-              </p>
-            </div>
-            <div className={`hidden h-10 w-10 shrink-0 items-center justify-center rounded-2xl border md:flex ${stateClasses.icon}`}>
-              <Icon className="h-5 w-5" strokeWidth={2.2} />
-            </div>
-          </div>
-
-          <div className="mt-4 flex flex-wrap gap-2">
-            <span className={`inline-flex items-center rounded-full border px-3 py-1 text-[0.72rem] font-semibold uppercase tracking-[0.12em] ${stateClasses.pill}`}>
-              {detail}
-            </span>
-            <span className={`inline-flex items-center rounded-full border px-3 py-1 text-[0.72rem] font-semibold uppercase tracking-[0.12em] ${stateClasses.pill}`}>
-              {meta}
-            </span>
-          </div>
-        </div>
+        <h3 className={`text-base font-semibold tracking-[-0.01em] md:text-[1.35rem] md:tracking-[-0.02em] ${stateClasses.title}`}>{title}</h3>
       </div>
     </motion.article>
   );
@@ -351,7 +282,7 @@ export function ScrollJourneySection() {
                       stepStates[index] === "active" ? "bg-[rgba(222,122,58,0.55)]" : "bg-transparent"
                     }`}
                   />
-                  <StepCard {...step} state={stepStates[index]} />
+                  <StepCard number={step.number} title={step.title} state={stepStates[index]} />
                 </div>
               ))}
             </div>
