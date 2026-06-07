@@ -59,15 +59,23 @@ STORAGE_SERVER_SIDE_ENCRYPTION=
 
 ## ACTION REQUIRED 5: Connect malware scanning
 
-Set an HTTPS scanning adapter that accepts the raw file body and returns JSON with `{"clean": true}` only for a clean file:
+The repository includes a Railway-ready scanner service at `services/malware-scanner`. It accepts the raw file body and returns JSON with `{"clean": true}` only for a clean file.
+
+Production is currently configured to use the Railway `malware-scanner` service:
 
 ```env
-MALWARE_SCAN_URL=
+MALWARE_SCAN_URL=https://malware-scanner-production-6f1a.up.railway.app/scan
 MALWARE_SCAN_TOKEN=
 ALLOW_UNSCANNED_DOCUMENTS=false
 ```
 
-Production uploads are rejected if scanning is unavailable. Keep `ALLOW_UNSCANNED_DOCUMENTS=false`.
+`MALWARE_SCAN_TOKEN` must match the scanner service `SCANNER_TOKEN`. Production uploads are rejected if scanning is unavailable. Keep `ALLOW_UNSCANNED_DOCUMENTS=false`.
+
+To redeploy scanner changes manually:
+
+```bash
+railway up ./services/malware-scanner --path-as-root --service malware-scanner --detach
+```
 
 ## ACTION REQUIRED 6: Complete admin MFA
 
