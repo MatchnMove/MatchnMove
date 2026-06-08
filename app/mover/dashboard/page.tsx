@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 import { LEAD_PRICING } from "@/lib/lead-pricing";
 import { serializeMoverLeadQuoteRequest } from "@/lib/mover-lead-visibility";
 import { calculateMoverProfileReadiness, isPhoneVerificationRequired } from "@/lib/mover-profile";
-import { canonicaliseServiceArea, sanitiseNzServiceAreas } from "@/lib/nz-regions";
+import { getQuoteServiceAreas, sanitiseNzServiceAreas } from "@/lib/nz-regions";
 import { getMoverLaunchTrialSetting } from "@/lib/platform-settings";
 import { getMoverCompetitionSnapshot, getMoverLeaderboard, getMoverRatingsDashboardData } from "@/lib/reviews";
 
@@ -13,9 +13,7 @@ function matchesServiceArea(serviceAreas: string[], lead: { fromCity: string; fr
   if (!serviceAreas.length) return false;
 
   const coverage = new Set(sanitiseNzServiceAreas(serviceAreas));
-  const leadRegions = [lead.fromRegion, lead.toRegion]
-    .map((region) => canonicaliseServiceArea(region))
-    .filter((region): region is NonNullable<typeof region> => Boolean(region));
+  const leadRegions = getQuoteServiceAreas(lead);
 
   return leadRegions.some((region) => coverage.has(region));
 }

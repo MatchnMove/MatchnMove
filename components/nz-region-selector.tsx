@@ -1,7 +1,8 @@
 "use client";
 
-import { Check, MapPinned } from "lucide-react";
-import { NZ_SERVICE_AREAS, NZ_SERVICE_AREA_GROUPS, type NzServiceArea } from "@/lib/nz-regions";
+import { useState } from "react";
+import { Check, ChevronDown, MapPinned } from "lucide-react";
+import { NZ_SERVICE_AREAS, NZ_SERVICE_AREA_GROUPS, NZ_SERVICE_AREA_LOCALITIES, type NzServiceArea } from "@/lib/nz-regions";
 import { cx } from "@/lib/utils";
 
 type NzRegionSelectorProps = {
@@ -19,6 +20,7 @@ export function NzRegionSelector({
   description = "Choose the NZ regions your moving business actively services.",
   className,
 }: NzRegionSelectorProps) {
+  const [openRegion, setOpenRegion] = useState<NzServiceArea | null>(null);
   const selectedSet = new Set(selectedRegions);
 
   function sortRegions(regions: Iterable<NzServiceArea>) {
@@ -99,29 +101,69 @@ export function NzRegionSelector({
             <div className="mt-3 grid gap-2">
               {group.regions.map((region) => {
                 const selected = selectedSet.has(region);
+                const expanded = openRegion === region;
+                const localities = NZ_SERVICE_AREA_LOCALITIES[region];
 
                 return (
-                  <button
+                  <div
                     key={region}
-                    type="button"
-                    onClick={() => toggleRegion(region)}
                     className={cx(
-                      "flex items-center justify-between rounded-2xl border px-4 py-3 text-left transition",
+                      "overflow-hidden rounded-2xl border transition",
                       selected
                         ? "border-sky-200 bg-[linear-gradient(180deg,#f4fbff_0%,#ffffff_100%)] shadow-[0_14px_34px_-28px_rgba(14,165,233,0.35)]"
                         : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50",
                     )}
                   >
-                    <span className="text-sm font-semibold text-slate-800">{region}</span>
-                    <span
-                      className={cx(
-                        "inline-flex h-6 w-6 items-center justify-center rounded-full border transition",
-                        selected ? "border-sky-200 bg-sky-600 text-white" : "border-slate-300 bg-white text-transparent",
-                      )}
-                    >
-                      <Check className="h-3.5 w-3.5" />
-                    </span>
-                  </button>
+                    <div className="flex items-center gap-2 px-4 py-3">
+                      <button type="button" onClick={() => toggleRegion(region)} className="flex min-w-0 flex-1 items-center justify-between text-left">
+                        <span className="text-sm font-semibold text-slate-800">{region}</span>
+                        <span
+                          className={cx(
+                            "ml-3 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition",
+                            selected ? "border-sky-200 bg-sky-600 text-white" : "border-slate-300 bg-white text-transparent",
+                          )}
+                        >
+                          <Check className="h-3.5 w-3.5" />
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setOpenRegion((current) => (current === region ? null : region))}
+                        className="inline-flex shrink-0 items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-slate-500 transition hover:border-slate-300 hover:text-slate-700"
+                        aria-expanded={expanded}
+                      >
+                        Areas
+                        <ChevronDown className={cx("h-3.5 w-3.5 transition", expanded ? "rotate-180" : "")} />
+                      </button>
+                    </div>
+
+                    {expanded ? (
+                      <div className="border-t border-slate-100 bg-slate-50/70 px-4 py-3">
+                        <p className="text-xs leading-5 text-slate-500">
+                          Includes common lead locations such as:
+                        </p>
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {localities.map((locality) => (
+                            <button
+                              key={locality}
+                              type="button"
+                              onClick={() => {
+                                if (!selectedSet.has(region)) onChange(sortRegions([...selectedRegions, region]));
+                              }}
+                              className={cx(
+                                "rounded-full border px-2.5 py-1 text-[11px] font-semibold transition",
+                                selected
+                                  ? "border-sky-100 bg-white text-sky-700"
+                                  : "border-slate-200 bg-white text-slate-600 hover:border-sky-200 hover:text-sky-700",
+                              )}
+                            >
+                              {locality}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
                 );
               })}
             </div>

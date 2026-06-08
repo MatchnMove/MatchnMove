@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { sendMoverLeadExpiryWarningEmail, sendMoverNewLeadEmail } from "@/lib/email";
 import { calculateLeadPrice } from "@/lib/lead-pricing";
 import { isMoverProfileLive } from "@/lib/mover-profile";
-import { canonicaliseServiceArea } from "@/lib/nz-regions";
+import { getQuoteServiceAreas } from "@/lib/nz-regions";
 
 export const INITIAL_LEAD_RECIPIENT_LIMIT = 5;
 export const LEAD_EXPIRY_HOURS = 48;
@@ -51,14 +51,8 @@ export function getLeadExpiryDate(start = new Date()) {
   return new Date(start.getTime() + LEAD_EXPIRY_HOURS * HOUR_MS);
 }
 
-export function getQuoteMatchedRegions(quote: Pick<QuoteForLeadLifecycle, "fromRegion" | "toRegion">) {
-  return Array.from(
-    new Set(
-      [quote.fromRegion, quote.toRegion]
-        .map((region) => canonicaliseServiceArea(region))
-        .filter((region): region is NonNullable<ReturnType<typeof canonicaliseServiceArea>> => Boolean(region)),
-    ),
-  );
+export function getQuoteMatchedRegions(quote: Pick<QuoteForLeadLifecycle, "fromCity" | "fromRegion" | "toCity" | "toRegion">) {
+  return getQuoteServiceAreas(quote);
 }
 
 export function selectLeadRecipients<T>(movers: T[], limit = INITIAL_LEAD_RECIPIENT_LIMIT) {
