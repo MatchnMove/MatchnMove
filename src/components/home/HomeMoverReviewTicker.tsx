@@ -7,8 +7,13 @@ import { CheckCircle2, Star, Truck } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { HeroMoverTickerItem } from "@/src/components/hero/hero-mover-data";
 
+export type HomeMoverReviewItem = HeroMoverTickerItem & {
+  profileHref: string;
+  hoverLabel?: string;
+};
+
 type HomeMoverReviewTickerProps = {
-  initialMovers: HeroMoverTickerItem[];
+  initialMovers: HomeMoverReviewItem[];
 };
 
 type PublicMoversResponse = {
@@ -19,7 +24,7 @@ type PublicMoversResponse = {
 const cardAngles = [0, 0, 0];
 const cardOffsets = [0, 0, 0];
 
-function getVisibleMovers(movers: HeroMoverTickerItem[], startIndex: number) {
+function getVisibleMovers(movers: HomeMoverReviewItem[], startIndex: number) {
   return Array.from({ length: Math.min(3, movers.length) }, (_, offset) => movers[(startIndex + offset) % movers.length]);
 }
 
@@ -74,7 +79,12 @@ export function HomeMoverReviewTicker({ initialMovers }: HomeMoverReviewTickerPr
           return;
         }
 
-        const nextMovers = Array.isArray(data.movers) ? data.movers.filter(isHeroMoverTickerItem) : [];
+        const nextMovers = Array.isArray(data.movers)
+          ? data.movers.filter(isHeroMoverTickerItem).map((mover) => ({
+              ...mover,
+              profileHref: `/movers/${mover.id}`,
+            }))
+          : [];
         const reviewedMovers = nextMovers.filter((mover) => mover.reviewCount > 0);
 
         if (data.source === "database" && nextMovers.length) {
@@ -127,7 +137,7 @@ export function HomeMoverReviewTicker({ initialMovers }: HomeMoverReviewTickerPr
             className="absolute left-0 top-0 w-[calc(100%-18px)] sm:w-[calc(100%-28px)]"
           >
             <Link
-              href={`/movers/${mover.id}`}
+              href={mover.profileHref}
               className="group flex min-h-[86px] items-center justify-between gap-3 rounded-[22px] border border-white/70 bg-white/95 px-4 py-3 text-left shadow-[0_26px_62px_-34px_rgba(15,23,42,0.62)] backdrop-blur transition duration-300 hover:-translate-y-1 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 sm:min-h-[96px] sm:gap-4 sm:rounded-[26px] sm:px-5 sm:py-4"
             >
               <div className="flex min-w-0 items-center gap-3 sm:gap-4">
@@ -158,7 +168,7 @@ export function HomeMoverReviewTicker({ initialMovers }: HomeMoverReviewTickerPr
                   {mover.reviewCount} review{mover.reviewCount === 1 ? "" : "s"}
                 </p>
                 <p className="mt-2 hidden text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-sky-700 opacity-0 transition group-hover:opacity-100 sm:block">
-                  View profile
+                  {mover.hoverLabel ?? "View profile"}
                 </p>
               </div>
             </Link>

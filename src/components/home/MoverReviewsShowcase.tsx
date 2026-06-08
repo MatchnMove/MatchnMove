@@ -2,19 +2,57 @@ import Link from "next/link";
 import { ArrowRight, ShieldCheck, Sparkles, Star } from "lucide-react";
 import { getPublicMovers } from "@/lib/public-movers";
 import { buildHeroMoverItems } from "@/src/components/hero/hero-mover-data";
-import { HomeMoverReviewTicker } from "@/src/components/home/HomeMoverReviewTicker";
+import { HomeMoverReviewTicker, type HomeMoverReviewItem } from "@/src/components/home/HomeMoverReviewTicker";
+
+const fallbackMoverReviews: HomeMoverReviewItem[] = [
+  {
+    id: "fallback-coastal-carry",
+    name: "Coastal Carry Co",
+    logoUrl: "/images/movers/coastal-carry.svg",
+    rating: 4.8,
+    reviewCount: 6,
+    badge: "Top rated",
+    tone: "bg-emerald-500",
+    profileHref: "/movers",
+    hoverLabel: "Browse profiles",
+  },
+  {
+    id: "fallback-summit-shift",
+    name: "Summit Shift Movers",
+    logoUrl: "/images/movers/summit-shift.svg",
+    rating: 4.8,
+    reviewCount: 6,
+    badge: "Top rated",
+    tone: "bg-blue-500",
+    profileHref: "/movers",
+    hoverLabel: "Browse profiles",
+  },
+  {
+    id: "fallback-harbourline",
+    name: "Harbourline Relocations",
+    logoUrl: "/images/movers/harbourline-relocations.svg",
+    rating: 4.7,
+    reviewCount: 6,
+    badge: "Top rated",
+    tone: "bg-sky-500",
+    profileHref: "/movers",
+    hoverLabel: "Browse profiles",
+  },
+];
 
 export async function MoverReviewsShowcase() {
-  const moverItems = buildHeroMoverItems(await getPublicMovers());
+  const moverItems = buildHeroMoverItems(await getPublicMovers()).map((mover) => ({
+    ...mover,
+    profileHref: `/movers/${mover.id}`,
+  }));
   const reviewedMovers = moverItems.filter((mover) => mover.reviewCount > 0);
-  const movers = reviewedMovers.length ? reviewedMovers : moverItems;
+  const movers = reviewedMovers.length ? reviewedMovers : moverItems.length ? moverItems : fallbackMoverReviews;
 
-  if (!movers.length) return null;
-
+  const ratedMovers = movers.filter((mover) => mover.reviewCount > 0 && mover.rating > 0);
   const totalReviews = movers.reduce((sum, mover) => sum + mover.reviewCount, 0);
   const averageRating =
-    reviewedMovers.length > 0
-      ? reviewedMovers.reduce((sum, mover) => sum + mover.rating, 0) / reviewedMovers.length
+    ratedMovers.length > 0
+      ? ratedMovers.reduce((sum, mover) => sum + mover.rating, 0) / ratedMovers.length
       : 0;
 
   return (
