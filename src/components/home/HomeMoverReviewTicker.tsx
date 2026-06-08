@@ -21,9 +21,6 @@ type PublicMoversResponse = {
   source?: unknown;
 };
 
-const cardAngles = [0, 0, 0];
-const cardOffsets = [0, 0, 0];
-
 function getVisibleMovers(movers: HomeMoverReviewItem[], startIndex: number) {
   return Array.from({ length: Math.min(3, movers.length) }, (_, offset) => movers[(startIndex + offset) % movers.length]);
 }
@@ -62,7 +59,7 @@ export function HomeMoverReviewTicker({ initialMovers }: HomeMoverReviewTickerPr
 
     const interval = window.setInterval(() => {
       setStartIndex((current) => (current + 1) % movers.length);
-    }, 4200);
+    }, 5600);
 
     return () => window.clearInterval(interval);
   }, [isPaused, movers.length]);
@@ -110,7 +107,7 @@ export function HomeMoverReviewTicker({ initialMovers }: HomeMoverReviewTickerPr
 
   return (
     <div
-      className="relative mx-auto h-[330px] w-full max-w-[520px] sm:h-[360px] lg:max-w-none"
+      className="relative mx-auto h-[338px] w-full max-w-[560px] overflow-visible sm:h-[368px]"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
       onFocus={() => setIsPaused(true)}
@@ -118,30 +115,29 @@ export function HomeMoverReviewTicker({ initialMovers }: HomeMoverReviewTickerPr
         if (!event.currentTarget.contains(event.relatedTarget)) setIsPaused(false);
       }}
     >
-      <div className="pointer-events-none absolute inset-x-4 top-10 h-[250px] rounded-[34px] border border-white/10 bg-white/[0.06] shadow-[0_40px_90px_-55px_rgba(15,23,42,0.8)] backdrop-blur-xl" />
+      <div className="pointer-events-none absolute inset-x-0 top-8 h-[282px] rounded-[28px] border border-slate-200 bg-slate-50 shadow-inner sm:top-10 sm:h-[298px]" />
+      <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-sky-200/70" />
       <AnimatePresence initial={false} mode="popLayout">
         {visibleMovers.map((mover, slot) => (
           <motion.div
             key={mover.id}
             layout
-            initial={{ opacity: 0, y: 44, scale: 0.95, rotate: cardAngles[slot] }}
+            initial={{ opacity: 0, y: 42, scale: 0.97 }}
             animate={{
               opacity: 1,
-              y: slot * 96,
-              x: cardOffsets[slot],
-              scale: 1,
-              rotate: cardAngles[slot],
+              y: slot * 108,
+              scale: 1 - slot * 0.015,
             }}
-            exit={{ opacity: 0, y: -46, scale: 0.95, rotate: cardAngles[0] }}
-            transition={{ duration: 0.72, ease: [0.22, 1, 0.36, 1] }}
-            className="absolute left-0 top-0 w-[calc(100%-18px)] sm:w-[calc(100%-28px)]"
+            exit={{ opacity: 0, y: -42, scale: 0.97 }}
+            transition={{ duration: 0.82, ease: [0.22, 1, 0.36, 1] }}
+            className="absolute inset-x-0 top-0 px-0 sm:px-3"
           >
             <Link
               href={mover.profileHref}
-              className="group flex min-h-[86px] items-center justify-between gap-3 rounded-[22px] border border-white/70 bg-white/95 px-4 py-3 text-left shadow-[0_26px_62px_-34px_rgba(15,23,42,0.62)] backdrop-blur transition duration-300 hover:-translate-y-1 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 sm:min-h-[96px] sm:gap-4 sm:rounded-[26px] sm:px-5 sm:py-4"
+              className="group mx-auto flex min-h-[94px] w-full max-w-[528px] items-center justify-between gap-3 rounded-[24px] border border-slate-200 bg-white px-4 py-3 text-left shadow-[0_24px_58px_-34px_rgba(15,23,42,0.38)] transition duration-300 hover:-translate-y-1 hover:border-sky-200 hover:shadow-[0_30px_68px_-36px_rgba(14,165,233,0.42)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2 sm:min-h-[104px] sm:gap-4 sm:px-5 sm:py-4"
             >
               <div className="flex min-w-0 items-center gap-3 sm:gap-4">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[15px] border border-slate-200 bg-white p-1.5 shadow-sm sm:h-14 sm:w-14 sm:rounded-[18px]">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-1.5 shadow-sm sm:h-14 sm:w-14">
                   {mover.logoUrl ? (
                     <img src={mover.logoUrl} alt={`${mover.name} logo`} className="h-full w-full object-contain" loading="lazy" />
                   ) : (
@@ -151,8 +147,8 @@ export function HomeMoverReviewTicker({ initialMovers }: HomeMoverReviewTickerPr
                   )}
                 </div>
                 <div className="min-w-0">
-                  <p className="truncate text-base font-black tracking-[-0.02em] text-slate-950 sm:text-lg">{mover.name}</p>
-                  <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[0.62rem] font-black uppercase tracking-[0.11em] text-emerald-700 sm:px-3 sm:text-[0.68rem]">
+                  <p className="truncate text-base font-black tracking-normal text-slate-950 sm:text-lg">{mover.name}</p>
+                  <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[0.62rem] font-black uppercase tracking-[0.1em] text-emerald-700 sm:px-3 sm:text-[0.68rem]">
                     <CheckCircle2 className="h-3.5 w-3.5" />
                     {mover.badge}
                   </div>

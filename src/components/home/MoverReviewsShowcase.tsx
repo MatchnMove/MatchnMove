@@ -56,20 +56,19 @@ export async function MoverReviewsShowcase() {
       : 0;
 
   return (
-    <section className="relative overflow-hidden bg-[linear-gradient(180deg,#07111d_0%,#0a1727_48%,#eef4fb_100%)] px-4 py-12 text-white sm:px-6 sm:py-16 lg:px-8 lg:py-24">
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(120deg,rgba(255,255,255,0.035),transparent_36%,rgba(255,255,255,0.045))]" />
+    <section id="mover-reviews" className="relative border-y border-slate-200 bg-white px-4 py-10 sm:px-6 sm:py-14 lg:px-8 lg:py-20">
       <div className="relative mx-auto max-w-6xl">
-        <div className="grid items-center gap-8 lg:grid-cols-[minmax(0,0.88fr)_minmax(420px,1.12fr)] lg:gap-14">
+        <div className="grid items-center gap-8 lg:grid-cols-[minmax(0,0.92fr)_minmax(430px,1fr)] lg:gap-14">
           <div className="hidden lg:block">
-            <p className="inline-flex items-center gap-2 rounded-full border border-sky-200/15 bg-white/[0.06] px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-sky-100">
+            <p className="inline-flex items-center gap-2 rounded-full border border-sky-100 bg-sky-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-sky-700">
               <Star className="h-4 w-4 fill-amber-300 text-amber-300" />
               Verified mover reviews
             </p>
-            <h2 className="mt-5 max-w-[11ch] text-[clamp(3rem,6vw,5rem)] font-black leading-[0.92] tracking-[-0.05em] text-white">
-              Compare movers with proof.
+            <h2 className="mt-5 max-w-[12ch] text-6xl font-black leading-[0.95] tracking-normal text-slate-950 xl:text-7xl">
+              Proof before you pick a mover.
             </h2>
-            <p className="mt-5 max-w-[35rem] text-base leading-8 text-slate-300">
-              Public mover profiles show verified ratings, company details, and customer feedback in one place, so families can choose with more confidence before they book.
+            <p className="mt-5 max-w-[35rem] text-base leading-8 text-slate-600">
+              Real ratings, public company details, and profile links sit together in one place, so customers can compare movers with confidence before they request a quote.
             </p>
 
             <div className="mt-8 grid gap-3 sm:grid-cols-3">
@@ -80,14 +79,14 @@ export async function MoverReviewsShowcase() {
 
             <Link
               href="/movers"
-              className="mt-8 inline-flex min-h-[52px] items-center gap-2 rounded-2xl bg-white px-6 py-3 text-sm font-semibold text-slate-950 shadow-[0_24px_58px_-36px_rgba(255,255,255,0.7)] transition hover:-translate-y-1 hover:bg-sky-50"
+              className="mt-8 inline-flex min-h-[52px] items-center gap-2 rounded-2xl bg-slate-950 px-6 py-3 text-sm font-semibold text-white shadow-[0_22px_52px_-32px_rgba(15,23,42,0.55)] transition hover:-translate-y-1 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2"
             >
               Browse mover profiles
               <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
 
-          <div className="lg:justify-self-end">
+          <div className="min-w-0 w-full max-w-[560px] lg:justify-self-end">
             <h2 className="sr-only">Verified mover review cards</h2>
             <HomeMoverReviewTicker initialMovers={movers} />
           </div>
@@ -99,10 +98,10 @@ export async function MoverReviewsShowcase() {
 
 function ReviewMetric({ icon: Icon, label, value }: { icon: typeof ShieldCheck; label: string; value: string }) {
   return (
-    <div className="rounded-[22px] border border-white/10 bg-white/[0.06] p-4 backdrop-blur">
-      <Icon className="h-5 w-5 text-sky-100" />
-      <p className="mt-4 text-2xl font-black tracking-[-0.04em] text-white">{value}</p>
-      <p className="mt-1 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-slate-400">{label}</p>
+    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+      <Icon className="h-5 w-5 text-sky-700" />
+      <p className="mt-4 text-2xl font-black tracking-normal text-slate-950">{value}</p>
+      <p className="mt-1 text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-slate-500">{label}</p>
     </div>
   );
 }
