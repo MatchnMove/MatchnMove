@@ -59,7 +59,7 @@ export function HomeMoverReviewTicker({ initialMovers }: HomeMoverReviewTickerPr
 
     const interval = window.setInterval(() => {
       setStartIndex((current) => (current + 1) % movers.length);
-    }, 5600);
+    }, 5000);
 
     return () => window.clearInterval(interval);
   }, [isPaused, movers.length]);
@@ -129,7 +129,7 @@ export function HomeMoverReviewTicker({ initialMovers }: HomeMoverReviewTickerPr
               scale: 1 - slot * 0.015,
             }}
             exit={{ opacity: 0, y: -42, scale: 0.97 }}
-            transition={{ duration: 0.82, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 0.72, ease: [0.22, 1, 0.36, 1] }}
             className="absolute inset-x-0 top-0 px-0 sm:px-3"
           >
             <Link
