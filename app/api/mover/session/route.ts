@@ -2,10 +2,15 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
+const privateNoStoreHeaders = {
+  "Cache-Control": "private, no-store, max-age=0, must-revalidate",
+  Pragma: "no-cache",
+};
+
 export async function GET() {
   const session = await auth();
   if (!session?.user?.id) {
-    return NextResponse.json({ authenticated: false });
+    return NextResponse.json({ authenticated: false }, { headers: privateNoStoreHeaders });
   }
 
   const user = await prisma.user.findUnique({
@@ -22,11 +27,15 @@ export async function GET() {
   });
 
   if (!user) {
-    return NextResponse.json({ authenticated: false });
+    return NextResponse.json({ authenticated: false }, { headers: privateNoStoreHeaders });
   }
 
-  return NextResponse.json({
-    authenticated: true,
-    accountName: user.moverCompany?.companyName || user.name || user.email,
-  });
+  return NextResponse.json(
+    {
+      authenticated: true,
+      accountId: session.user.id,
+      accountName: user.moverCompany?.companyName || user.name || user.email,
+    },
+    { headers: privateNoStoreHeaders },
+  );
 }

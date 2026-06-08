@@ -1,10 +1,8 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 export function MoverAccountActions({ email, emailVerified }: { email: string; emailVerified: boolean }) {
-  const router = useRouter();
   const [submitting, setSubmitting] = useState<"verify" | "logout" | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -39,8 +37,7 @@ export function MoverAccountActions({ email, emailVerified }: { email: string; e
 
     try {
       await fetch("/api/mover/logout", { method: "POST" });
-      router.push("/mover/login");
-      router.refresh();
+      window.location.replace("/mover/login");
     } finally {
       setSubmitting(null);
     }

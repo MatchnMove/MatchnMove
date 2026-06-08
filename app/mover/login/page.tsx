@@ -4,8 +4,7 @@ import { Nav } from "@/components/site-shell";
 import { NzRegionSelector } from "@/components/nz-region-selector";
 import Link from "next/link";
 import Script from "next/script";
-import { useRouter } from "next/navigation";
-import { FormEvent, startTransition, useEffect, useEffectEvent, useRef, useState } from "react";
+import { FormEvent, useEffect, useEffectEvent, useRef, useState } from "react";
 import { ArrowRight, BadgeCheck, Building2, Eye, EyeOff, LockKeyhole, ShieldCheck, Sparkles } from "lucide-react";
 import { type NzServiceArea } from "@/lib/nz-regions";
 
@@ -64,7 +63,6 @@ function getNetworkErrorMessage(action: string) {
 }
 
 export default function MoverLoginPage() {
-  const router = useRouter();
   const googleButtonRef = useRef<HTMLDivElement | null>(null);
   const googleRenderedRef = useRef(false);
 
@@ -127,7 +125,7 @@ export default function MoverLoginPage() {
       }
 
       setSuccess(payload.adminMfaRequired ? "Admin sign-in accepted. Complete authenticator verification..." : "Signed in with Google. Redirecting to your mover dashboard...");
-      startTransition(() => router.push(payload.adminMfaRequired ? "/admin/mfa" : redirectPath));
+      window.location.replace(payload.adminMfaRequired ? "/admin/mfa" : redirectPath);
     } catch {
       setError(getNetworkErrorMessage("Google sign-in"));
     } finally {
@@ -221,7 +219,7 @@ export default function MoverLoginPage() {
       }
 
       setSuccess(payload.adminMfaRequired ? "Code accepted. Complete authenticator verification..." : "Welcome back. Taking you to your dashboard...");
-      startTransition(() => router.push(payload.adminMfaRequired ? "/admin/mfa" : redirectPath));
+      window.location.replace(payload.adminMfaRequired ? "/admin/mfa" : redirectPath);
     } catch {
       setError(getNetworkErrorMessage("Sign-in code verification"));
     } finally {
@@ -256,7 +254,7 @@ export default function MoverLoginPage() {
           ? "Your Match 'n Move mover account is ready. Check your inbox for a verification email while we take you to the dashboard..."
           : "Your Match 'n Move mover account is ready. Email verification is available once SMTP is configured, and we're taking you to the dashboard now..."
       );
-      startTransition(() => router.push(redirectPath));
+      window.location.replace(redirectPath);
     } catch {
       setError(getNetworkErrorMessage("Account creation"));
     } finally {

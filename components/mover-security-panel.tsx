@@ -1,7 +1,6 @@
 "use client";
 
 import { type ReactNode, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
   ArrowRight,
@@ -72,7 +71,6 @@ function createAsyncState(): AsyncActionState {
 }
 
 export function MoverSecurityPanel({ mover, onOpenDestination }: Props) {
-  const router = useRouter();
   const [billing, setBilling] = useState<BillingSnapshot | null>(null);
   const [billingLoading, setBillingLoading] = useState(true);
   const [billingError, setBillingError] = useState<string | null>(null);
@@ -261,8 +259,7 @@ export function MoverSecurityPanel({ mover, onOpenDestination }: Props) {
 
     try {
       await fetch("/api/mover/logout", { method: "POST" });
-      router.push("/mover/login");
-      router.refresh();
+      window.location.replace("/mover/login");
     } finally {
       setLogoutLoading(false);
     }

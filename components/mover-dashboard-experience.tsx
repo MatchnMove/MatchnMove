@@ -33,6 +33,7 @@ import { MoverLeadTrendsCard } from "@/components/mover-lead-trends-card";
 import { cx } from "@/lib/utils";
 
 type DashboardMover = {
+  accountId: string;
   companyName: string;
   businessDescription: string;
   status: string;
@@ -351,6 +352,61 @@ export function MoverDashboardExperience({
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [activeTab]);
+
+  useEffect(() => {
+    let cancelled = false;
+    let checking = false;
+
+    async function verifyCurrentAccount() {
+      if (checking) return;
+      checking = true;
+
+      try {
+        const response = await fetch("/api/mover/session", {
+          cache: "no-store",
+          credentials: "same-origin",
+        });
+        const session = (await response.json().catch(() => null)) as {
+          authenticated?: boolean;
+          accountId?: string;
+        } | null;
+
+        if (cancelled) return;
+
+        if (!session?.authenticated) {
+          const next = encodeURIComponent(window.location.pathname + window.location.search);
+          window.location.replace(`/mover/login?next=${next}`);
+          return;
+        }
+
+        if (session.accountId !== mover.accountId) {
+          window.location.reload();
+        }
+      } catch {
+        // Protected API requests still validate the session during a temporary network failure.
+      } finally {
+        checking = false;
+      }
+    }
+
+    const verifyVisibleAccount = () => {
+      if (document.visibilityState === "visible") {
+        void verifyCurrentAccount();
+      }
+    };
+
+    void verifyCurrentAccount();
+    window.addEventListener("pageshow", verifyCurrentAccount);
+    window.addEventListener("focus", verifyCurrentAccount);
+    document.addEventListener("visibilitychange", verifyVisibleAccount);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener("pageshow", verifyCurrentAccount);
+      window.removeEventListener("focus", verifyCurrentAccount);
+      document.removeEventListener("visibilitychange", verifyVisibleAccount);
+    };
+  }, [mover.accountId]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setNowMs(Date.now()), 60_000);

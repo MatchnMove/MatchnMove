@@ -9,6 +9,9 @@ import { getQuoteServiceAreas, sanitiseNzServiceAreas } from "@/lib/nz-regions";
 import { getMoverLaunchTrialSetting } from "@/lib/platform-settings";
 import { getMoverCompetitionSnapshot, getMoverLeaderboard, getMoverRatingsDashboardData } from "@/lib/reviews";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 function matchesServiceArea(
   serviceAreas: string[],
   lead: { fromAddress: string; fromCity: string; fromRegion: string; toAddress: string; toCity: string; toRegion: string },
@@ -83,6 +86,7 @@ export default async function MoverDashboardPage({
     .reduce((sum, lead) => sum + lead.price, 0);
 
   const dashboardData = {
+    accountId: session.user.id,
     companyName: mover.companyName,
     businessDescription: mover.businessDescription ?? "",
     status: mover.status,

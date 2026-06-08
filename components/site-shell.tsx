@@ -2,9 +2,10 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, Mail, Menu, ShieldCheck, Sparkles, X } from "lucide-react";
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { SITE_EMAILS, toMailto } from "@/lib/site-emails";
 import logo from "@/public/logo.webp";
 
@@ -53,8 +54,10 @@ const contactLinks = [
 ] as const;
 
 export function Nav() {
+  const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [moverSession, setMoverSession] = useState<MoverSessionState | null>(null);
+  const sessionRequestRef = useRef(0);
 
   const moverAccountHref = moverSession?.authenticated ? "/mover/dashboard" : "/mover/login";
   const moverAccountLabel = moverSession?.authenticated && moverSession.accountName ? moverSession.accountName : "Mover Login";
@@ -77,30 +80,54 @@ export function Nav() {
     };
   }, [mobileMenuOpen]);
 
-  useEffect(() => {
-    let cancelled = false;
+  const loadMoverSession = useCallback(async () => {
+    const requestId = ++sessionRequestRef.current;
 
-    async function loadMoverSession() {
-      try {
-        const response = await fetch("/api/mover/session", { cache: "no-store" });
-        const data = (await response.json().catch(() => null)) as MoverSessionState | null;
+    try {
+      const response = await fetch("/api/mover/session", {
+        cache: "no-store",
+        credentials: "same-origin",
+      });
+      const data = (await response.json().catch(() => null)) as MoverSessionState | null;
 
-        if (!cancelled) {
-          setMoverSession(data?.authenticated ? data : { authenticated: false });
-        }
-      } catch {
-        if (!cancelled) {
-          setMoverSession({ authenticated: false });
-        }
+      if (requestId === sessionRequestRef.current) {
+        setMoverSession(data?.authenticated ? data : { authenticated: false });
+      }
+    } catch {
+      if (requestId === sessionRequestRef.current) {
+        setMoverSession({ authenticated: false });
       }
     }
+  }, []);
 
-    loadMoverSession();
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void loadMoverSession();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [loadMoverSession, pathname]);
+
+  useEffect(() => {
+    const refreshRestoredSession = () => {
+      void loadMoverSession();
+    };
+    const refreshVisibleSession = () => {
+      if (document.visibilityState === "visible") {
+        void loadMoverSession();
+      }
+    };
+
+    window.addEventListener("pageshow", refreshRestoredSession);
+    window.addEventListener("focus", refreshRestoredSession);
+    document.addEventListener("visibilitychange", refreshVisibleSession);
 
     return () => {
-      cancelled = true;
+      window.removeEventListener("pageshow", refreshRestoredSession);
+      window.removeEventListener("focus", refreshRestoredSession);
+      document.removeEventListener("visibilitychange", refreshVisibleSession);
     };
-  }, []);
+  }, [loadMoverSession]);
 
   return (
     <header className="relative bg-white border-b">
