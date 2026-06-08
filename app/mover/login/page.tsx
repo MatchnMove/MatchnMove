@@ -191,7 +191,7 @@ export default function MoverLoginPage() {
       if (payload.emailCodeRequired) {
         setLoginCode("");
         setLoginCodeEmail(payload.email || loginForm.email);
-        setSuccess("Password accepted. Check your email for a 6-digit sign-in code.");
+        setSuccess("");
         return;
       }
     } catch {
@@ -362,47 +362,53 @@ export default function MoverLoginPage() {
                 <div className="min-w-0 rounded-[26px] border border-slate-200/80 bg-[linear-gradient(180deg,#ffffff_0%,#f6f8fc_100%)] p-4 sm:rounded-[30px] sm:p-8">
                   <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
                     <div className="text-center sm:text-left">
-                      <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">Partner portal</p>
+                      <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">
+                        {loginCodeEmail ? "Email verification" : "Partner portal"}
+                      </p>
                       <h2 className="mt-2 text-[clamp(2rem,8vw,3rem)] font-black tracking-[-0.04em] text-slate-950">
-                        {mode === "signup" ? "Create your mover account" : "Welcome back"}
+                        {loginCodeEmail ? "Check your email" : mode === "signup" ? "Create your mover account" : "Welcome back"}
                       </h2>
                       <p className="mt-2 max-w-md text-sm leading-6 text-slate-500 sm:max-w-md">
-                        {mode === "signup"
+                        {loginCodeEmail
+                          ? "Enter the one-time code we sent to finish signing in securely."
+                          : mode === "signup"
                           ? "Set up the account movers will use to manage their profile, team details, and purchased leads."
                           : "Sign in to review leads, update your company profile, and keep your Match 'n Move presence current."}
                       </p>
                     </div>
-                    <div className="mx-auto inline-flex w-full max-w-[16rem] rounded-full border border-slate-200 bg-slate-100 p-1 text-sm font-semibold sm:mx-0 sm:w-auto sm:max-w-none">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setMode("signup");
-                          setLoginCodeEmail("");
-                          setLoginCode("");
-                          setError("");
-                          setSuccess("");
-                        }}
-                        className={`flex-1 rounded-full px-4 py-2 transition sm:flex-none ${mode === "signup" ? "bg-white text-slate-950 shadow-sm" : "text-slate-500"}`}
-                      >
-                        Sign up
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setMode("login");
-                          setLoginCodeEmail("");
-                          setLoginCode("");
-                          setError("");
-                          setSuccess("");
-                        }}
-                        className={`flex-1 rounded-full px-4 py-2 transition sm:flex-none ${mode === "login" ? "bg-white text-slate-950 shadow-sm" : "text-slate-500"}`}
-                      >
-                        Log in
-                      </button>
-                    </div>
+                    {!loginCodeEmail ? (
+                      <div className="mx-auto inline-flex w-full max-w-[16rem] rounded-full border border-slate-200 bg-slate-100 p-1 text-sm font-semibold sm:mx-0 sm:w-auto sm:max-w-none">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMode("signup");
+                            setLoginCodeEmail("");
+                            setLoginCode("");
+                            setError("");
+                            setSuccess("");
+                          }}
+                          className={`flex-1 rounded-full px-4 py-2 transition sm:flex-none ${mode === "signup" ? "bg-white text-slate-950 shadow-sm" : "text-slate-500"}`}
+                        >
+                          Sign up
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMode("login");
+                            setLoginCodeEmail("");
+                            setLoginCode("");
+                            setError("");
+                            setSuccess("");
+                          }}
+                          className={`flex-1 rounded-full px-4 py-2 transition sm:flex-none ${mode === "login" ? "bg-white text-slate-950 shadow-sm" : "text-slate-500"}`}
+                        >
+                          Log in
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
 
-                  <div className="mt-6 rounded-[22px] border border-slate-200 bg-white px-4 py-4 shadow-[0_15px_30px_-24px_rgba(15,23,42,0.35)] sm:rounded-[26px]">
+                  {!loginCodeEmail ? <div className="mt-6 rounded-[22px] border border-slate-200 bg-white px-4 py-4 shadow-[0_15px_30px_-24px_rgba(15,23,42,0.35)] sm:rounded-[26px]">
                     <div className="flex items-center gap-3">
                       <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-50 text-brandBlue">
                         {mode === "signup" ? <Building2 className="h-5 w-5" /> : <LockKeyhole className="h-5 w-5" />}
@@ -416,9 +422,9 @@ export default function MoverLoginPage() {
                         </p>
                       </div>
                     </div>
-                  </div>
+                  </div> : null}
 
-                  <div className="mt-6 flex justify-center">
+                  {!loginCodeEmail ? <div className="mt-6 flex justify-center">
                     {GOOGLE_CLIENT_ID ? (
                       <div ref={googleButtonRef} className="min-h-[44px] w-full max-w-[340px] overflow-hidden [&>div]:!w-full [&_iframe]:!w-full" />
                     ) : (
@@ -426,13 +432,13 @@ export default function MoverLoginPage() {
                         Add <code>NEXT_PUBLIC_GOOGLE_CLIENT_ID</code> to enable one-click Google sign-in for movers.
                       </div>
                     )}
-                  </div>
+                  </div> : null}
 
-                  <div className="my-6 flex items-center gap-3 sm:gap-4">
+                  {!loginCodeEmail ? <div className="my-6 flex items-center gap-3 sm:gap-4">
                     <div className="h-px flex-1 bg-slate-200" />
                     <span className="text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400 sm:text-xs sm:tracking-[0.22em]">or continue with email</span>
                     <div className="h-px flex-1 bg-slate-200" />
-                  </div>
+                  </div> : null}
 
                   {mode === "signup" ? (
                     <form onSubmit={handleSignupSubmit} className="space-y-4">
@@ -579,14 +585,19 @@ export default function MoverLoginPage() {
                       </button>
                     </form>
                   ) : loginCodeEmail ? (
-                    <form onSubmit={handleLoginCodeSubmit} className="space-y-4">
-                      <div className="rounded-2xl border border-sky-100 bg-sky-50 px-4 py-4 text-sm leading-6 text-sky-800">
-                        Enter the 6-digit code sent to <span className="font-semibold">{loginCodeEmail}</span>.
+                    <form onSubmit={handleLoginCodeSubmit} className="mt-8 space-y-5">
+                      <div className="border-y border-slate-200 py-5 text-center">
+                        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-sky-50 text-brandBlue">
+                          <LockKeyhole className="h-5 w-5" />
+                        </div>
+                        <p className="mt-4 text-sm leading-6 text-slate-600">We sent a 6-digit sign-in code to</p>
+                        <p className="break-all text-base font-bold text-slate-950">{loginCodeEmail}</p>
                       </div>
 
                       <label className="block">
-                        <span className="mb-2 block text-sm font-semibold text-slate-700">Sign-in code</span>
+                        <span className="mb-3 block text-center text-sm font-semibold text-slate-700">Enter your code</span>
                         <input
+                          autoFocus
                           required
                           inputMode="numeric"
                           autoComplete="one-time-code"
@@ -594,7 +605,7 @@ export default function MoverLoginPage() {
                           maxLength={6}
                           value={loginCode}
                           onChange={(event) => setLoginCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
-                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-center text-xl font-bold tracking-[0.3em] text-slate-900 outline-none transition focus:border-brandBlue focus:ring-4 focus:ring-indigo-100"
+                          className="min-h-[68px] w-full rounded-2xl border-2 border-slate-200 bg-white px-4 py-3 text-center text-2xl font-bold tracking-[0.35em] text-slate-900 outline-none transition placeholder:text-slate-300 focus:border-brandBlue focus:ring-4 focus:ring-indigo-100"
                           placeholder="000000"
                         />
                       </label>
@@ -674,7 +685,7 @@ export default function MoverLoginPage() {
                   {error ? <p className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
                   {success ? <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{success}</p> : null}
 
-                  <p className="mt-5 text-center text-sm text-slate-500">
+                  {!loginCodeEmail ? <p className="mt-5 text-center text-sm text-slate-500">
                     {mode === "signup" ? "Already have a mover account?" : "Need a new mover account?"}{" "}
                     <button
                       type="button"
@@ -689,7 +700,7 @@ export default function MoverLoginPage() {
                     >
                       {mode === "signup" ? "Log in instead" : "Create one here"}
                     </button>
-                  </p>
+                  </p> : null}
                 </div>
               </div>
             </div>
