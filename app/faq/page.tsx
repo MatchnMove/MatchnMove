@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
   ChevronDown,
@@ -163,7 +163,6 @@ export default function FAQPage() {
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
   const [expandedHistoryId, setExpandedHistoryId] = useState<string | null>(null);
   const [isMobilePlaceholder, setIsMobilePlaceholder] = useState(false);
-  const quickAnswerRef = useRef<HTMLDivElement>(null);
 
   const deferredQuery = useDeferredValue(query.trim().toLowerCase());
 
@@ -197,16 +196,24 @@ export default function FAQPage() {
     setSearchHistory((current) => [item.id, ...current.filter((historyId) => historyId !== item.id)].slice(0, 6));
   };
 
-  const scrollToQuickAnswer = () => {
-    window.requestAnimationFrame(() => {
-      quickAnswerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
+  const jumpToQuickAnswer = () => {
+    window.setTimeout(() => {
+      const quickAnswer = document.getElementById("quick-answer");
+
+      if (!quickAnswer) {
+        return;
+      }
+
+      const topOffset = window.innerWidth >= 640 ? 32 : 24;
+      const top = quickAnswer.getBoundingClientRect().top + window.scrollY - topOffset;
+      window.scrollTo({ top, behavior: "smooth" });
+    }, 0);
   };
 
   const handleSearchPreviewClick = (item: FaqItem) => {
     setOpenId(item.id);
     setSearchHistory((current) => [item.id, ...current.filter((historyId) => historyId !== item.id)].slice(0, 6));
-    scrollToQuickAnswer();
+    jumpToQuickAnswer();
   };
 
   const searchPreviewItems = deferredQuery ? filteredFaqs.slice(0, 4) : featuredFaqs.slice(0, 3);
@@ -330,11 +337,11 @@ export default function FAQPage() {
                             const isActive = activeItem?.id === item.id;
 
                             return (
-                              <button
+                              <a
                                 key={item.id}
-                                type="button"
+                                href="#quick-answer"
                                 onClick={() => handleSearchPreviewClick(item)}
-                                className={`rounded-[18px] border px-3 py-3 text-left transition sm:rounded-[22px] sm:px-4 sm:py-4 ${
+                                className={`block rounded-[18px] border px-3 py-3 text-left no-underline transition sm:rounded-[22px] sm:px-4 sm:py-4 ${
                                   isActive
                                     ? "border-sky-200 bg-sky-50/80 shadow-sm"
                                     : "border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] hover:border-slate-300 hover:bg-white"
@@ -350,7 +357,7 @@ export default function FAQPage() {
                                   </div>
                                   <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-slate-300" />
                                 </div>
-                              </button>
+                              </a>
                             );
                           })
                         ) : (
@@ -399,7 +406,7 @@ export default function FAQPage() {
         <div className="container-shell">
           {activeItem ? (
             <div
-              ref={quickAnswerRef}
+              id="quick-answer"
               className="scroll-mt-6 overflow-hidden rounded-[24px] border border-slate-200/90 bg-white/95 shadow-[0_28px_80px_-52px_rgba(15,23,42,0.35)] sm:scroll-mt-8 sm:rounded-[32px]"
             >
               <div className="border-b border-slate-200 bg-[linear-gradient(135deg,#ffffff_0%,#f4f9ff_100%)] px-4 py-4 sm:px-7 sm:py-6">
