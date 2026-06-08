@@ -24,13 +24,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       moverCompany: {
         include: {
           user: true,
-          documents: {
-            select: {
-              id: true,
-              type: true,
-              verificationStatus: true,
-            },
-          },
+          documents: true,
         },
       },
     },

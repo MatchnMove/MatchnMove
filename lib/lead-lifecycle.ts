@@ -331,13 +331,7 @@ async function findReplacementMover(quoteRequestId: string, matchedRegions: stri
     },
     include: {
       user: true,
-      documents: {
-        select: {
-          id: true,
-          type: true,
-          verificationStatus: true,
-        },
-      },
+      documents: true,
     },
   });
 
