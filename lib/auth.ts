@@ -4,13 +4,14 @@ import { createHmac, timingSafeEqual } from "crypto";
 type SessionPayload = { userId: string; email: string; role: string; mfaVerified: boolean; exp: number };
 
 const SESSION_COOKIE = "mm_session";
+const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 180;
 
 function sign(payload: string) {
   return createHmac("sha256", process.env.NEXTAUTH_SECRET || "dev-secret").update(payload).digest("hex");
 }
 
 export function createSessionToken(data: Omit<SessionPayload, "exp">) {
-  const payload: SessionPayload = { ...data, exp: Date.now() + 1000 * 60 * 60 * 24 * 7 };
+  const payload: SessionPayload = { ...data, exp: Date.now() + SESSION_MAX_AGE_SECONDS * 1000 };
   const encoded = Buffer.from(JSON.stringify(payload)).toString("base64url");
   return `${encoded}.${sign(encoded)}`;
 }
@@ -33,7 +34,13 @@ export function parseSessionToken(token?: string): SessionPayload | null {
 }
 
 export async function setSessionCookie(token: string) {
-  (await cookies()).set(SESSION_COOKIE, token, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/" });
+  (await cookies()).set(SESSION_COOKIE, token, {
+    httpOnly: true,
+    maxAge: SESSION_MAX_AGE_SECONDS,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+  });
 }
 
 export async function clearSessionCookie() {

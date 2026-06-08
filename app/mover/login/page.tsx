@@ -370,7 +370,7 @@ export default function MoverLoginPage() {
                           {mode === "signup" ? "Mover company onboarding" : "Secure mover login"}
                         </p>
                         <p className="text-sm leading-6 text-slate-500">
-                          {mode === "signup" ? `${signupForm.serviceAreas.length} coverage region${signupForm.serviceAreas.length === 1 ? "" : "s"} ready to save` : "7-day secure session on successful sign-in"}
+                          {mode === "signup" ? `${signupForm.serviceAreas.length} coverage region${signupForm.serviceAreas.length === 1 ? "" : "s"} ready to save` : "Stay signed in on this device"}
                         </p>
                       </div>
                     </div>
