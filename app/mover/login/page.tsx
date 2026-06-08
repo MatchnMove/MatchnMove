@@ -70,6 +70,8 @@ export default function MoverLoginPage() {
 
   const [mode, setMode] = useState<Mode>("signup");
   const [loginForm, setLoginForm] = useState({ email: "", password: "" });
+  const [loginCode, setLoginCode] = useState("");
+  const [loginCodeEmail, setLoginCodeEmail] = useState("");
   const [signupForm, setSignupForm] = useState({
     name: "",
     companyName: "",
@@ -176,16 +178,52 @@ export default function MoverLoginPage() {
         body: JSON.stringify(loginForm)
       });
 
-      const payload = (await res.json().catch(() => ({}))) as { error?: string; adminMfaRequired?: boolean };
+      const payload = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        email?: string;
+        emailCodeRequired?: boolean;
+      };
       if (!res.ok) {
         setError(payload.error || "Unable to log in");
         return;
       }
 
-      setSuccess(payload.adminMfaRequired ? "Password accepted. Complete authenticator verification..." : "Welcome back. Taking you to your dashboard...");
-      startTransition(() => router.push(payload.adminMfaRequired ? "/admin/mfa" : redirectPath));
+      if (payload.emailCodeRequired) {
+        setLoginCode("");
+        setLoginCodeEmail(payload.email || loginForm.email);
+        setSuccess("Password accepted. Check your email for a 6-digit sign-in code.");
+        return;
+      }
     } catch {
       setError(getNetworkErrorMessage("Login"));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleLoginCodeSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSubmitting(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const res = await fetch("/api/mover/login/verify-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: loginCodeEmail, code: loginCode })
+      });
+
+      const payload = (await res.json().catch(() => ({}))) as { error?: string; adminMfaRequired?: boolean };
+      if (!res.ok) {
+        setError(payload.error || "Unable to verify sign-in code");
+        return;
+      }
+
+      setSuccess(payload.adminMfaRequired ? "Code accepted. Complete authenticator verification..." : "Welcome back. Taking you to your dashboard...");
+      startTransition(() => router.push(payload.adminMfaRequired ? "/admin/mfa" : redirectPath));
+    } catch {
+      setError(getNetworkErrorMessage("Sign-in code verification"));
     } finally {
       setSubmitting(false);
     }
@@ -339,6 +377,8 @@ export default function MoverLoginPage() {
                         type="button"
                         onClick={() => {
                           setMode("signup");
+                          setLoginCodeEmail("");
+                          setLoginCode("");
                           setError("");
                           setSuccess("");
                         }}
@@ -350,6 +390,8 @@ export default function MoverLoginPage() {
                         type="button"
                         onClick={() => {
                           setMode("login");
+                          setLoginCodeEmail("");
+                          setLoginCode("");
                           setError("");
                           setSuccess("");
                         }}
@@ -536,6 +578,48 @@ export default function MoverLoginPage() {
                         <ArrowRight className="h-4 w-4" />
                       </button>
                     </form>
+                  ) : loginCodeEmail ? (
+                    <form onSubmit={handleLoginCodeSubmit} className="space-y-4">
+                      <div className="rounded-2xl border border-sky-100 bg-sky-50 px-4 py-4 text-sm leading-6 text-sky-800">
+                        Enter the 6-digit code sent to <span className="font-semibold">{loginCodeEmail}</span>.
+                      </div>
+
+                      <label className="block">
+                        <span className="mb-2 block text-sm font-semibold text-slate-700">Sign-in code</span>
+                        <input
+                          required
+                          inputMode="numeric"
+                          autoComplete="one-time-code"
+                          pattern="[0-9]{6}"
+                          maxLength={6}
+                          value={loginCode}
+                          onChange={(event) => setLoginCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                          className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-center text-xl font-bold tracking-[0.3em] text-slate-900 outline-none transition focus:border-brandBlue focus:ring-4 focus:ring-indigo-100"
+                          placeholder="000000"
+                        />
+                      </label>
+
+                      <button
+                        disabled={submitting}
+                        className="inline-flex min-h-[56px] w-full items-center justify-center gap-2 rounded-[22px] bg-[linear-gradient(135deg,#5f6ee8_0%,#4f7cf0_45%,#3ca5e8_100%)] px-5 py-3 text-base font-semibold text-white shadow-[0_20px_35px_-20px_rgba(95,110,232,0.8)] transition hover:translate-y-[-1px] disabled:cursor-not-allowed disabled:opacity-70"
+                      >
+                        {submitting ? "Checking code..." : "Verify and log in"}
+                        <ArrowRight className="h-4 w-4" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLoginCodeEmail("");
+                          setLoginCode("");
+                          setSuccess("");
+                          setError("");
+                        }}
+                        className="w-full text-sm font-semibold text-brandBlue hover:text-indigo-700"
+                      >
+                        Use a different email
+                      </button>
+                    </form>
                   ) : (
                     <form onSubmit={handleLoginSubmit} className="space-y-4">
                       <label className="block">
@@ -596,6 +680,8 @@ export default function MoverLoginPage() {
                       type="button"
                       onClick={() => {
                         setMode(mode === "signup" ? "login" : "signup");
+                        setLoginCodeEmail("");
+                        setLoginCode("");
                         setError("");
                         setSuccess("");
                       }}

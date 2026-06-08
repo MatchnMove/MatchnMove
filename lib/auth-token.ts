@@ -6,8 +6,7 @@ function hashToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
 }
 
-export async function issueAuthToken(userId: string, type: AuthTokenType, expiresInHours: number) {
-  const token = randomBytes(32).toString("hex");
+export async function issueAuthToken(userId: string, type: AuthTokenType, expiresInHours: number, token = randomBytes(32).toString("hex")) {
   const tokenHash = hashToken(token);
 
   await prisma.authToken.create({
@@ -23,13 +22,17 @@ export async function issueAuthToken(userId: string, type: AuthTokenType, expire
 }
 
 export async function consumeAuthToken(token: string, type: AuthTokenType) {
+  return consumeAuthTokenForUser(token, type);
+}
+
+export async function consumeAuthTokenForUser(token: string, type: AuthTokenType, userId?: string) {
   const tokenHash = hashToken(token);
   const existing = await prisma.authToken.findUnique({
     where: { tokenHash },
     include: { user: true }
   });
 
-  if (!existing || existing.type !== type || existing.consumedAt || existing.expiresAt < new Date()) {
+  if (!existing || existing.type !== type || existing.consumedAt || existing.expiresAt < new Date() || (userId && existing.userId !== userId)) {
     return null;
   }
 

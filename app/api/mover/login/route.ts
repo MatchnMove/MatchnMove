@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { moverLoginSchema } from "@/lib/validators";
-import { establishMoverSession } from "@/lib/mover-auth";
+import { sendSignInCodeEmail } from "@/lib/mover-auth";
 import { hashPassword, needsPasswordRehash, verifyPassword } from "@/lib/password";
 import { rateLimit } from "@/lib/rate-limit";
 import { getDatabaseUnavailableMessage, logRuntimeWarning } from "@/lib/runtime-errors";
@@ -32,8 +32,18 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    await establishMoverSession(user);
-    return NextResponse.json({ ok: true, adminMfaRequired: isAdminUser({ ...user, mfaVerified: false }) });
+    const signInCodeResult = await sendSignInCodeEmail(user);
+    if (!signInCodeResult.sent) {
+      logRuntimeWarning("Mover sign-in code email unavailable", signInCodeResult.error);
+      return NextResponse.json({ error: "We could not send your sign-in code. Please try again shortly." }, { status: 503 });
+    }
+
+    return NextResponse.json({
+      ok: true,
+      emailCodeRequired: true,
+      email: user.email,
+      adminMfaRequired: isAdminUser({ ...user, mfaVerified: false }),
+    });
   } catch (error) {
     logRuntimeWarning("Mover login unavailable", error);
     return NextResponse.json({ error: getDatabaseUnavailableMessage("Mover login") }, { status: 503 });

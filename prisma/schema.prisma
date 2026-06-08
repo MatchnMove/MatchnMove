@@ -34,6 +34,7 @@ enum PaymentStatus {
 enum AuthTokenType {
   VERIFY_EMAIL
   RESET_PASSWORD
+  SIGN_IN_CODE
 }
 
 enum ReviewModerationStatus {

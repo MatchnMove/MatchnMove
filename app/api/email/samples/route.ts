@@ -4,6 +4,7 @@ import {
   sendMoverLeadExpiryWarningEmail,
   sendMoverNewLeadEmail,
   sendMoverPasswordResetEmail,
+  sendMoverSignInCodeEmail,
   sendMoverVerificationEmail,
   sendReviewSurveyEmail,
 } from "@/lib/email";
@@ -46,6 +47,11 @@ export async function POST(request: NextRequest) {
       email: recipient,
       name: "Mover Partner",
       resetUrl: `https://www.matchnmove.co.nz/mover/reset-password?token=layout-reset-${now}`,
+    }),
+    sendMoverSignInCodeEmail({
+      email: recipient,
+      name: "Mover Partner",
+      signInCode: "482913",
     }),
     sendMoverNewLeadEmail({
       email: recipient,

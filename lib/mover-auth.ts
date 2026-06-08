@@ -1,9 +1,9 @@
-import { randomBytes } from "crypto";
+import { randomBytes, randomInt } from "crypto";
 import { AuthTokenType } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { createSessionToken, setSessionCookie } from "@/lib/auth";
 import { issueAuthToken, purgeAuthTokens } from "@/lib/auth-token";
-import { sendMoverPasswordResetEmail, sendMoverVerificationEmail } from "@/lib/email";
+import { sendMoverPasswordResetEmail, sendMoverSignInCodeEmail, sendMoverVerificationEmail } from "@/lib/email";
 import { sanitiseNzServiceAreas } from "@/lib/nz-regions";
 import { hashPassword } from "@/lib/password";
 
@@ -115,4 +115,11 @@ export async function sendPasswordResetEmail(user: { id: string; email: string; 
   const token = await issueAuthToken(user.id, AuthTokenType.RESET_PASSWORD, 2);
   const resetUrl = `${getBaseUrl()}/mover/reset-password?token=${token}`;
   return sendMoverPasswordResetEmail({ email: user.email, name: user.name, resetUrl });
+}
+
+export async function sendSignInCodeEmail(user: { id: string; email: string; name?: string | null }) {
+  await purgeAuthTokens(user.id, AuthTokenType.SIGN_IN_CODE);
+  const code = randomInt(100000, 1000000).toString();
+  await issueAuthToken(user.id, AuthTokenType.SIGN_IN_CODE, 0.25, code);
+  return sendMoverSignInCodeEmail({ email: user.email, name: user.name, signInCode: code });
 }

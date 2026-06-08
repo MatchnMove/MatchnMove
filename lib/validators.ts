@@ -45,6 +45,11 @@ export const moverLoginSchema = z.object({
   password: z.string().min(1, "Enter your password"),
 });
 
+export const moverSignInCodeSchema = z.object({
+  email: z.string().trim().toLowerCase().email("Enter a valid email address"),
+  code: z.string().trim().regex(/^\d{6}$/, "Enter the 6-digit sign-in code"),
+});
+
 export const moverRegisterSchema = z
   .object({
     name: z.string().trim().min(2, "Enter your full name"),

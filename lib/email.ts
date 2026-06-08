@@ -16,6 +16,7 @@ type MoverAuthEmailInput = {
   name?: string | null;
   verificationUrl?: string;
   resetUrl?: string;
+  signInCode?: string;
 };
 
 type ReviewSurveyEmailInput = {
@@ -57,6 +58,7 @@ type EmailKind =
   | "contact_notification"
   | "mover_verification"
   | "mover_password_reset"
+  | "mover_sign_in_code"
   | "review_survey"
   | "mover_new_lead"
   | "mover_lead_expiry_warning"
@@ -916,6 +918,67 @@ export async function sendMoverPasswordResetEmail(input: MoverAuthEmailInput) {
         label: "Reset password",
       },
       footerNote: "If you did not request a password reset, no action is needed and your current password remains unchanged.",
+    }),
+  };
+
+  return queueAndTrySend(message, config.configured);
+}
+
+export async function sendMoverSignInCodeEmail(input: MoverAuthEmailInput) {
+  const config = getAuthEmailConfig();
+  if (!input.signInCode) {
+    return { sent: false, skipped: true as const, queued: false };
+  }
+
+  const theme: EmailTheme = {
+    accent: "#14b8a6",
+    accentDark: "#0f766e",
+    accentSoft: "#bceee6",
+    accentTint: "#f0fdfa",
+    background: "#fff7ed",
+    eyebrowBackground: "#e9fbf6",
+    eyebrowText: "#0f766e",
+    button: "#0f766e",
+    buttonShadow: "rgba(15,118,110,0.28)",
+    iconBackground: "#ccfbf1",
+    iconText: "#0f766e",
+  };
+  const friendlyName = input.name?.trim() || "there";
+  const subject = "Your Match 'n Move sign-in code";
+  const bodyHtml = `
+    ${renderNoteBox(
+      "Enter this one-time code on the mover login page to finish signing in. It helps protect your dashboard after you have logged out.",
+      theme,
+    )}
+    ${renderDetailTable(`
+      ${renderDetailRow("Account", input.email)}
+      ${renderDetailRow("Sign-in code", input.signInCode)}
+      ${renderDetailRow("Code expires", "15 minutes")}
+    `)}
+  `;
+  const message: EmailMessage = {
+    kind: "mover_sign_in_code",
+    from: config.from,
+    to: input.email,
+    subject,
+    text: [
+      `Hi ${friendlyName},`,
+      "",
+      "Use this one-time code to finish signing in to your Match 'n Move mover account:",
+      "",
+      input.signInCode,
+      "",
+      "This code expires in 15 minutes.",
+      "If you did not try to sign in, you can ignore this email.",
+    ].join("\n"),
+    html: renderEmailShell({
+      theme,
+      preheader: "Use this one-time code to finish signing in to your mover dashboard.",
+      eyebrow: "Secure sign-in",
+      title: "Finish signing in",
+      intro: `Hi ${friendlyName}, use the code below to confirm this sign-in attempt.`,
+      bodyHtml,
+      footerNote: "If you did not try to sign in to Match 'n Move, no action is needed.",
     }),
   };
 
