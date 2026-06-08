@@ -17,9 +17,11 @@ type QuoteForLeadLifecycle = {
   id: string;
   name: string;
   bedrooms: string;
+  fromAddress: string;
   fromCity: string;
   fromRegion: string;
   fromCountry: string;
+  toAddress: string;
   toCity: string;
   toRegion: string;
   toCountry: string;
@@ -51,7 +53,7 @@ export function getLeadExpiryDate(start = new Date()) {
   return new Date(start.getTime() + LEAD_EXPIRY_HOURS * HOUR_MS);
 }
 
-export function getQuoteMatchedRegions(quote: Pick<QuoteForLeadLifecycle, "fromCity" | "fromRegion" | "toCity" | "toRegion">) {
+export function getQuoteMatchedRegions(quote: Pick<QuoteForLeadLifecycle, "fromAddress" | "fromCity" | "fromRegion" | "toAddress" | "toCity" | "toRegion">) {
   return getQuoteServiceAreas(quote);
 }
 

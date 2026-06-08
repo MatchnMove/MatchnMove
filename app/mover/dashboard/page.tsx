@@ -9,7 +9,10 @@ import { getQuoteServiceAreas, sanitiseNzServiceAreas } from "@/lib/nz-regions";
 import { getMoverLaunchTrialSetting } from "@/lib/platform-settings";
 import { getMoverCompetitionSnapshot, getMoverLeaderboard, getMoverRatingsDashboardData } from "@/lib/reviews";
 
-function matchesServiceArea(serviceAreas: string[], lead: { fromCity: string; fromRegion: string; toCity: string; toRegion: string }) {
+function matchesServiceArea(
+  serviceAreas: string[],
+  lead: { fromAddress: string; fromCity: string; fromRegion: string; toAddress: string; toCity: string; toRegion: string },
+) {
   if (!serviceAreas.length) return false;
 
   const coverage = new Set(sanitiseNzServiceAreas(serviceAreas));

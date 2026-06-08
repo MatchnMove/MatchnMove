@@ -34,7 +34,25 @@ export const NZ_SERVICE_AREA_LOCALITIES = {
   Marlborough: ["Blenheim", "Picton", "Marlborough Sounds", "Renwick", "Seddon"],
   "West Coast": ["Greymouth", "Westport", "Hokitika", "Reefton", "Franz Josef", "Fox Glacier"],
   Canterbury: ["Christchurch", "Rangiora", "Kaiapoi", "Ashburton", "Timaru", "Waimate", "Geraldine", "Mackenzie", "Kaikoura"],
-  Otago: ["Dunedin", "Queenstown", "Wanaka", "Alexandra", "Cromwell", "Oamaru", "Balclutha", "Mosgiel", "Central Otago", "Clutha", "Waitaki"],
+  Otago: [
+    "Dunedin",
+    "Dunedin Central",
+    "Queenstown",
+    "Queenstown-Lakes",
+    "Queenstown Lakes District",
+    "Glenorchy",
+    "Frankton",
+    "Arrowtown",
+    "Wanaka",
+    "Alexandra",
+    "Cromwell",
+    "Oamaru",
+    "Balclutha",
+    "Mosgiel",
+    "Central Otago",
+    "Clutha",
+    "Waitaki",
+  ],
   Southland: ["Invercargill", "Gore", "Te Anau", "Winton", "Riverton", "Fiordland"],
 } as const satisfies Record<NzServiceArea, readonly string[]>;
 
@@ -74,6 +92,15 @@ const localityServiceAreaLookup = new Map(
   ),
 );
 
+const searchableServiceAreas = NZ_SERVICE_AREAS.flatMap((area) => [
+  { key: normaliseServiceAreaKey(area), area },
+  { key: normaliseServiceAreaKey(`${area} Region`), area },
+]);
+
+const searchableLocalities = NZ_SERVICE_AREAS.flatMap((area) =>
+  NZ_SERVICE_AREA_LOCALITIES[area].map((locality) => ({ key: normaliseServiceAreaKey(locality), area })),
+).sort((left, right) => right.key.length - left.key.length);
+
 function normaliseServiceAreaKey(value: string) {
   return value
     .trim()
@@ -94,13 +121,31 @@ export function matchNzServiceArea(value: string | null | undefined): NzServiceA
   if (!value) return null;
 
   const normalized = normaliseServiceAreaKey(value);
-  return serviceAreaLookup.get(normalized) ?? localityServiceAreaLookup.get(normalized) ?? null;
+  const exactMatch = serviceAreaLookup.get(normalized) ?? localityServiceAreaLookup.get(normalized);
+  if (exactMatch) return exactMatch;
+
+  const searchableValue = ` ${normalized} `;
+  for (const match of searchableServiceAreas) {
+    if (searchableValue.includes(` ${match.key} `)) return match.area;
+  }
+  for (const match of searchableLocalities) {
+    if (searchableValue.includes(` ${match.key} `)) return match.area;
+  }
+
+  return null;
 }
 
-export function getQuoteServiceAreas(quote: { fromCity?: string | null; fromRegion?: string | null; toCity?: string | null; toRegion?: string | null }) {
+export function getQuoteServiceAreas(quote: {
+  fromAddress?: string | null;
+  fromCity?: string | null;
+  fromRegion?: string | null;
+  toAddress?: string | null;
+  toCity?: string | null;
+  toRegion?: string | null;
+}) {
   return Array.from(
     new Set(
-      [quote.fromRegion, quote.fromCity, quote.toRegion, quote.toCity]
+      [quote.fromRegion, quote.fromCity, quote.fromAddress, quote.toRegion, quote.toCity, quote.toAddress]
         .map((value) => matchNzServiceArea(value))
         .filter((area): area is NzServiceArea => Boolean(area)),
     ),
