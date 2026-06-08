@@ -308,7 +308,7 @@ export default function FAQPage() {
                           value={query}
                           onChange={(event) => updateQuery(event.target.value)}
                           placeholder={isMobilePlaceholder ? "Try \"quote timing\"" : "Try \"how soon can I expect quotations?\""}
-                          className="w-full min-w-0 border-0 bg-transparent p-0 text-[0.8rem] font-semibold text-slate-950 outline-none placeholder:text-[0.8rem] placeholder:font-normal placeholder:text-slate-400 sm:mt-1 sm:text-base sm:placeholder:text-base"
+                          className="w-full min-w-0 border-0 bg-transparent p-0 text-base font-semibold text-slate-950 outline-none placeholder:text-base placeholder:font-normal placeholder:text-slate-400 sm:mt-1"
                         />
                       </div>
                     </label>

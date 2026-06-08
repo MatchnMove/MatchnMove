@@ -533,6 +533,13 @@ export function QuoteForm() {
 
   const transitionToStep = (nextStep: number) => {
     setStep(nextStep);
+    window.requestAnimationFrame(() => {
+      const target = formCardRef.current;
+      if (!target) return;
+
+      const top = target.getBoundingClientRect().top + window.scrollY - 16;
+      window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+    });
   };
 
   const formatDateLabel = (isoDate: string) => {

@@ -137,6 +137,7 @@ export default function MoverLoginPage() {
     if (!GOOGLE_CLIENT_ID || !googleReady || !googleButtonRef.current || googleRenderedRef.current) return;
     const google = window.google?.accounts?.id;
     if (!google) return;
+    const buttonWidth = Math.max(220, Math.min(340, Math.floor(googleButtonRef.current.getBoundingClientRect().width)));
 
     google.initialize({
       client_id: GOOGLE_CLIENT_ID,
@@ -155,7 +156,7 @@ export default function MoverLoginPage() {
       text: mode === "signup" ? "signup_with" : "signin_with",
       shape: "pill",
       size: "large",
-      width: 340,
+      width: buttonWidth,
       logo_alignment: "left"
     });
 
@@ -238,8 +239,8 @@ export default function MoverLoginPage() {
         </div>
 
         <div className="container-shell relative py-10 md:py-14 lg:py-16">
-          <div className="grid gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:items-start">
-            <div className="max-w-xl">
+          <div className="grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:items-start">
+            <div className="min-w-0 max-w-xl">
               <p className="inline-flex items-center gap-2 rounded-full border border-sky-200/90 bg-white/75 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-sky-700 shadow-sm backdrop-blur">
                 <Sparkles className="h-4 w-4" />
                 Mover Access
@@ -315,12 +316,12 @@ export default function MoverLoginPage() {
               </div>
             </div>
 
-            <div className="relative">
+            <div className="relative min-w-0">
               <div className="absolute left-1/2 top-0 hidden h-24 w-24 -translate-x-1/2 rounded-full border border-white/70 bg-white/35 blur-sm md:block lg:left-auto lg:-left-4 lg:translate-x-0" />
               <div className="absolute left-1/2 bottom-8 hidden h-32 w-32 -translate-x-1/2 rounded-full border border-indigo-100 bg-indigo-100/50 blur-sm md:block lg:left-auto lg:-right-5 lg:translate-x-0" />
 
-              <div className="relative mx-auto w-full max-w-[38rem] rounded-[30px] border border-white/80 bg-white/82 p-3 shadow-[0_34px_80px_-38px_rgba(44,62,88,0.45)] backdrop-blur sm:rounded-[34px] sm:p-4 xl:p-5">
-                <div className="rounded-[26px] border border-slate-200/80 bg-[linear-gradient(180deg,#ffffff_0%,#f6f8fc_100%)] p-5 sm:rounded-[30px] sm:p-8">
+              <div className="relative mx-auto w-full max-w-[38rem] rounded-[30px] border border-white/80 bg-white/82 p-2 shadow-[0_34px_80px_-38px_rgba(44,62,88,0.45)] backdrop-blur min-[360px]:p-3 sm:rounded-[34px] sm:p-4 xl:p-5">
+                <div className="min-w-0 rounded-[26px] border border-slate-200/80 bg-[linear-gradient(180deg,#ffffff_0%,#f6f8fc_100%)] p-4 sm:rounded-[30px] sm:p-8">
                   <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
                     <div className="text-center sm:text-left">
                       <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">Partner portal</p>
@@ -377,7 +378,7 @@ export default function MoverLoginPage() {
 
                   <div className="mt-6 flex justify-center">
                     {GOOGLE_CLIENT_ID ? (
-                      <div ref={googleButtonRef} className="min-h-[44px] w-full max-w-[340px]" />
+                      <div ref={googleButtonRef} className="min-h-[44px] w-full max-w-[340px] overflow-hidden [&>div]:!w-full [&_iframe]:!w-full" />
                     ) : (
                       <div className="w-full rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-center text-sm leading-6 text-slate-500">
                         Add <code>NEXT_PUBLIC_GOOGLE_CLIENT_ID</code> to enable one-click Google sign-in for movers.
