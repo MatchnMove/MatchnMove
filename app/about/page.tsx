@@ -147,7 +147,7 @@ export default async function AboutPage() {
             <div className="overflow-hidden rounded-[24px] border border-slate-200 bg-[linear-gradient(145deg,#0f172a,#17324f)] p-4 text-white shadow-[0_28px_74px_-44px_rgba(15,23,42,0.75)] sm:rounded-[30px] sm:p-7">
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-200">Network pulse</p>
               <h2 className="mt-3 text-[clamp(1.75rem,8vw,3.2rem)] font-black leading-[1] tracking-[-0.03em] text-white sm:leading-[0.95] sm:tracking-[-0.05em]">
-                A platform that grows alongside the movers using it.
+                Helping customers meet the movers behind each quote.
               </h2>
 
               <div className="mt-6 grid gap-3">
@@ -157,9 +157,9 @@ export default async function AboutPage() {
                       <Building2 className="h-5 w-5" />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-white">Partner wall updates automatically</p>
+                      <p className="text-sm font-semibold text-white">Real businesses, not just names on a list</p>
                       <p className="mt-1 text-sm leading-6 text-slate-300">
-                        Once a mover saves a logo in their dashboard, this page can showcase it without manual edits.
+                        Every mover in the network has a place to show who they are, where they work, and what they care about.
                       </p>
                     </div>
                   </div>
@@ -170,9 +170,9 @@ export default async function AboutPage() {
                       <Users2 className="h-5 w-5" />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-white">Built for both sides of the move</p>
+                      <p className="text-sm font-semibold text-white">Built on trust before the first call</p>
                       <p className="mt-1 text-sm leading-6 text-slate-300">
-                        Customers get cleaner comparisons while movers get a more focused, higher-intent lead flow.
+                        We want customers to feel like they already know a little about the people they are inviting into their move.
                       </p>
                     </div>
                   </div>
@@ -183,9 +183,9 @@ export default async function AboutPage() {
                       <UploadCloud className="h-5 w-5" />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-white">Ready for richer company profiles</p>
+                      <p className="text-sm font-semibold text-white">A better way to be remembered</p>
                       <p className="mt-1 text-sm leading-6 text-slate-300">
-                        Logos are the first step. This section is set up to feel fuller as more businesses join.
+                        As more local teams join, this page will help each business feel familiar before a customer reaches out.
                       </p>
                     </div>
                   </div>
