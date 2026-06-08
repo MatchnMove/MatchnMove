@@ -7,19 +7,19 @@ import { NZ_SERVICE_AREAS, dedupeServiceAreaLabels, formatServiceAreaLabel } fro
 
 const teamCards = [
   {
-    name: "Founder & platform developer",
-    role: "Product and build",
-    note: "Leading the Match 'n Move platform, shaping the customer experience, and building the tools that connect movers with better opportunities."
+    name: "Founder / developer",
+    role: "Platform build",
+    note: "Building the Match 'n Move experience and the tools behind every quote."
   },
   {
-    name: "Business & finance lead",
-    role: "Strategy and oversight",
-    note: "Keeping the business steady behind the scenes, from financial planning and operations oversight to the decisions that support a strong launch."
+    name: "Finance lead",
+    role: "Business oversight",
+    note: "Guiding the money, operations, and launch decisions that keep the business steady."
   },
   {
-    name: "Communications & partnerships lead",
-    role: "Calls and relationships",
-    note: "Handling key conversations with customers, movers, and business partners so every relationship starts clearly and moves forward with confidence."
+    name: "Partnerships lead",
+    role: "Calls and comms",
+    note: "Managing calls, mover relationships, and business partnerships with a clear voice."
   }
 ] as const;
 
@@ -131,7 +131,7 @@ export default async function AboutPage() {
                     <div className="flex h-32 items-center justify-center rounded-[18px] border border-dashed border-slate-300 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.12),transparent_55%),linear-gradient(180deg,#f8fafc,#eef6ff)] sm:h-40 sm:rounded-[22px]">
                       <div className="text-center">
                         <p className="text-[0.72rem] font-semibold uppercase tracking-[0.2em] text-slate-400">
-                          Photo slot 0{index + 1}
+                          Photo 0{index + 1}
                         </p>
                         <p className="mt-2 text-sm font-semibold text-slate-700">Portrait ready</p>
                       </div>
