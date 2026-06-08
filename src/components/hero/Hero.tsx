@@ -1,12 +1,7 @@
 import Image from "next/image";
-import { getPublicMovers } from "@/lib/public-movers";
 import { HeroQuoteCard } from "@/src/components/hero/HeroQuoteCard";
-import { HeroMoverTicker } from "@/src/components/hero/HeroMoverTicker";
-import { buildHeroMoverItems } from "@/src/components/hero/hero-mover-data";
 
-export async function Hero() {
-  const movers = buildHeroMoverItems(await getPublicMovers());
-
+export function Hero() {
   return (
     <section className="relative -mb-px overflow-hidden bg-white">
       <div className="relative min-h-[calc(100svh-61px)] overflow-hidden bg-slate-100 sm:min-h-[calc(100svh-73px)] lg:h-[calc(100svh-81px)] lg:min-h-0">
@@ -44,7 +39,6 @@ export async function Hero() {
           </div>
         </div>
 
-        <HeroMoverTicker initialMovers={movers} />
       </div>
     </section>
   );

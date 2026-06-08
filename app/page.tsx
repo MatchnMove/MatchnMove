@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { SiteShell } from "@/components/site-shell";
 import { Hero } from "@/src/components/hero/Hero";
+import { MoverReviewsShowcase } from "@/src/components/home/MoverReviewsShowcase";
 import { ScrollJourneySection } from "@/src/components/home/ScrollJourneySection";
 
 export default function Home() {
@@ -9,6 +10,7 @@ export default function Home() {
     <SiteShell>
       <Hero />
       <ScrollJourneySection />
+      <MoverReviewsShowcase />
       <section className="relative overflow-hidden bg-white py-10 sm:py-16 lg:py-20">
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute left-[8%] top-8 h-32 w-32 rounded-full bg-emerald-100 blur-3xl sm:h-48 sm:w-48" />
