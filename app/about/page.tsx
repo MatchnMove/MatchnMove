@@ -7,19 +7,19 @@ import { NZ_SERVICE_AREAS, dedupeServiceAreaLabels, formatServiceAreaLabel } fro
 
 const teamCards = [
   {
-    name: "Founder profile",
-    role: "Photo coming soon",
-    note: "A space ready for the person shaping the Match 'n Move experience from the front."
+    name: "Founder & platform developer",
+    role: "Product and build",
+    note: "Leading the Match 'n Move platform, shaping the customer experience, and building the tools that connect movers with better opportunities."
   },
   {
-    name: "Operations lead",
-    role: "Photo coming soon",
-    note: "Reserved for the team member keeping customer support, mover onboarding, and quality control aligned."
+    name: "Business & finance lead",
+    role: "Strategy and oversight",
+    note: "Keeping the business steady behind the scenes, from financial planning and operations oversight to the decisions that support a strong launch."
   },
   {
-    name: "Growth & partnerships",
-    role: "Photo coming soon",
-    note: "A future home for the face building strong mover relationships across the network."
+    name: "Communications & partnerships lead",
+    role: "Calls and relationships",
+    note: "Handling key conversations with customers, movers, and business partners so every relationship starts clearly and moves forward with confidence."
   }
 ] as const;
 
@@ -112,12 +112,12 @@ export default async function AboutPage() {
                 <div>
                   <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">Our team</p>
                   <h2 className="mt-3 text-[clamp(1.75rem,8vw,3.5rem)] font-black leading-[1] tracking-[-0.03em] text-slate-950 sm:leading-[0.95] sm:tracking-[-0.05em]">
-                    Faces coming soon, direction already clear.
+                    The team bringing Match &apos;n Move to launch.
                   </h2>
                 </div>
                 <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-600">
                   <Camera className="h-4 w-4 text-sky-700" />
-                  Team photos still to be added
+                  Portraits ready to add
                 </div>
               </div>
 
@@ -131,9 +131,9 @@ export default async function AboutPage() {
                     <div className="flex h-32 items-center justify-center rounded-[18px] border border-dashed border-slate-300 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.12),transparent_55%),linear-gradient(180deg,#f8fafc,#eef6ff)] sm:h-40 sm:rounded-[22px]">
                       <div className="text-center">
                         <p className="text-[0.72rem] font-semibold uppercase tracking-[0.2em] text-slate-400">
-                          Team slot 0{index + 1}
+                          Photo slot 0{index + 1}
                         </p>
-                        <p className="mt-2 text-sm font-semibold text-slate-700">Portrait placeholder</p>
+                        <p className="mt-2 text-sm font-semibold text-slate-700">Portrait ready</p>
                       </div>
                     </div>
                     <p className="mt-4 text-lg font-bold text-slate-950">{member.name}</p>
