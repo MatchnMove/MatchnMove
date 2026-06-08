@@ -161,7 +161,7 @@ export default function ContactPage() {
 
                 <div className="mt-6 space-y-4">
                   <Link
-                    href="tel:+64800123456"
+                    href="tel:+6421958000"
                     className="flex items-start gap-4 rounded-2xl border border-slate-200 bg-white/80 px-4 py-4 transition hover:border-slate-300 hover:bg-white"
                   >
                     <div className="rounded-2xl bg-sky-50 p-3 text-sky-700">
