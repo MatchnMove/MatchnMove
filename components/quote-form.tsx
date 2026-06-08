@@ -197,7 +197,6 @@ export function QuoteForm() {
   const [errors, setErrors] = useState<Errors>({});
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState("");
-  const [voiceState, setVoiceState] = useState<"idle" | "listening" | "transcribing" | "complete">("idle");
   const [locating, setLocating] = useState(false);
   const [showItemsPicker, setShowItemsPicker] = useState(false);
   const [itemQuantities, setItemQuantities] = useState<Record<string, number>>({});
@@ -412,18 +411,6 @@ export function QuoteForm() {
   const goNext = () => {
     if (!validateStep(step)) return;
     transitionToStep(Math.min(3, step + 1));
-  };
-
-  const transcribe = async () => {
-    setVoiceState("listening");
-    setSubmitError("");
-    const res = await fetch("/api/transcription/session", { method: "POST" });
-    const data = await res.json();
-    setVoiceState("transcribing");
-    setTimeout(() => {
-      setVoiceState("complete");
-      if (data.extractedFields) setForm((f) => ({ ...f, ...data.extractedFields }));
-    }, 1200);
   };
 
   const submit = async () => {
@@ -694,16 +681,7 @@ export function QuoteForm() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-[#101b34] to-[#0f2747] py-8 sm:py-12">
       <div className="container-shell relative text-white">
-        <p className="mb-4 max-w-2xl text-base leading-7 text-slate-100 sm:mb-6 sm:text-2xl">Fill in your details, or use voice transcription to prefill key fields.</p>
-        <div className="mb-5 flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:gap-3">
-          <button
-            onClick={transcribe}
-            className="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-brandBlue px-5 py-2.5 font-medium text-white shadow-[0_8px_18px_-14px_rgba(95,110,232,0.75)] transition-colors duration-150 hover:bg-[#5262df]"
-          >
-            Transcribe by voice
-          </button>
-          <span className="self-start rounded-full border border-slate-400/30 bg-slate-900/35 px-3 py-1 text-xs uppercase tracking-[0.2em] text-slate-300 sm:self-auto">{voiceState}</span>
-        </div>
+        <p className="mb-5 max-w-2xl text-base leading-7 text-slate-100 sm:mb-6 sm:text-2xl">Fill in your details to get free, no-obligation moving quotes from trusted local movers.</p>
         <div ref={formCardRef} className="max-w-3xl rounded-[22px] border border-slate-200/80 bg-white p-4 text-slate-900 shadow-[0_20px_45px_-25px_rgba(2,6,23,0.65)] sm:rounded-2xl sm:p-7">
           <div className="mb-5 sm:mb-7">
             <div className="mb-2 flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
