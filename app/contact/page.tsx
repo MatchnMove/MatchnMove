@@ -169,7 +169,7 @@ export default function ContactPage() {
                     </div>
                     <div>
                       <p className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-400">Call us</p>
-                      <p className="mt-1 text-lg font-semibold text-slate-950">+64 800 123 456</p>
+                      <p className="mt-1 text-lg font-semibold text-slate-950">+64 21 958 000</p>
                       <p className="mt-1 text-sm leading-6 text-slate-500">For urgent quote or partnership questions.</p>
                     </div>
                   </Link>
