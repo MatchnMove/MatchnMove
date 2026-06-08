@@ -152,8 +152,8 @@ POST https://www.matchnmove.co.nz/api/email/process?limit=50
 Authorization: Bearer $EMAIL_QUEUE_SECRET
 ```
 
-## Secure Excel lead register
+## Secure Google Sheets lead register
 
-New quote requests can be appended automatically to a named-user Microsoft 365 Excel workbook for the communications team. The integration uses an encrypted delegated OAuth connection, a durable Postgres retry queue, idempotent Quote IDs, and separate editor/viewer access lists.
+New quote requests can be appended automatically to a company-owned Google Sheet for the communications team. The integration uses a dedicated service account, a durable Postgres retry queue, idempotent Quote IDs, raw-value formula protection, and named Workspace sharing.
 
-Production setup and security operations are documented in [`docs/LEAD_EXCEL_SETUP.md`](docs/LEAD_EXCEL_SETUP.md). After configuring Railway, an MFA-verified admin completes setup at `/admin/leads`.
+Production setup and security operations are documented in [`docs/LEAD_GOOGLE_SHEETS_SETUP.md`](docs/LEAD_GOOGLE_SHEETS_SETUP.md). After configuring Railway and sharing the Sheet with the service account, an MFA-verified admin completes setup at `/admin/leads`.

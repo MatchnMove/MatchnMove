@@ -85,7 +85,7 @@ export default async function AdminVerificationPage() {
               href="/admin/leads"
               className="inline-flex min-h-10 items-center justify-center rounded-xl bg-teal-700 px-4 text-sm font-bold text-white hover:bg-teal-800"
             >
-              Excel lead register
+              Google Sheets lead register
             </Link>
           </div>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">

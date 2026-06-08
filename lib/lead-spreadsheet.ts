@@ -1,16 +1,14 @@
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from "crypto";
-import ExcelJS from "exceljs";
+import { JWT } from "google-auth-library";
 import { SpreadsheetDeliveryStatus, type Prisma, type QuoteRequest } from "@prisma/client";
 import { prisma } from "@/lib/db";
 
-const GRAPH_BASE_URL = "https://graph.microsoft.com/v1.0";
-const TOKEN_SETTING_KEY = "lead_spreadsheet_refresh_token";
-const ACCOUNT_SETTING_KEY = "lead_spreadsheet_account";
-const WEB_URL_SETTING_KEY = "lead_spreadsheet_web_url";
-const DEFAULT_TABLE_NAME = "LeadsTable";
-const DEFAULT_WORKBOOK_PATH = "Match-n-Move-Leads.xlsx";
+const SHEETS_API = "https://sheets.googleapis.com/v4/spreadsheets";
+const SHEET_VERIFIED_ID_SETTING_KEY = "lead_google_sheet_verified_id";
+const DEFAULT_SHEET_NAME = "Leads";
 const DEFAULT_PROCESS_LIMIT = 25;
 const DEFAULT_MAX_ATTEMPTS = 10;
+const LEADS_SHEET_ID = 0;
+const README_SHEET_ID = 1;
 
 export const LEAD_SPREADSHEET_HEADERS = [
   "Quote ID",
@@ -45,34 +43,6 @@ export const LEAD_SPREADSHEET_HEADERS = [
   "Team Notes",
 ] as const;
 
-type MicrosoftTokenResponse = {
-  access_token?: string;
-  expires_in?: number;
-  refresh_token?: string;
-  error?: string;
-  error_description?: string;
-};
-
-type MicrosoftAccount = {
-  id: string;
-  displayName: string;
-  email: string;
-  connectedAt: string;
-};
-
-type GraphDriveItem = {
-  id: string;
-  name: string;
-  webUrl?: string;
-};
-
-type GraphTableRowsResponse = {
-  value?: Array<{
-    values?: unknown[][];
-  }>;
-  "@odata.nextLink"?: string;
-};
-
 type SpreadsheetMetadata = {
   currentProperty?: {
     floor?: unknown;
@@ -92,14 +62,31 @@ type SpreadsheetMetadata = {
   }>;
 };
 
+type GoogleSheetMetadata = {
+  spreadsheetId?: string;
+  properties?: {
+    title?: string;
+  };
+  sheets?: Array<{
+    properties?: {
+      sheetId?: number;
+      title?: string;
+    };
+  }>;
+};
+
+type GoogleValuesResponse = {
+  values?: unknown[][];
+};
+
 type AccessTokenCache = {
   token: string;
   expiresAt: number;
 };
 
 const globalForLeadSpreadsheet = globalThis as typeof globalThis & {
-  matchnMoveMicrosoftAccessToken?: AccessTokenCache;
-  matchnMoveMicrosoftTokenPromise?: Promise<string>;
+  matchnMoveGoogleSheetsAccessToken?: AccessTokenCache;
+  matchnMoveGoogleSheetsTokenPromise?: Promise<string>;
 };
 
 function getNumberEnv(name: string, fallback: number, minimum = 1) {
@@ -108,249 +95,109 @@ function getNumberEnv(name: string, fallback: number, minimum = 1) {
   return Math.max(Math.floor(parsed), minimum);
 }
 
-function getConfig() {
-  const editorEmails = (process.env.LEADS_EXCEL_EDITOR_EMAILS || process.env.LEADS_EXCEL_TEAM_EMAILS || "")
+function parseEmails(value: string | undefined) {
+  return (value || "")
     .split(",")
     .map((email) => email.trim().toLowerCase())
     .filter(Boolean);
+}
+
+function getConfig() {
+  const editorEmails = parseEmails(process.env.GOOGLE_SHEETS_EDITOR_EMAILS);
   const editorSet = new Set(editorEmails);
-  const viewerEmails = (process.env.LEADS_EXCEL_VIEWER_EMAILS || "")
-    .split(",")
-    .map((email) => email.trim().toLowerCase())
-    .filter((email) => Boolean(email) && !editorSet.has(email));
+  const viewerEmails = parseEmails(process.env.GOOGLE_SHEETS_VIEWER_EMAILS)
+    .filter((email) => !editorSet.has(email));
 
   return {
-    tenantId: process.env.MICROSOFT_TENANT_ID?.trim() ?? "",
-    clientId: process.env.MICROSOFT_CLIENT_ID?.trim() ?? "",
-    clientSecret: process.env.MICROSOFT_CLIENT_SECRET?.trim() ?? "",
-    ownerEmail: process.env.LEADS_EXCEL_OWNER_EMAIL?.trim().toLowerCase() ?? "",
-    workbookPath: (process.env.LEADS_EXCEL_WORKBOOK_PATH?.trim() || DEFAULT_WORKBOOK_PATH).replace(/^\/+/, ""),
-    tableName: process.env.LEADS_EXCEL_TABLE_NAME?.trim() || DEFAULT_TABLE_NAME,
+    serviceAccountEmail: process.env.GOOGLE_SHEETS_SERVICE_ACCOUNT_EMAIL?.trim().toLowerCase() ?? "",
+    privateKey: (process.env.GOOGLE_SHEETS_PRIVATE_KEY || "").replace(/\\n/g, "\n").trim(),
+    spreadsheetId: process.env.GOOGLE_SHEETS_SPREADSHEET_ID?.trim() ?? "",
+    sheetName: process.env.GOOGLE_SHEETS_SHEET_NAME?.trim() || DEFAULT_SHEET_NAME,
     editorEmails,
     viewerEmails,
   };
 }
 
-function getBaseUrl() {
-  return (process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || "http://localhost:3000").replace(/\/$/, "");
+function isConfigured() {
+  const config = getConfig();
+  return Boolean(config.serviceAccountEmail && config.privateKey && config.spreadsheetId && config.sheetName);
 }
 
-export function getMicrosoftRedirectUri() {
-  return `${getBaseUrl()}/api/admin/lead-spreadsheet/oauth/callback`;
+function getSpreadsheetUrl(spreadsheetId = getConfig().spreadsheetId) {
+  return spreadsheetId ? `https://docs.google.com/spreadsheets/d/${encodeURIComponent(spreadsheetId)}/edit` : null;
 }
 
-function getEncryptionKey() {
-  const configured = process.env.LEADS_EXCEL_ENCRYPTION_KEY?.trim();
-  if (configured) {
-    const decoded = /^[a-f0-9]{64}$/i.test(configured)
-      ? Buffer.from(configured, "hex")
-      : Buffer.from(configured, "base64");
-    if (decoded.length === 32) return decoded;
-    throw new Error("LEADS_EXCEL_ENCRYPTION_KEY must be a 32-byte base64 or 64-character hex value.");
-  }
-
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("LEADS_EXCEL_ENCRYPTION_KEY is required in production.");
-  }
-
-  return createHash("sha256")
-    .update(`${process.env.NEXTAUTH_SECRET || "development-secret"}:lead-spreadsheet`)
-    .digest();
+function escapeSheetName(name: string) {
+  return `'${name.replaceAll("'", "''")}'`;
 }
 
-function encryptSecret(secret: string) {
-  const iv = randomBytes(12);
-  const cipher = createCipheriv("aes-256-gcm", getEncryptionKey(), iv);
-  const encrypted = Buffer.concat([cipher.update(secret, "utf8"), cipher.final()]);
-  const tag = cipher.getAuthTag();
-  return [iv, tag, encrypted].map((part) => part.toString("base64url")).join(".");
-}
-
-function decryptSecret(value: string) {
-  const [ivValue, tagValue, encryptedValue] = value.split(".");
-  if (!ivValue || !tagValue || !encryptedValue) {
-    throw new Error("Stored Microsoft connection is invalid.");
-  }
-  const decipher = createDecipheriv("aes-256-gcm", getEncryptionKey(), Buffer.from(ivValue, "base64url"));
-  decipher.setAuthTag(Buffer.from(tagValue, "base64url"));
-  return Buffer.concat([
-    decipher.update(Buffer.from(encryptedValue, "base64url")),
-    decipher.final(),
-  ]).toString("utf8");
-}
-
-function encodeDrivePath(path: string) {
-  return path
-    .split("/")
-    .filter(Boolean)
-    .map(encodeURIComponent)
-    .join("/");
-}
-
-function getWorkbookGraphPath() {
-  return `/me/drive/root:/${encodeDrivePath(getConfig().workbookPath)}:`;
-}
-
-function getWorkbookApiPath() {
-  return `${getWorkbookGraphPath()}/workbook`;
-}
-
-function getOAuthScopes() {
-  return ["offline_access", "openid", "profile", "email", "User.Read", "Files.ReadWrite"].join(" ");
-}
-
-function getTokenEndpoint() {
-  const { tenantId } = getConfig();
-  return `https://login.microsoftonline.com/${encodeURIComponent(tenantId)}/oauth2/v2.0/token`;
-}
-
-function getAuthorizationEndpoint() {
-  const { tenantId } = getConfig();
-  return `https://login.microsoftonline.com/${encodeURIComponent(tenantId)}/oauth2/v2.0/authorize`;
-}
-
-function assertMicrosoftAppConfigured() {
-  const { tenantId, clientId, clientSecret, ownerEmail } = getConfig();
-  if (!tenantId || !clientId || !clientSecret || !ownerEmail) {
-    throw new Error("Microsoft Excel integration is not configured. Set MICROSOFT_TENANT_ID, MICROSOFT_CLIENT_ID, MICROSOFT_CLIENT_SECRET, and LEADS_EXCEL_OWNER_EMAIL.");
+function assertGoogleSheetsConfigured() {
+  if (!isConfigured()) {
+    throw new Error(
+      "Google Sheets is not configured. Set GOOGLE_SHEETS_SERVICE_ACCOUNT_EMAIL, GOOGLE_SHEETS_PRIVATE_KEY, GOOGLE_SHEETS_SPREADSHEET_ID, and GOOGLE_SHEETS_SHEET_NAME.",
+    );
   }
 }
 
-export function getMicrosoftAuthorizationUrl(state: string) {
-  assertMicrosoftAppConfigured();
-  const { clientId } = getConfig();
-  const params = new URLSearchParams({
-    client_id: clientId,
-    response_type: "code",
-    redirect_uri: getMicrosoftRedirectUri(),
-    response_mode: "query",
-    scope: getOAuthScopes(),
-    state,
-    prompt: "select_account",
+async function refreshGoogleAccessToken() {
+  assertGoogleSheetsConfigured();
+  const { serviceAccountEmail, privateKey } = getConfig();
+  const client = new JWT({
+    email: serviceAccountEmail,
+    key: privateKey,
+    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
   });
-  return `${getAuthorizationEndpoint()}?${params.toString()}`;
-}
+  const credentials = await client.authorize();
+  if (!credentials.access_token) throw new Error("Google did not issue a Sheets API access token.");
 
-async function parseMicrosoftTokenResponse(response: Response) {
-  const token = (await response.json().catch(() => ({}))) as MicrosoftTokenResponse;
-  if (!response.ok || !token.access_token) {
-    const detail = token.error_description?.split("\r\n")[0] || token.error || `HTTP ${response.status}`;
-    throw new Error(`Microsoft authorization failed: ${detail}`);
-  }
-  return token;
-}
-
-async function exchangeAuthorizationCode(code: string) {
-  assertMicrosoftAppConfigured();
-  const { clientId, clientSecret } = getConfig();
-  const response = await fetch(getTokenEndpoint(), {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      client_id: clientId,
-      client_secret: clientSecret,
-      code,
-      redirect_uri: getMicrosoftRedirectUri(),
-      grant_type: "authorization_code",
-      scope: getOAuthScopes(),
-    }),
-    cache: "no-store",
-  });
-  return parseMicrosoftTokenResponse(response);
-}
-
-async function getStoredRefreshToken() {
-  const setting = await prisma.platformSetting.findUnique({
-    where: { key: TOKEN_SETTING_KEY },
-    select: { value: true },
-  });
-  if (setting?.value) return decryptSecret(setting.value);
-  return process.env.MICROSOFT_GRAPH_REFRESH_TOKEN?.trim() || null;
-}
-
-async function storeRefreshToken(refreshToken: string) {
-  await prisma.platformSetting.upsert({
-    where: { key: TOKEN_SETTING_KEY },
-    update: { value: encryptSecret(refreshToken) },
-    create: { key: TOKEN_SETTING_KEY, value: encryptSecret(refreshToken) },
-  });
-}
-
-async function refreshMicrosoftAccessToken() {
-  assertMicrosoftAppConfigured();
-  const refreshToken = await getStoredRefreshToken();
-  if (!refreshToken) {
-    throw new Error("Microsoft Excel is not connected. An MFA-verified admin must connect the dedicated Microsoft 365 account.");
-  }
-
-  const { clientId, clientSecret } = getConfig();
-  const response = await fetch(getTokenEndpoint(), {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      client_id: clientId,
-      client_secret: clientSecret,
-      refresh_token: refreshToken,
-      grant_type: "refresh_token",
-      scope: getOAuthScopes(),
-    }),
-    cache: "no-store",
-  });
-  const token = await parseMicrosoftTokenResponse(response);
-  if (token.refresh_token && token.refresh_token !== refreshToken) {
-    await storeRefreshToken(token.refresh_token);
-  }
-
-  globalForLeadSpreadsheet.matchnMoveMicrosoftAccessToken = {
-    token: token.access_token!,
-    expiresAt: Date.now() + Math.max((token.expires_in ?? 3600) - 300, 60) * 1000,
+  globalForLeadSpreadsheet.matchnMoveGoogleSheetsAccessToken = {
+    token: credentials.access_token,
+    expiresAt: credentials.expiry_date || Date.now() + 55 * 60_000,
   };
-  return token.access_token!;
+  return credentials.access_token;
 }
 
-async function getMicrosoftAccessToken(forceRefresh = false) {
-  const cached = globalForLeadSpreadsheet.matchnMoveMicrosoftAccessToken;
-  if (!forceRefresh && cached && cached.expiresAt > Date.now()) return cached.token;
+async function getGoogleAccessToken(forceRefresh = false) {
+  const cached = globalForLeadSpreadsheet.matchnMoveGoogleSheetsAccessToken;
+  if (!forceRefresh && cached && cached.expiresAt > Date.now() + 60_000) return cached.token;
 
-  if (!globalForLeadSpreadsheet.matchnMoveMicrosoftTokenPromise) {
-    globalForLeadSpreadsheet.matchnMoveMicrosoftTokenPromise = refreshMicrosoftAccessToken().finally(() => {
-      globalForLeadSpreadsheet.matchnMoveMicrosoftTokenPromise = undefined;
+  if (!globalForLeadSpreadsheet.matchnMoveGoogleSheetsTokenPromise) {
+    globalForLeadSpreadsheet.matchnMoveGoogleSheetsTokenPromise = refreshGoogleAccessToken().finally(() => {
+      globalForLeadSpreadsheet.matchnMoveGoogleSheetsTokenPromise = undefined;
     });
   }
-  return globalForLeadSpreadsheet.matchnMoveMicrosoftTokenPromise;
+  return globalForLeadSpreadsheet.matchnMoveGoogleSheetsTokenPromise;
 }
 
-function getRetryDelayMs(attempt: number) {
+function getHttpRetryDelayMs(attempt: number) {
   return Math.min(500 * 2 ** Math.max(attempt - 1, 0), 8_000);
 }
 
 function getQueueRetryDelayMs(attempt: number) {
-  const base = getNumberEnv("LEADS_EXCEL_RETRY_BASE_MS", 60_000);
-  const maximum = getNumberEnv("LEADS_EXCEL_RETRY_MAX_MS", 6 * 60 * 60_000);
+  const base = getNumberEnv("GOOGLE_SHEETS_RETRY_BASE_MS", 60_000);
+  const maximum = getNumberEnv("GOOGLE_SHEETS_RETRY_MAX_MS", 6 * 60 * 60_000);
   return Math.min(base * 2 ** Math.max(attempt - 1, 0), maximum);
 }
 
-function getGraphErrorMessage(status: number, body: unknown) {
+function getGoogleErrorMessage(status: number, body: unknown) {
   if (body && typeof body === "object" && "error" in body) {
-    const graphError = (body as { error?: { code?: string; message?: string } }).error;
-    if (graphError?.message) return `${graphError.code || "GraphError"}: ${graphError.message}`;
+    const error = (body as { error?: { status?: string; message?: string } }).error;
+    if (error?.message) return `${error.status || "GoogleApiError"}: ${error.message}`;
   }
-  return `Microsoft Graph request failed with HTTP ${status}.`;
+  return `Google Sheets API request failed with HTTP ${status}.`;
 }
 
-async function graphRequest(
-  pathOrUrl: string,
+async function googleSheetsRequest(
+  path: string,
   init: RequestInit = {},
-  options: { allowedStatuses?: number[]; parseJson?: boolean; retryTransient?: boolean } = {},
+  options: { retryTransient?: boolean } = {},
 ) {
-  const allowedStatuses = options.allowedStatuses ?? [];
-  const parseJson = options.parseJson ?? true;
   const retryTransient = options.retryTransient ?? true;
   let forceRefresh = false;
 
   for (let attempt = 1; attempt <= 4; attempt += 1) {
-    const token = await getMicrosoftAccessToken(forceRefresh);
-    const response = await fetch(pathOrUrl.startsWith("https://") ? pathOrUrl : `${GRAPH_BASE_URL}${pathOrUrl}`, {
+    const token = await getGoogleAccessToken(forceRefresh);
+    const response = await fetch(`${SHEETS_API}/${path}`, {
       ...init,
       headers: {
         Authorization: `Bearer ${token}`,
@@ -359,14 +206,13 @@ async function graphRequest(
       cache: "no-store",
     });
 
-    if (allowedStatuses.includes(response.status) && !response.ok) return null;
     if (response.ok) {
-      if (!parseJson || response.status === 204) return null;
+      if (response.status === 204) return null;
       return response.json().catch(() => null);
     }
 
     if (response.status === 401 && !forceRefresh) {
-      globalForLeadSpreadsheet.matchnMoveMicrosoftAccessToken = undefined;
+      globalForLeadSpreadsheet.matchnMoveGoogleSheetsAccessToken = undefined;
       forceRefresh = true;
       continue;
     }
@@ -375,88 +221,16 @@ async function graphRequest(
       const retryAfter = Number(response.headers.get("retry-after"));
       const delayMs = Number.isFinite(retryAfter) && retryAfter > 0
         ? retryAfter * 1000
-        : getRetryDelayMs(attempt);
+        : getHttpRetryDelayMs(attempt);
       await new Promise((resolve) => setTimeout(resolve, delayMs));
       continue;
     }
 
     const body = await response.json().catch(() => null);
-    throw new Error(getGraphErrorMessage(response.status, body));
+    throw new Error(getGoogleErrorMessage(response.status, body));
   }
 
-  throw new Error("Microsoft Graph request exhausted its retry limit.");
-}
-
-export async function connectMicrosoftLeadSpreadsheet(code: string, actorId: string) {
-  const token = await exchangeAuthorizationCode(code);
-  if (!token.refresh_token) {
-    throw new Error("Microsoft did not return a refresh token. Reconnect and approve offline access.");
-  }
-
-  globalForLeadSpreadsheet.matchnMoveMicrosoftAccessToken = {
-    token: token.access_token!,
-    expiresAt: Date.now() + Math.max((token.expires_in ?? 3600) - 300, 60) * 1000,
-  };
-
-  const profile = await graphRequest("/me?$select=id,displayName,mail,userPrincipalName", {
-    method: "GET",
-  }) as {
-    id?: string;
-    displayName?: string;
-    mail?: string;
-    userPrincipalName?: string;
-  };
-  const account: MicrosoftAccount = {
-    id: profile.id || "unknown",
-    displayName: profile.displayName || "Microsoft 365 account",
-    email: profile.mail || profile.userPrincipalName || "unknown",
-    connectedAt: new Date().toISOString(),
-  };
-  const expectedOwnerEmail = getConfig().ownerEmail;
-  const connectedEmails = new Set(
-    [profile.mail, profile.userPrincipalName]
-      .map((email) => email?.trim().toLowerCase())
-      .filter(Boolean),
-  );
-  if (!connectedEmails.has(expectedOwnerEmail)) {
-    globalForLeadSpreadsheet.matchnMoveMicrosoftAccessToken = undefined;
-    throw new Error(`Connect the dedicated Microsoft 365 account configured as ${expectedOwnerEmail}.`);
-  }
-
-  await prisma.$transaction([
-    prisma.platformSetting.upsert({
-      where: { key: TOKEN_SETTING_KEY },
-      update: { value: encryptSecret(token.refresh_token) },
-      create: { key: TOKEN_SETTING_KEY, value: encryptSecret(token.refresh_token) },
-    }),
-    prisma.platformSetting.upsert({
-      where: { key: ACCOUNT_SETTING_KEY },
-      update: { value: JSON.stringify(account) },
-      create: { key: ACCOUNT_SETTING_KEY, value: JSON.stringify(account) },
-    }),
-    prisma.adminAuditLog.create({
-      data: {
-        actorId,
-        action: "lead_spreadsheet_microsoft_connected",
-        meta: { microsoftAccountId: account.id, microsoftAccountEmail: account.email },
-      },
-    }),
-  ]);
-
-  return account;
-}
-
-export async function disconnectMicrosoftLeadSpreadsheet(actorId: string) {
-  globalForLeadSpreadsheet.matchnMoveMicrosoftAccessToken = undefined;
-  await prisma.$transaction([
-    prisma.platformSetting.deleteMany({ where: { key: { in: [TOKEN_SETTING_KEY, ACCOUNT_SETTING_KEY] } } }),
-    prisma.adminAuditLog.create({
-      data: {
-        actorId,
-        action: "lead_spreadsheet_microsoft_disconnected",
-      },
-    }),
-  ]);
+  throw new Error("Google Sheets API request exhausted its retry limit.");
 }
 
 function parseSpreadsheetMetadata(value: Prisma.JsonValue | null): SpreadsheetMetadata {
@@ -566,49 +340,51 @@ export function buildLeadSpreadsheetRow(quote: QuoteRequest) {
   ];
 }
 
+async function getSpreadsheetMetadata() {
+  const { spreadsheetId } = getConfig();
+  return googleSheetsRequest(
+    `${encodeURIComponent(spreadsheetId)}?fields=spreadsheetId,properties.title,sheets.properties`,
+    { method: "GET" },
+  ) as Promise<GoogleSheetMetadata>;
+}
+
 async function getExistingQuoteIds() {
-  const { tableName } = getConfig();
-  let nextUrl: string | undefined = `${GRAPH_BASE_URL}${getWorkbookApiPath()}/tables/${encodeURIComponent(tableName)}/rows?$select=values`;
-  const ids = new Set<string>();
-  let pageCount = 0;
-
-  while (nextUrl) {
-    pageCount += 1;
-    if (pageCount > 1_000) throw new Error("Lead workbook is too large to verify safely.");
-    const page = await graphRequest(nextUrl, { method: "GET" }) as GraphTableRowsResponse;
-    for (const row of page.value ?? []) {
-      const quoteId = row.values?.[0]?.[0];
-      if (typeof quoteId === "string" && quoteId) ids.add(quoteId.replace(/^'/, ""));
-    }
-    nextUrl = page["@odata.nextLink"];
-  }
-
-  return ids;
+  const { spreadsheetId, sheetName } = getConfig();
+  const range = encodeURIComponent(`${escapeSheetName(sheetName)}!A2:A`);
+  const response = await googleSheetsRequest(
+    `${encodeURIComponent(spreadsheetId)}/values/${range}?majorDimension=COLUMNS&valueRenderOption=UNFORMATTED_VALUE`,
+    { method: "GET" },
+  ) as GoogleValuesResponse;
+  return new Set(
+    (response.values?.[0] ?? [])
+      .filter((value): value is string => typeof value === "string" && Boolean(value))
+      .map((value) => value.replace(/^'/, "")),
+  );
 }
 
 async function appendLeadRow(quote: QuoteRequest) {
-  const { tableName } = getConfig();
-  await graphRequest(`${getWorkbookApiPath()}/tables/${encodeURIComponent(tableName)}/rows/add`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      index: null,
-      values: [buildLeadSpreadsheetRow(quote)],
-    }),
-  }, { retryTransient: false });
+  const { spreadsheetId, sheetName } = getConfig();
+  const range = encodeURIComponent(`${escapeSheetName(sheetName)}!A:AD`);
+  await googleSheetsRequest(
+    `${encodeURIComponent(spreadsheetId)}/values/${range}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        majorDimension: "ROWS",
+        values: [buildLeadSpreadsheetRow(quote)],
+      }),
+    },
+    { retryTransient: false },
+  );
 }
 
 function getErrorMessage(error: unknown) {
   const message = error instanceof Error ? error.message : "Unknown spreadsheet delivery error.";
-  return message.replace(/(refresh_token|client_secret|access_token)=[^&\s]+/gi, "$1=[redacted]").slice(0, 2_000);
-}
-
-async function hasMicrosoftConnection() {
-  const setting = await prisma.platformSetting.findUnique({
-    where: { key: TOKEN_SETTING_KEY },
-    select: { key: true },
-  });
-  return Boolean(setting || process.env.MICROSOFT_GRAPH_REFRESH_TOKEN?.trim());
+  return message
+    .replace(/-----BEGIN PRIVATE KEY-----[\s\S]+?-----END PRIVATE KEY-----/g, "[redacted private key]")
+    .replace(/Bearer\s+[A-Za-z0-9._~-]+/gi, "Bearer [redacted]")
+    .slice(0, 2_000);
 }
 
 export async function deliverLeadSpreadsheetRow(deliveryId: string, knownQuoteIds?: Set<string>) {
@@ -659,7 +435,7 @@ export async function deliverLeadSpreadsheetRow(deliveryId: string, knownQuoteId
       }),
       prisma.adminAuditLog.create({
         data: {
-          action: "lead_spreadsheet_row_synced",
+          action: "lead_google_sheet_row_synced",
           meta: {
             deliveryId: current.id,
             quoteRequestId: current.quoteRequestId,
@@ -685,16 +461,21 @@ export async function deliverLeadSpreadsheetRow(deliveryId: string, knownQuoteId
 }
 
 export async function processLeadSpreadsheetQueue(limit = DEFAULT_PROCESS_LIMIT) {
+  if (!isConfigured()) {
+    return { configured: false, connected: false, processed: 0, synced: 0, failed: 0, results: [] };
+  }
   const config = getConfig();
-  const appConfigured = Boolean(config.tenantId && config.clientId && config.clientSecret && config.ownerEmail);
-  const connected = appConfigured ? await hasMicrosoftConnection() : false;
-  if (!appConfigured || !connected) {
-    return { configured: appConfigured, connected, processed: 0, synced: 0, failed: 0, results: [] };
+  const verification = await prisma.platformSetting.findUnique({
+    where: { key: SHEET_VERIFIED_ID_SETTING_KEY },
+    select: { value: true },
+  });
+  if (verification?.value !== config.spreadsheetId) {
+    return { configured: true, connected: false, processed: 0, synced: 0, failed: 0, results: [] };
   }
 
   const safeLimit = Math.min(Math.max(Math.floor(limit), 1), 100);
   const now = new Date();
-  const staleSendingMs = getNumberEnv("LEADS_EXCEL_SENDING_STALE_MS", 10 * 60_000);
+  const staleSendingMs = getNumberEnv("GOOGLE_SHEETS_SENDING_STALE_MS", 10 * 60_000);
   await prisma.leadSpreadsheetDelivery.updateMany({
     where: {
       status: SpreadsheetDeliveryStatus.SENDING,
@@ -737,165 +518,255 @@ export async function processLeadSpreadsheetQueue(limit = DEFAULT_PROCESS_LIMIT)
   };
 }
 
-function configureLeadWorksheet(worksheet: ExcelJS.Worksheet) {
-  worksheet.views = [{ state: "frozen", ySplit: 1 }];
-  worksheet.properties.defaultRowHeight = 20;
-  worksheet.addTable({
-    name: getConfig().tableName,
-    ref: "A1",
-    headerRow: true,
-    totalsRow: false,
-    style: {
-      theme: "TableStyleMedium2",
-      showFirstColumn: false,
-      showLastColumn: false,
-      showRowStripes: true,
-      showColumnStripes: false,
+function columnWidthRequests() {
+  const widths = [190, 160, 145, 110, 190, 145, 220, 115, 110, 250, 145, 170, 110, 140, 145, 220, 90, 250, 145, 170, 110, 140, 145, 220, 340, 185, 185, 155, 145, 340];
+  return widths.map((pixelSize, index) => ({
+    updateDimensionProperties: {
+      range: {
+        sheetId: LEADS_SHEET_ID,
+        dimension: "COLUMNS",
+        startIndex: index,
+        endIndex: index + 1,
+      },
+      properties: { pixelSize },
+      fields: "pixelSize",
     },
-    columns: LEAD_SPREADSHEET_HEADERS.map((name) => ({ name })),
-    rows: [],
-  });
-
-  const widths = [24, 21, 18, 14, 24, 18, 28, 14, 14, 34, 20, 22, 14, 18, 18, 28, 12, 34, 20, 22, 14, 18, 18, 28, 48, 24, 24, 20, 18, 48];
-  worksheet.columns.forEach((column, index) => {
-    column.width = widths[index] ?? 18;
-    column.alignment = { vertical: "top", wrapText: true };
-  });
-  worksheet.getRow(1).height = 32;
-  worksheet.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
-
-  for (let row = 2; row <= 10_000; row += 1) {
-    worksheet.getCell(`C${row}`).dataValidation = {
-      type: "list",
-      allowBlank: true,
-      formulae: ['"New,Contacting mover,Offered,Accepted,Declined,Closed"'],
-    };
-    worksheet.getCell(`AB${row}`).dataValidation = {
-      type: "list",
-      allowBlank: true,
-      formulae: ['"Not contacted,Contacted,Waiting,Accepted,Declined,No response"'],
-    };
-  }
+  }));
 }
 
-function configureReadMeWorksheet(worksheet: ExcelJS.Worksheet) {
-  worksheet.columns = [{ width: 26 }, { width: 105 }];
-  const rows = [
+function getReadMeRows() {
+  return [
     ["Match 'n Move Lead Register", "Secure team operating guide"],
     ["Purpose", "New customer quote requests are added automatically. Use the operational columns on the right to record which mover was offered the lead and the outcome."],
-    ["Source of truth", "The Match 'n Move Postgres database remains the authoritative record. Do not delete or rename the LeadsTable table, the Leads worksheet, or the Quote ID column."],
-    ["Access", "Share only with named Match 'n Move team members who need customer details. Anonymous links and public sharing must stay disabled. Remove access immediately when a teammate leaves or changes role."],
+    ["Source of truth", "The Match 'n Move Postgres database remains the authoritative record. Do not rename the Leads tab or remove the Quote ID column."],
+    ["Access", "Share only with named Match 'n Move team members who need customer details. Keep General access set to Restricted and remove access immediately when a teammate leaves or changes role."],
     ["Customer privacy", "Use customer details only to arrange the requested moving quote. Do not export, resell, forward, or use the data for unrelated marketing."],
     ["Working method", "Filter by Lead Status, Priority, region, or move date. Update Mover Offered, Mover Contact, Outreach Status, Follow-up Date, and Team Notes as work progresses."],
-    ["Protected input", "Customer text is written as plain text and neutralised if it begins with an Excel formula character. This protects the workbook from spreadsheet-formula injection."],
+    ["Protected input", "Customer text is sent using RAW input and neutralised if it begins with a spreadsheet formula character."],
     ["Support", "If automatic updates stop, an MFA-verified admin can open /admin/leads to view connection and retry status without exposing customer details in logs."],
   ];
-  worksheet.addRows(rows);
-  worksheet.getRow(1).height = 34;
-  worksheet.getRow(1).font = { bold: true, size: 16, color: { argb: "FFFFFFFF" } };
-  worksheet.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF082F5F" } };
-  for (let row = 2; row <= rows.length; row += 1) {
-    worksheet.getCell(`A${row}`).font = { bold: true, color: { argb: "FF082F5F" } };
-    worksheet.getCell(`A${row}`).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFEAF4FB" } };
-    worksheet.getRow(row).alignment = { vertical: "top", wrapText: true };
-    worksheet.getRow(row).height = 52;
+}
+
+async function ensureRequiredSheets(metadata: GoogleSheetMetadata) {
+  const { spreadsheetId, sheetName } = getConfig();
+  const sheets = metadata.sheets ?? [];
+  const leads = sheets.find((sheet) => sheet.properties?.title === sheetName);
+  const readMe = sheets.find((sheet) => sheet.properties?.title === "Read Me");
+  const requests = [];
+
+  if (!leads) {
+    const firstSheet = sheets.find((sheet) => sheet.properties?.sheetId === LEADS_SHEET_ID);
+    if (!firstSheet || sheets.length > 1) {
+      throw new Error(`Use a new blank Google Sheet, then run setup again. The first tab will become "${sheetName}".`);
+    }
+    requests.push({
+      updateSheetProperties: {
+        properties: {
+          sheetId: LEADS_SHEET_ID,
+          title: sheetName,
+          gridProperties: {
+            rowCount: 10_000,
+            columnCount: LEAD_SPREADSHEET_HEADERS.length,
+          },
+        },
+        fields: "title,gridProperties(rowCount,columnCount)",
+      },
+    });
+  } else if (leads.properties?.sheetId !== LEADS_SHEET_ID) {
+    throw new Error(`The "${sheetName}" tab must be the first tab in the spreadsheet. Move it to the far left and try again.`);
   }
-  worksheet.views = [{ state: "frozen", ySplit: 1 }];
-}
 
-export async function buildLeadWorkbookBuffer() {
-  const workbook = new ExcelJS.Workbook();
-  workbook.creator = "Match 'n Move";
-  workbook.company = "Match 'n Move";
-  workbook.subject = "Secure customer lead operations register";
-  workbook.title = "Match 'n Move Leads";
-  workbook.created = new Date();
-  workbook.modified = new Date();
+  if (!readMe) {
+    if (sheets.some((sheet) => sheet.properties?.sheetId === README_SHEET_ID)) {
+      throw new Error('The second tab must be named "Read Me". Rename or remove the existing second tab and try again.');
+    }
+    requests.push({
+      addSheet: {
+        properties: {
+          sheetId: README_SHEET_ID,
+          title: "Read Me",
+          gridProperties: { rowCount: 50, columnCount: 2 },
+        },
+      },
+    });
+  }
 
-  configureLeadWorksheet(workbook.addWorksheet("Leads"));
-  configureReadMeWorksheet(workbook.addWorksheet("Read Me"));
-  return Buffer.from(await workbook.xlsx.writeBuffer());
-}
-
-async function getWorkbookDriveItem() {
-  return graphRequest(getWorkbookGraphPath(), { method: "GET" }, { allowedStatuses: [404] }) as Promise<GraphDriveItem | null>;
-}
-
-async function verifyWorkbookTable() {
-  const { tableName } = getConfig();
-  await graphRequest(`${getWorkbookApiPath()}/tables/${encodeURIComponent(tableName)}?$select=name`, { method: "GET" });
-}
-
-async function inviteWorkbookTeamMembers(itemId: string, sendInvitation: boolean) {
-  const { editorEmails, viewerEmails } = getConfig();
-
-  const invite = async (emails: string[], role: "read" | "write") => {
-    if (emails.length === 0) return;
-    await graphRequest(`/me/drive/items/${encodeURIComponent(itemId)}/invite`, {
+  if (requests.length > 0) {
+    await googleSheetsRequest(`${encodeURIComponent(spreadsheetId)}:batchUpdate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        recipients: emails.map((email) => ({ email })),
-        message: "You have been granted named-user access to the Match 'n Move lead register. Customer information is confidential and may only be used for fulfilling quote requests.",
-        requireSignIn: true,
-        sendInvitation,
-        roles: [role],
-      }),
+      body: JSON.stringify({ requests }),
     });
-  };
-
-  await invite(editorEmails, "write");
-  await invite(viewerEmails, "read");
-  return { editorsInvited: editorEmails.length, viewersInvited: viewerEmails.length };
+  }
 }
 
-export async function provisionLeadWorkbook(actorId: string) {
-  let driveItem = await getWorkbookDriveItem();
-  let created = false;
+async function writeProvisioningValues() {
+  const { spreadsheetId, sheetName } = getConfig();
+  await googleSheetsRequest(`${encodeURIComponent(spreadsheetId)}/values:batchUpdate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      valueInputOption: "RAW",
+      data: [
+        {
+          range: `${escapeSheetName(sheetName)}!A1:AD1`,
+          majorDimension: "ROWS",
+          values: [[...LEAD_SPREADSHEET_HEADERS]],
+        },
+        {
+          range: "'Read Me'!A1:B8",
+          majorDimension: "ROWS",
+          values: getReadMeRows(),
+        },
+      ],
+    }),
+  });
+}
 
-  if (driveItem) {
-    await verifyWorkbookTable();
-  } else {
-    const workbook = await buildLeadWorkbookBuffer();
-    driveItem = await graphRequest(`${getWorkbookGraphPath()}/content`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+async function formatProvisionedSheets() {
+  const { spreadsheetId } = getConfig();
+  const requests = [
+    {
+      updateSheetProperties: {
+        properties: {
+          sheetId: LEADS_SHEET_ID,
+          gridProperties: { frozenRowCount: 1 },
+        },
+        fields: "gridProperties.frozenRowCount",
       },
-      body: workbook,
-    }) as GraphDriveItem;
-    created = true;
-  }
+    },
+    {
+      repeatCell: {
+        range: { sheetId: LEADS_SHEET_ID, startRowIndex: 0, endRowIndex: 1, startColumnIndex: 0, endColumnIndex: 30 },
+        cell: {
+          userEnteredFormat: {
+            backgroundColor: { red: 0.03, green: 0.18, blue: 0.37 },
+            textFormat: { foregroundColor: { red: 1, green: 1, blue: 1 }, bold: true },
+            horizontalAlignment: "CENTER",
+            verticalAlignment: "MIDDLE",
+            wrapStrategy: "WRAP",
+          },
+        },
+        fields: "userEnteredFormat",
+      },
+    },
+    {
+      repeatCell: {
+        range: { sheetId: LEADS_SHEET_ID, startRowIndex: 1, endRowIndex: 10_000, startColumnIndex: 0, endColumnIndex: 30 },
+        cell: {
+          userEnteredFormat: {
+            verticalAlignment: "TOP",
+            wrapStrategy: "WRAP",
+          },
+        },
+        fields: "userEnteredFormat(verticalAlignment,wrapStrategy)",
+      },
+    },
+    {
+      setDataValidation: {
+        range: { sheetId: LEADS_SHEET_ID, startRowIndex: 1, endRowIndex: 10_000, startColumnIndex: 2, endColumnIndex: 3 },
+        rule: {
+          condition: {
+            type: "ONE_OF_LIST",
+            values: ["New", "Contacting mover", "Offered", "Accepted", "Declined", "Closed"].map((userEnteredValue) => ({ userEnteredValue })),
+          },
+          strict: true,
+          showCustomUi: true,
+        },
+      },
+    },
+    {
+      setDataValidation: {
+        range: { sheetId: LEADS_SHEET_ID, startRowIndex: 1, endRowIndex: 10_000, startColumnIndex: 27, endColumnIndex: 28 },
+        rule: {
+          condition: {
+            type: "ONE_OF_LIST",
+            values: ["Not contacted", "Contacted", "Waiting", "Accepted", "Declined", "No response"].map((userEnteredValue) => ({ userEnteredValue })),
+          },
+          strict: true,
+          showCustomUi: true,
+        },
+      },
+    },
+    {
+      updateSheetProperties: {
+        properties: {
+          sheetId: README_SHEET_ID,
+          gridProperties: { frozenRowCount: 1 },
+        },
+        fields: "gridProperties.frozenRowCount",
+      },
+    },
+    {
+      repeatCell: {
+        range: { sheetId: README_SHEET_ID, startRowIndex: 0, endRowIndex: 1, startColumnIndex: 0, endColumnIndex: 2 },
+        cell: {
+          userEnteredFormat: {
+            backgroundColor: { red: 0.03, green: 0.18, blue: 0.37 },
+            textFormat: { foregroundColor: { red: 1, green: 1, blue: 1 }, bold: true, fontSize: 14 },
+            wrapStrategy: "WRAP",
+          },
+        },
+        fields: "userEnteredFormat",
+      },
+    },
+    {
+      updateDimensionProperties: {
+        range: { sheetId: README_SHEET_ID, dimension: "COLUMNS", startIndex: 0, endIndex: 1 },
+        properties: { pixelSize: 190 },
+        fields: "pixelSize",
+      },
+    },
+    {
+      updateDimensionProperties: {
+        range: { sheetId: README_SHEET_ID, dimension: "COLUMNS", startIndex: 1, endIndex: 2 },
+        properties: { pixelSize: 720 },
+        fields: "pixelSize",
+      },
+    },
+    ...columnWidthRequests(),
+  ];
 
-  if (!driveItem?.id) throw new Error("Microsoft Graph did not return the workbook item.");
-  const invitation = await inviteWorkbookTeamMembers(driveItem.id, created);
+  await googleSheetsRequest(`${encodeURIComponent(spreadsheetId)}:batchUpdate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ requests }),
+  });
+}
 
+export async function provisionLeadSpreadsheet(actorId: string) {
+  assertGoogleSheetsConfigured();
+  const metadata = await getSpreadsheetMetadata();
+  await ensureRequiredSheets(metadata);
+  await writeProvisioningValues();
+  await formatProvisionedSheets();
+
+  const config = getConfig();
+  const webUrl = getSpreadsheetUrl(config.spreadsheetId);
   await prisma.$transaction([
     prisma.platformSetting.upsert({
-      where: { key: WEB_URL_SETTING_KEY },
-      update: { value: driveItem.webUrl || "" },
-      create: { key: WEB_URL_SETTING_KEY, value: driveItem.webUrl || "" },
+      where: { key: SHEET_VERIFIED_ID_SETTING_KEY },
+      update: { value: config.spreadsheetId },
+      create: { key: SHEET_VERIFIED_ID_SETTING_KEY, value: config.spreadsheetId },
     }),
     prisma.adminAuditLog.create({
       data: {
         actorId,
-        action: created ? "lead_spreadsheet_workbook_created" : "lead_spreadsheet_workbook_verified",
+        action: "lead_google_sheet_verified",
         meta: {
-          workbookItemId: driveItem.id,
-          workbookPath: getConfig().workbookPath,
-          editorsInvited: invitation.editorsInvited,
-          viewersInvited: invitation.viewersInvited,
+          spreadsheetId: config.spreadsheetId,
+          spreadsheetTitle: metadata.properties?.title || null,
+          sheetName: config.sheetName,
+          serviceAccountEmail: config.serviceAccountEmail,
         },
       },
     }),
   ]);
 
   return {
-    created,
-    workbookPath: getConfig().workbookPath,
-    webUrl: driveItem.webUrl || null,
-    editorsInvited: invitation.editorsInvited,
-    viewersInvited: invitation.viewersInvited,
+    spreadsheetTitle: metadata.properties?.title || "Google Sheet",
+    sheetName: config.sheetName,
+    webUrl,
   };
 }
 
@@ -914,7 +785,7 @@ export async function retryLeadSpreadsheetDeliveries(actorId: string) {
   await prisma.adminAuditLog.create({
     data: {
       actorId,
-      action: "lead_spreadsheet_deliveries_retried",
+      action: "lead_google_sheet_deliveries_retried",
       meta: { count: result.count },
     },
   });
@@ -923,10 +794,10 @@ export async function retryLeadSpreadsheetDeliveries(actorId: string) {
 
 export async function getLeadSpreadsheetDiagnostics() {
   const config = getConfig();
-  const [settings, counts, recentDeliveries] = await Promise.all([
-    prisma.platformSetting.findMany({
-      where: { key: { in: [TOKEN_SETTING_KEY, ACCOUNT_SETTING_KEY, WEB_URL_SETTING_KEY] } },
-      select: { key: true, value: true, updatedAt: true },
+  const [verification, counts, recentDeliveries] = await Promise.all([
+    prisma.platformSetting.findUnique({
+      where: { key: SHEET_VERIFIED_ID_SETTING_KEY },
+      select: { value: true },
     }),
     prisma.leadSpreadsheetDelivery.groupBy({
       by: ["status"],
@@ -948,26 +819,17 @@ export async function getLeadSpreadsheetDiagnostics() {
       },
     }),
   ]);
-  const settingMap = new Map(settings.map((setting) => [setting.key, setting]));
-  const accountValue = settingMap.get(ACCOUNT_SETTING_KEY)?.value;
-  let account: MicrosoftAccount | null = null;
-  if (accountValue) {
-    try {
-      account = JSON.parse(accountValue) as MicrosoftAccount;
-    } catch {
-      account = null;
-    }
-  }
 
   return {
-    configured: Boolean(config.tenantId && config.clientId && config.clientSecret && config.ownerEmail),
-    connected: Boolean(settingMap.has(TOKEN_SETTING_KEY) || process.env.MICROSOFT_GRAPH_REFRESH_TOKEN?.trim()),
-    account,
-    workbook: {
-      path: config.workbookPath,
-      tableName: config.tableName,
-      webUrl: settingMap.get(WEB_URL_SETTING_KEY)?.value || null,
-      ownerEmail: config.ownerEmail,
+    configured: isConfigured(),
+    connected: Boolean(config.spreadsheetId && verification?.value === config.spreadsheetId),
+    serviceAccount: {
+      email: config.serviceAccountEmail,
+    },
+    spreadsheet: {
+      id: config.spreadsheetId,
+      sheetName: config.sheetName,
+      webUrl: getSpreadsheetUrl(config.spreadsheetId),
       editorEmails: config.editorEmails,
       viewerEmails: config.viewerEmails,
     },

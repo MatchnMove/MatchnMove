@@ -11,7 +11,7 @@
     "start": "next start",
     "lint": "eslint .",
     "email:verify": "node scripts/verify-email-config.mjs",
-    "excel:verify-template": "tsx scripts/verify-lead-workbook.ts",
+    "sheets:verify-row": "tsx scripts/verify-lead-sheet.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
@@ -28,7 +28,6 @@
     "@types/nodemailer": "^7.0.11",
     "bcryptjs": "^2.4.3",
     "clsx": "^2.1.1",
-    "exceljs": "^4.4.0",
     "framer-motion": "^12.38.0",
     "google-auth-library": "^10.6.2",
     "lottie-react": "^2.4.1",
@@ -58,9 +57,6 @@
     "typescript": "^5.7.2"
   },
   "overrides": {
-    "exceljs": {
-      "uuid": "11.1.1"
-    },
     "postcss": "8.5.15"
   },
   "prisma": {
