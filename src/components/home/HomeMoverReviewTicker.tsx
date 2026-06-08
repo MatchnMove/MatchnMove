@@ -16,8 +16,8 @@ type PublicMoversResponse = {
   source?: unknown;
 };
 
-const cardAngles = [-2.8, -1.4, -3.6];
-const cardOffsets = [0, 18, 8];
+const cardAngles = [0, 0, 0];
+const cardOffsets = [0, 0, 0];
 
 function getVisibleMovers(movers: HeroMoverTickerItem[], startIndex: number) {
   return Array.from({ length: Math.min(3, movers.length) }, (_, offset) => movers[(startIndex + offset) % movers.length]);
