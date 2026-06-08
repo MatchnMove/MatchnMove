@@ -8,6 +8,11 @@ import { ReactNode, useEffect, useState } from "react";
 import { SITE_EMAILS, toMailto } from "@/lib/site-emails";
 import logo from "@/public/logo.webp";
 
+type MoverSessionState = {
+  authenticated: boolean;
+  accountName?: string;
+};
+
 const navLinks = [
   { href: "/contact", label: "Contact us" },
   { href: "/about", label: "About us" },
@@ -49,6 +54,10 @@ const contactLinks = [
 
 export function Nav() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [moverSession, setMoverSession] = useState<MoverSessionState | null>(null);
+
+  const moverAccountHref = moverSession?.authenticated ? "/mover/dashboard" : "/mover/login";
+  const moverAccountLabel = moverSession?.authenticated && moverSession.accountName ? moverSession.accountName : "Mover Login";
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -67,6 +76,31 @@ export function Nav() {
       document.body.style.overflow = "";
     };
   }, [mobileMenuOpen]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadMoverSession() {
+      try {
+        const response = await fetch("/api/mover/session", { cache: "no-store" });
+        const data = (await response.json().catch(() => null)) as MoverSessionState | null;
+
+        if (!cancelled) {
+          setMoverSession(data?.authenticated ? data : { authenticated: false });
+        }
+      } catch {
+        if (!cancelled) {
+          setMoverSession({ authenticated: false });
+        }
+      }
+    }
+
+    loadMoverSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <header className="relative bg-white border-b">
@@ -94,10 +128,11 @@ export function Nav() {
         </nav>
         <div className="flex items-center gap-2 sm:gap-3">
           <Link
-            href="/mover/login"
-            className="hidden whitespace-nowrap rounded-lg bg-accentOrange px-2.5 py-2 text-[0.82rem] font-semibold leading-none text-white shadow-sm sm:inline-flex sm:rounded sm:px-4 sm:py-2 sm:text-base"
+            href={moverAccountHref}
+            title={moverAccountLabel}
+            className="hidden max-w-[13rem] whitespace-nowrap rounded-lg bg-accentOrange px-2.5 py-2 text-[0.82rem] font-semibold leading-none text-white shadow-sm sm:inline-flex sm:rounded sm:px-4 sm:py-2 sm:text-base lg:max-w-[16rem]"
           >
-            Mover Login
+            <span className="truncate">{moverAccountLabel}</span>
           </Link>
           <button
             type="button"
@@ -145,11 +180,11 @@ export function Nav() {
                   </Link>
                 ))}
                 <Link
-                  href="/mover/login"
+                  href={moverAccountHref}
                   onClick={() => setMobileMenuOpen(false)}
                   className="mt-2 inline-flex min-h-[46px] items-center justify-center rounded-2xl bg-accentOrange px-4 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-orange-500"
                 >
-                  Mover Login
+                  <span className="truncate">{moverAccountLabel}</span>
                 </Link>
               </nav>
             </motion.div>

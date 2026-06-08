@@ -5,6 +5,7 @@ export function proxy(req: NextRequest) {
   if (
     pathname === "/api/mover/login" ||
     pathname === "/api/mover/register" ||
+    pathname === "/api/mover/session" ||
     pathname === "/api/mover/google" ||
     pathname === "/api/mover/forgot-password" ||
     pathname === "/api/mover/reset-password" ||
