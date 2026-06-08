@@ -27,7 +27,10 @@ export async function POST(req: NextRequest) {
       data: {
         ...data,
         moveDate,
-        transcriptionState: data.transcriptRaw ? "complete" : "manual"
+        transcriptionState: data.transcriptRaw ? "complete" : "manual",
+        spreadsheetDelivery: {
+          create: {},
+        },
       }
     });
 

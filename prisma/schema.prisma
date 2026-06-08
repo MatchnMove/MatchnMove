@@ -50,6 +50,13 @@ enum EmailDeliveryStatus {
   FAILED
 }
 
+enum SpreadsheetDeliveryStatus {
+  QUEUED
+  SENDING
+  SYNCED
+  FAILED
+}
+
 model User {
   id                     String                  @id @default(cuid())
   name                   String?
@@ -181,33 +188,50 @@ model VerificationAudit {
 }
 
 model QuoteRequest {
-  id                 String    @id @default(cuid())
-  name               String
-  email              String
-  phone              String
-  movingWhat         String?
-  fromPropertyType   String
-  toPropertyType     String
-  bedrooms           String
-  fromAddress        String
-  fromCity           String
-  fromRegion         String
-  fromPostcode       String
-  fromCountry        String
-  toAddress          String
-  toCity             String
-  toRegion           String
-  toPostcode         String
-  toCountry          String
-  moveDate           DateTime?
-  dateFlexible       Boolean   @default(false)
-  transcriptRaw      Json?
-  transcriptFields   Json?
-  transcriptionState String?
-  createdAt          DateTime  @default(now())
-  leads              Lead[]
+  id                  String                   @id @default(cuid())
+  name                String
+  email               String
+  phone               String
+  movingWhat          String?
+  fromPropertyType    String
+  toPropertyType      String
+  bedrooms            String
+  fromAddress         String
+  fromCity            String
+  fromRegion          String
+  fromPostcode        String
+  fromCountry         String
+  toAddress           String
+  toCity              String
+  toRegion            String
+  toPostcode          String
+  toCountry           String
+  moveDate            DateTime?
+  dateFlexible        Boolean                  @default(false)
+  transcriptRaw       Json?
+  transcriptFields    Json?
+  transcriptionState  String?
+  createdAt           DateTime                 @default(now())
+  leads               Lead[]
+  spreadsheetDelivery LeadSpreadsheetDelivery?
 
   @@index([createdAt])
+}
+
+model LeadSpreadsheetDelivery {
+  id             String                    @id @default(cuid())
+  quoteRequestId String                    @unique
+  status         SpreadsheetDeliveryStatus @default(QUEUED)
+  attempts       Int                       @default(0)
+  maxAttempts    Int                       @default(10)
+  nextAttemptAt  DateTime                  @default(now())
+  syncedAt       DateTime?
+  lastError      String?                   @db.Text
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
+  quoteRequest   QuoteRequest              @relation(fields: [quoteRequestId], references: [id], onDelete: Cascade)
+
+  @@index([status, nextAttemptAt])
 }
 
 model Lead {

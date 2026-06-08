@@ -151,3 +151,9 @@ You can also call this endpoint manually, or from a Railway cron/external uptime
 POST https://www.matchnmove.co.nz/api/email/process?limit=50
 Authorization: Bearer $EMAIL_QUEUE_SECRET
 ```
+
+## Secure Excel lead register
+
+New quote requests can be appended automatically to a named-user Microsoft 365 Excel workbook for the communications team. The integration uses an encrypted delegated OAuth connection, a durable Postgres retry queue, idempotent Quote IDs, and separate editor/viewer access lists.
+
+Production setup and security operations are documented in [`docs/LEAD_EXCEL_SETUP.md`](docs/LEAD_EXCEL_SETUP.md). After configuring Railway, an MFA-verified admin completes setup at `/admin/leads`.

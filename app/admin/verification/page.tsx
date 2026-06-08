@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { AdminMoverVerificationPanel } from "@/components/admin-mover-verification-panel";
 import { isAdminUser } from "@/lib/admin-auth";
 import { auth } from "@/lib/auth";
@@ -75,8 +76,18 @@ export default async function AdminVerificationPage() {
     <section className="min-h-screen bg-[linear-gradient(180deg,#eef4fb_0%,#f7f9fc_100%)] px-4 py-5">
       <div className="mx-auto max-w-[1400px]">
         <div className="mb-4 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-sm font-semibold uppercase tracking-[0.16em] text-sky-700">Admin verification</p>
-          <h1 className="mt-2 text-3xl font-black tracking-[-0.05em] text-slate-950">Mover verification queue</h1>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.16em] text-sky-700">Admin verification</p>
+              <h1 className="mt-2 text-3xl font-black tracking-[-0.05em] text-slate-950">Mover verification queue</h1>
+            </div>
+            <Link
+              href="/admin/leads"
+              className="inline-flex min-h-10 items-center justify-center rounded-xl bg-teal-700 px-4 text-sm font-bold text-white hover:bg-teal-800"
+            >
+              Excel lead register
+            </Link>
+          </div>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
             Approve only details that match the NZBN Register and submitted evidence. A mover profile is not public and cannot open new leads until all required checks pass.
           </p>
