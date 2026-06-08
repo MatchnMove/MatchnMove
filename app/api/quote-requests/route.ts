@@ -54,6 +54,27 @@ export async function POST(req: NextRequest) {
     const verifiedMovers = matchedMovers.filter(isMoverProfileLive);
     const selectedMovers = selectLeadRecipients(verifiedMovers);
 
+    await prisma.adminAuditLog.create({
+      data: {
+        action: selectedMovers.length ? "quote_distribution_matched" : "quote_distribution_no_recipients",
+        meta: {
+          quoteRequestId: quote.id,
+          matchedRegions,
+          matchedMoverCount: matchedMovers.length,
+          verifiedMoverCount: verifiedMovers.length,
+          selectedMoverCount: selectedMovers.length,
+        },
+      },
+    });
+
+    console.info("quote distribution", {
+      quoteRequestId: quote.id,
+      matchedRegions,
+      matchedMoverCount: matchedMovers.length,
+      verifiedMoverCount: verifiedMovers.length,
+      selectedMoverCount: selectedMovers.length,
+    });
+
     const pricing = calculateLeadPrice({
       bedrooms: data.bedrooms,
       moveDate,
