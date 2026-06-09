@@ -15,6 +15,7 @@ import {
   CreditCard,
   LayoutGrid,
   LoaderCircle,
+  LogOut,
   MapPinned,
   Menu,
   RadioTower,
@@ -336,6 +337,7 @@ export function MoverDashboardExperience({
   const [leadActionMessage, setLeadActionMessage] = useState<string | null>(null);
   const [leadActionError, setLeadActionError] = useState<string | null>(null);
   const [busyLeadId, setBusyLeadId] = useState<string | null>(null);
+  const [logoutLoading, setLogoutLoading] = useState(false);
   const [nowMs, setNowMs] = useState(() => Date.now());
 
   const filteredLeads = profile.status === "ACTIVE" ? profile.leads.filter((lead) => {
@@ -427,6 +429,19 @@ export function MoverDashboardExperience({
 
     setActiveTab("profile");
     setProfileFocusSection(destination);
+  }
+
+  async function logout() {
+    if (logoutLoading) return;
+
+    setLogoutLoading(true);
+
+    try {
+      await fetch("/api/mover/logout", { method: "POST" });
+      window.location.replace("/mover/login");
+    } catch {
+      setLogoutLoading(false);
+    }
   }
 
   async function unlockLead(leadId: string) {
@@ -555,6 +570,8 @@ export function MoverDashboardExperience({
           isMenuOpen={isMobileMenuOpen}
           onMenuToggle={() => setIsMobileMenuOpen((current) => !current)}
           onOpenTab={openTab}
+          onLogout={logout}
+          logoutLoading={logoutLoading}
         />
 
         {isMobileMenuOpen ? (
@@ -563,7 +580,13 @@ export function MoverDashboardExperience({
 
         <div className="grid gap-4 xl:grid-cols-[290px_minmax(0,1fr)]">
           <aside className="hidden xl:sticky xl:top-4 xl:block xl:h-[calc(100vh-2rem)]">
-            <DesktopSidebar mover={profile} activeTab={activeTab} onOpenTab={openTab} />
+            <DesktopSidebar
+              mover={profile}
+              activeTab={activeTab}
+              onOpenTab={openTab}
+              onLogout={logout}
+              logoutLoading={logoutLoading}
+            />
           </aside>
 
           <main className="space-y-3 sm:space-y-4">
@@ -619,6 +642,8 @@ function MobileHeader({
   isMenuOpen,
   onMenuToggle,
   onOpenTab,
+  onLogout,
+  logoutLoading,
 }: {
   mover: DashboardMover;
   activeTab: (typeof tabs)[number];
@@ -626,6 +651,8 @@ function MobileHeader({
   isMenuOpen: boolean;
   onMenuToggle: () => void;
   onOpenTab: (tab: (typeof tabs)[number]["id"]) => void;
+  onLogout: () => void;
+  logoutLoading: boolean;
 }) {
   return (
     <>
@@ -721,6 +748,10 @@ function MobileHeader({
             Pricing rules
             <ArrowRight className="h-4 w-4" />
           </Link>
+          <button type="button" onClick={() => onOpenTab("leads")} className="flex w-full items-center justify-between rounded-2xl bg-white/[0.08] px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/[0.14]">
+            Work leads
+            <ArrowRight className="h-4 w-4" />
+          </button>
           <button type="button" onClick={() => onOpenTab("profile")} className="flex w-full items-center justify-between rounded-2xl bg-white/[0.08] px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/[0.14]">
             Update profile
             <ArrowRight className="h-4 w-4" />
@@ -729,6 +760,7 @@ function MobileHeader({
             {mover.readiness.isLive ? "Review verification" : "Get profile live"}
             <ArrowRight className="h-4 w-4" />
           </button>
+          <QuickLogoutButton loading={logoutLoading} onClick={onLogout} />
         </div>
       </div>
     </>
@@ -748,10 +780,14 @@ function DesktopSidebar({
   mover,
   activeTab,
   onOpenTab,
+  onLogout,
+  logoutLoading,
 }: {
   mover: DashboardMover;
   activeTab: (typeof tabs)[number]["id"];
   onOpenTab: (tab: (typeof tabs)[number]["id"]) => void;
+  onLogout: () => void;
+  logoutLoading: boolean;
 }) {
   return (
     <div className="flex flex-col gap-4 rounded-[32px] border border-slate-200 bg-[linear-gradient(180deg,#07192a,#102844)] p-4 text-white shadow-[0_28px_90px_-45px_rgba(15,23,42,0.85)] xl:h-full xl:overflow-y-auto">
@@ -817,9 +853,24 @@ function DesktopSidebar({
             {mover.readiness.isLive ? "Review verification" : "Get profile live"}
             <ArrowRight className="h-4 w-4" />
           </button>
+          <QuickLogoutButton loading={logoutLoading} onClick={onLogout} />
         </div>
       </div>
     </div>
+  );
+}
+
+function QuickLogoutButton({ loading, onClick }: { loading: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={loading}
+      className="flex w-full items-center justify-between rounded-2xl border border-rose-300/15 bg-rose-400/10 px-4 py-3 text-sm font-semibold text-rose-100 transition hover:bg-rose-400/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-200 disabled:cursor-not-allowed disabled:opacity-60"
+    >
+      <span>{loading ? "Signing out..." : "Quick logout"}</span>
+      {loading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
+    </button>
   );
 }
 
