@@ -97,7 +97,7 @@ export function HeroQuoteCard() {
           }}
           error={errors.from}
           labelClassName="mb-1 block text-[0.82rem] font-semibold text-slate-100 sm:text-[0.86rem]"
-          inputClassName={`w-full rounded-2xl border bg-white py-2.5 pr-4 pl-10 text-[0.95rem] text-slate-900 placeholder:text-slate-400 shadow-sm transition duration-150 focus:outline-none ${
+          inputClassName={`w-full rounded-2xl border bg-white py-2.5 pr-14 pl-10 text-[0.95rem] text-slate-900 placeholder:text-slate-400 shadow-sm transition duration-150 focus:outline-none sm:pr-24 ${
             errors.from ? "border-red-400 focus:border-red-400 focus:ring-4 focus:ring-red-100" : "border-slate-200 focus:border-brandBlue/70 focus:ring-4 focus:ring-brandBlue/15"
           }`}
         />
@@ -112,7 +112,7 @@ export function HeroQuoteCard() {
           }}
           error={errors.to}
           labelClassName="mb-1 block text-[0.82rem] font-semibold text-slate-100 sm:text-[0.86rem]"
-          inputClassName={`w-full rounded-2xl border bg-white py-2.5 pr-4 pl-10 text-[0.95rem] text-slate-900 placeholder:text-slate-400 shadow-sm transition duration-150 focus:outline-none ${
+          inputClassName={`w-full rounded-2xl border bg-white py-2.5 pr-14 pl-10 text-[0.95rem] text-slate-900 placeholder:text-slate-400 shadow-sm transition duration-150 focus:outline-none sm:pr-24 ${
             errors.to ? "border-red-400 focus:border-red-400 focus:ring-4 focus:ring-red-100" : "border-slate-200 focus:border-brandBlue/70 focus:ring-4 focus:ring-brandBlue/15"
           }`}
         />

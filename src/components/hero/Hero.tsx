@@ -3,8 +3,8 @@ import { HeroQuoteCard } from "@/src/components/hero/HeroQuoteCard";
 
 export function Hero() {
   return (
-    <section className="relative -mb-px overflow-hidden bg-white">
-      <div className="relative min-h-[calc(100svh-61px)] overflow-hidden bg-slate-100 sm:min-h-[calc(100svh-73px)] lg:h-[calc(100svh-81px)] lg:min-h-0">
+    <section className="relative z-20 -mb-px overflow-visible bg-white">
+      <div className="relative min-h-[calc(100svh-61px)] overflow-visible bg-slate-100 sm:min-h-[calc(100svh-73px)] lg:h-[calc(100svh-81px)] lg:min-h-0">
         <Image
           src="/HeroImg.webp"
           alt=""
