@@ -711,6 +711,28 @@ async function formatProvisionedSheets() {
       },
     },
     {
+      repeatCell: {
+        range: { sheetId: README_SHEET_ID, startRowIndex: 1, endRowIndex: 8, startColumnIndex: 0, endColumnIndex: 2 },
+        cell: {
+          userEnteredFormat: {
+            verticalAlignment: "TOP",
+            wrapStrategy: "WRAP",
+          },
+        },
+        fields: "userEnteredFormat(verticalAlignment,wrapStrategy)",
+      },
+    },
+    {
+      autoResizeDimensions: {
+        dimensions: {
+          sheetId: README_SHEET_ID,
+          dimension: "ROWS",
+          startIndex: 0,
+          endIndex: 8,
+        },
+      },
+    },
+    {
       updateDimensionProperties: {
         range: { sheetId: README_SHEET_ID, dimension: "COLUMNS", startIndex: 0, endIndex: 1 },
         properties: { pixelSize: 190 },
