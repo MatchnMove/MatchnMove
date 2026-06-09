@@ -52,13 +52,13 @@ export function AdminMfaSetup() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-10">
-      <section className="mx-auto max-w-xl rounded-[8px] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-        <div className="flex items-center gap-3">
-          <div className="rounded-[8px] bg-emerald-100 p-3 text-emerald-700"><ShieldCheck className="h-6 w-6" /></div>
-          <div>
+    <main className="min-h-screen bg-slate-100 px-4 py-6 sm:py-10">
+      <section className="mx-auto max-w-xl rounded-[8px] border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
+        <div className="flex items-start gap-3 sm:items-center">
+          <div className="shrink-0 rounded-[8px] bg-emerald-100 p-3 text-emerald-700"><ShieldCheck className="h-6 w-6" /></div>
+          <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">Admin security</p>
-            <h1 className="mt-1 text-2xl font-black text-slate-950">Authenticator verification</h1>
+            <h1 className="mt-1 text-xl font-black text-slate-950 sm:text-2xl">Authenticator verification</h1>
           </div>
         </div>
 
@@ -66,16 +66,16 @@ export function AdminMfaSetup() {
         {setup && !setup.enabled ? (
           <div className="mt-6">
             <p className="text-sm leading-6 text-slate-600">Scan this code in Google Authenticator, Microsoft Authenticator, 1Password, or another TOTP app.</p>
-            {setup.qrDataUrl ? <Image src={setup.qrDataUrl} alt="Admin authenticator QR code" width={280} height={280} unoptimized className="mx-auto mt-5 h-[280px] w-[280px]" /> : null}
+            {setup.qrDataUrl ? <Image src={setup.qrDataUrl} alt="Admin authenticator QR code" width={280} height={280} unoptimized className="mx-auto mt-5 h-auto w-full max-w-[280px]" /> : null}
             {setup.manualKey ? <p className="mt-4 break-all rounded-[8px] bg-slate-100 p-3 font-mono text-xs text-slate-700">Manual key: {setup.manualKey}</p> : null}
           </div>
         ) : null}
         {setup?.enabled ? <p className="mt-6 text-sm leading-6 text-slate-600">Enter the current code from your authenticator app to continue to verification reviews.</p> : null}
 
         {setup ? (
-          <div className="mt-5 flex gap-2">
-            <input value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" placeholder="6-digit code" className="min-h-[48px] flex-1 rounded-[8px] border border-slate-300 px-4 text-base outline-none focus:border-emerald-600" />
-            <button type="button" onClick={() => void verify()} disabled={busy || code.length !== 6} className="min-h-[48px] rounded-[8px] bg-emerald-700 px-5 text-sm font-semibold text-white disabled:opacity-50">
+          <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+            <input value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" placeholder="6-digit code" className="min-h-[48px] min-w-0 flex-1 rounded-[8px] border border-slate-300 px-4 text-base outline-none focus:border-emerald-600" />
+            <button type="button" onClick={() => void verify()} disabled={busy || code.length !== 6} className="min-h-[48px] w-full rounded-[8px] bg-emerald-700 px-5 text-sm font-semibold text-white disabled:opacity-50 sm:w-auto">
               {busy ? "Checking..." : "Continue"}
             </button>
           </div>
