@@ -23,7 +23,9 @@ export async function POST(request: NextRequest) {
 
   const limitParam = request.nextUrl.searchParams.get("limit");
   const parsedLimit = limitParam ? Number(limitParam) : 50;
-  const limit = Number.isFinite(parsedLimit) ? parsedLimit : 50;
+  const limit = Number.isFinite(parsedLimit)
+    ? Math.min(Math.max(Math.floor(parsedLimit), 1), 100)
+    : 50;
 
   const [email, leads] = await Promise.all([
     processEmailQueue(limit),
@@ -43,7 +45,9 @@ export async function GET(request: NextRequest) {
 
   const limitParam = request.nextUrl.searchParams.get("limit");
   const parsedLimit = limitParam ? Number(limitParam) : 10;
-  const limit = Number.isFinite(parsedLimit) ? parsedLimit : 10;
+  const limit = Number.isFinite(parsedLimit)
+    ? Math.min(Math.max(Math.floor(parsedLimit), 1), 100)
+    : 10;
 
   const result = await getEmailDiagnostics(limit);
   return NextResponse.json(result);

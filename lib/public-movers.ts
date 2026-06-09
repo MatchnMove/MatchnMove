@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { getMoverLogoUrl } from "@/lib/mover-logo";
 import { isMoverProfileLive } from "@/lib/mover-profile";
 import { cacheTaggedData, PUBLIC_MOVERS_TAG } from "@/lib/public-cache";
 import { getDisplayedReviewerName, getPublicReviewsForMover } from "@/lib/reviews";
@@ -56,7 +57,7 @@ function toPublicMover(mover: PublicMoverCandidate): PublicMover {
     id: mover.id,
     companyName: mover.companyName,
     businessDescription: mover.businessDescription,
-    logoUrl: mover.logoUrl,
+    logoUrl: getMoverLogoUrl(mover.id, mover.logoUrl),
     serviceAreas: mover.serviceAreas,
     yearsOperating: mover.yearsOperating,
     averageRating: mover.averageRating,
@@ -140,7 +141,7 @@ const loadPublicMoverProfile = cacheTaggedData(async (moverId: string) => {
       id: mover.id,
       companyName: mover.companyName,
       businessDescription: mover.businessDescription,
-      logoUrl: mover.logoUrl,
+      logoUrl: getMoverLogoUrl(mover.id, mover.logoUrl),
       serviceAreas: mover.serviceAreas,
       yearsOperating: mover.yearsOperating,
       averageRating: mover.averageRating,

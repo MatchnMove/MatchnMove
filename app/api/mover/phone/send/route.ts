@@ -5,7 +5,7 @@ import {
   hashPhoneVerificationCode,
   normalizeNzPhoneNumber,
 } from "@/lib/phone-verification";
-import { rateLimit } from "@/lib/rate-limit";
+import { getClientIp, rateLimit } from "@/lib/rate-limit";
 import { requireAuthenticatedMover } from "@/lib/mover-profile";
 import { sendPhoneVerificationSms } from "@/lib/sms";
 
@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
   if (!mover) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!mover.phone) return NextResponse.json({ error: "Save a phone number first." }, { status: 400 });
 
-  const ip = req.headers.get("x-forwarded-for") ?? "local";
+  const ip = getClientIp(req);
   if (!rateLimit(`phone-verification:${mover.id}:${ip}`, 4, 60 * 60_000).allowed) {
     return NextResponse.json({ error: "Too many SMS requests. Try again later." }, { status: 429 });
   }

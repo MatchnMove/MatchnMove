@@ -50,7 +50,7 @@ export default function Home() {
                     href="/about"
                     className="inline-flex min-h-[46px] w-full items-center justify-center rounded-xl bg-[linear-gradient(135deg,#0f172a,#1e293b)] px-6 py-3 text-[0.95rem] font-semibold text-white shadow-[0_18px_40px_-24px_rgba(15,23,42,0.45)] transition duration-200 hover:translate-y-[-1px] hover:shadow-[0_24px_48px_-24px_rgba(15,23,42,0.55)] sm:min-h-[52px] sm:w-auto sm:rounded-2xl sm:px-7 sm:text-base"
                   >
-                    Learn more
+                    Learn how Match &apos;n Move works
                   </Link>
                   <p className="max-w-[22rem] text-sm leading-6 text-slate-500">
                     Learn how Match &apos;n Move helps movers grow, then join when you&apos;re ready.

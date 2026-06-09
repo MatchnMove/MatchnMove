@@ -18,19 +18,16 @@
     "prisma:seed": "tsx prisma/seed.ts",
     "admin:cleanup-mover-account": "node scripts/cleanup-admin-mover-account.mjs",
     "seed:demo-movers": "node scripts/seed-demo-movers.mjs",
-    "seed:shared-load": "node scripts/seed-shared-load-data.mjs"
+    "seed:shared-load": "node scripts/seed-shared-load-data.mjs",
+    "load:test": "node scripts/load-scenario.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1063.0",
     "@aws-sdk/s3-request-presigner": "^3.1063.0",
     "@prisma/client": "^5.22.0",
-    "@rive-app/react-canvas": "^4.27.3",
-    "@types/nodemailer": "^7.0.11",
     "bcryptjs": "^2.4.3",
-    "clsx": "^2.1.1",
     "framer-motion": "^12.38.0",
     "google-auth-library": "^10.6.2",
-    "lottie-react": "^2.4.1",
     "lucide-react": "^0.468.0",
     "next": "16.2.7",
     "nodemailer": "8.0.5",
@@ -44,6 +41,7 @@
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^22.10.2",
+    "@types/nodemailer": "^8.0.0",
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",

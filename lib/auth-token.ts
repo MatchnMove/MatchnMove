@@ -27,21 +27,28 @@ export async function consumeAuthToken(token: string, type: AuthTokenType) {
 
 export async function consumeAuthTokenForUser(token: string, type: AuthTokenType, userId?: string) {
   const tokenHash = hashToken(token);
+  const now = new Date();
   const existing = await prisma.authToken.findUnique({
     where: { tokenHash },
     include: { user: true }
   });
 
-  if (!existing || existing.type !== type || existing.consumedAt || existing.expiresAt < new Date() || (userId && existing.userId !== userId)) {
+  if (!existing || existing.type !== type || existing.consumedAt || existing.expiresAt < now || (userId && existing.userId !== userId)) {
     return null;
   }
 
-  await prisma.authToken.update({
-    where: { id: existing.id },
+  const consumed = await prisma.authToken.updateMany({
+    where: {
+      id: existing.id,
+      type,
+      consumedAt: null,
+      expiresAt: { gte: now },
+      ...(userId ? { userId } : {}),
+    },
     data: { consumedAt: new Date() }
   });
 
-  return existing;
+  return consumed.count === 1 ? existing : null;
 }
 
 export async function purgeAuthTokens(userId: string, type: AuthTokenType) {

@@ -3,6 +3,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { prisma } from "@/lib/db";
 import { sendVerificationReviewSubmitted } from "@/lib/email";
 import { calculateMoverProfileReadiness, isPhoneVerificationRequired, requireAuthenticatedMover } from "@/lib/mover-profile";
+import { getMoverLogoUrl } from "@/lib/mover-logo";
 import { NZBN_VERIFICATION, verifyNzbnAgainstRegister } from "@/lib/nzbn-verification";
 import { revalidateAboutPage, revalidatePublicMovers } from "@/lib/public-cache";
 import { moverProfileSchema, sanitiseServiceAreas } from "@/lib/validators";
@@ -30,7 +31,7 @@ function serialiseProfile(mover: NonNullable<Awaited<ReturnType<typeof requireAu
     serviceAreas: sanitiseServiceAreas(mover.serviceAreas),
     email: mover.user.email,
     emailVerified: Boolean(mover.user.emailVerifiedAt),
-    logoUrl: mover.logoUrl,
+    logoUrl: getMoverLogoUrl(mover.id, mover.logoUrl),
     documents: mover.documents.map((document) => ({
       id: document.id,
       type: document.type,

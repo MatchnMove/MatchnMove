@@ -3,12 +3,12 @@ import { prisma } from "@/lib/db";
 import { moverRegisterSchema } from "@/lib/validators";
 import { createMoverAccount, sendVerificationEmail } from "@/lib/mover-auth";
 import { revalidatePublicSite } from "@/lib/public-cache";
-import { rateLimit } from "@/lib/rate-limit";
+import { getClientIp, rateLimit } from "@/lib/rate-limit";
 import { getDatabaseUnavailableMessage, logRuntimeWarning } from "@/lib/runtime-errors";
 import { isConfiguredAdminEmail } from "@/lib/admin-auth";
 
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get("x-forwarded-for") ?? "local";
+  const ip = getClientIp(req);
   if (!rateLimit(`mover-register:${ip}`, 6).allowed) {
     return NextResponse.json({ error: "Too many sign-up attempts. Please try again shortly." }, { status: 429 });
   }

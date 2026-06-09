@@ -1,5 +1,5 @@
 import { performance } from "node:perf_hooks";
-import { randomBytes, scrypt as scryptCallback } from "node:crypto";
+import { createHmac, randomBytes, scrypt as scryptCallback } from "node:crypto";
 import { promisify } from "node:util";
 import { PrismaClient } from "@prisma/client";
 
@@ -99,6 +99,23 @@ function makeIp(offset, segment = 10) {
   const b = Math.floor(offset / 250) % 250;
   const c = (offset % 250) + 1;
   return `${a}.1.${b}.${c}`;
+}
+
+function createSessionCookie(user) {
+  const secret = process.env.NEXTAUTH_SECRET;
+  if (!secret) {
+    throw new Error("NEXTAUTH_SECRET is required for authenticated load-test flows.");
+  }
+
+  const payload = Buffer.from(JSON.stringify({
+    userId: user.id,
+    email: user.email,
+    role: user.role,
+    mfaVerified: true,
+    exp: Date.now() + 60 * 60 * 1000,
+  })).toString("base64url");
+  const signature = createHmac("sha256", secret).update(payload).digest("hex");
+  return `mm_session=${payload}.${signature}`;
 }
 
 async function request(label, path, options = {}) {
@@ -252,6 +269,9 @@ async function getStablePublicMoverId() {
 }
 
 function buildQuotePayload(index) {
+  const moveDate = new Date();
+  moveDate.setUTCDate(moveDate.getUTCDate() + 30);
+
   return {
     name: `Load Test Customer ${index}`,
     email: `${runId}-quote-${index}@loadtest.local`,
@@ -269,7 +289,7 @@ function buildQuotePayload(index) {
     toRegion: "Wellington",
     toPostcode: "6011",
     toCountry: "New Zealand",
-    moveDate: "2026-05-01",
+    moveDate: moveDate.toISOString().slice(0, 10),
     dateFlexible: false,
     movingWhat: "Household furniture and boxes",
   };
@@ -308,31 +328,8 @@ async function customerFlow(index) {
 }
 
 async function moverFlow(index, mover) {
-  const ip = makeIp(index, 60);
   await request("page.mover.login", "/mover/login");
-
-  const loginResult = await request("api.mover.login", "/api/mover/login", {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-forwarded-for": ip,
-    },
-    body: JSON.stringify({
-      email: mover.user.email,
-      password: moverPassword,
-    }),
-  });
-
-  const setCookies =
-    typeof loginResult.headers.getSetCookie === "function"
-      ? loginResult.headers.getSetCookie()
-      : [loginResult.headers.get("set-cookie")].filter(Boolean);
-  const cookie = setCookies.map((value) => value.split(";")[0]).join("; ");
-
-  if (!loginResult.ok || !cookie) {
-    return { kind: "mover", ok: false, stage: "login" };
-  }
-
+  const cookie = createSessionCookie(mover.user);
   const authHeaders = { cookie };
   const profileResult = await request("api.mover.profile.get", "/api/mover/profile", {
     headers: authHeaders,

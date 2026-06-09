@@ -72,6 +72,9 @@ Default seeded mover login:
 - `NEXT_PUBLIC_NO_REPLY_EMAIL`
 
 ## Optional integrations
+- `ADDRESS_SEARCH_BASE_URL`
+  A Nominatim-compatible `/search` endpoint for address suggestions. Production intentionally falls back to manual
+  address entry when this is unset. Do not use the public `nominatim.openstreetmap.org` endpoint for autocomplete.
 - `NEXT_PUBLIC_GOOGLE_CLIENT_ID`
   Enables the Google Identity Services button on the mover login page.
 - `GOOGLE_CLIENT_ID`

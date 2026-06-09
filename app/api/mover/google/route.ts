@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { moverGoogleSchema } from "@/lib/validators";
 import { createAdminAccount, createMoverAccount, ensureMoverCompanyProfile, establishMoverSession } from "@/lib/mover-auth";
 import { revalidatePublicSite } from "@/lib/public-cache";
-import { rateLimit } from "@/lib/rate-limit";
+import { getClientIp, rateLimit } from "@/lib/rate-limit";
 import { getDatabaseUnavailableMessage, logRuntimeWarning } from "@/lib/runtime-errors";
 import { isAdminUser, isConfiguredAdminEmail } from "@/lib/admin-auth";
 
@@ -42,7 +42,7 @@ async function verifyGoogleCredential(credential: string, clientId: string) {
 }
 
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get("x-forwarded-for") ?? "local";
+  const ip = getClientIp(req);
   if (!rateLimit(`mover-google:${ip}`, 10).allowed) {
     return NextResponse.json({ error: "Too many sign-in attempts. Please try again shortly." }, { status: 429 });
   }

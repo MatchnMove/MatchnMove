@@ -2,11 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { sendContactNotification } from "@/lib/email";
 import { contactSchema } from "@/lib/validators";
-import { rateLimit } from "@/lib/rate-limit";
+import { getClientIp, rateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get("x-forwarded-for") ?? "local";
+  const ip = getClientIp(req);
   if (!rateLimit(`contact:${ip}`, 6).allowed) return NextResponse.json({ error: "Rate limited" }, { status: 429 });
+  const contentLength = Number(req.headers.get("content-length") || "0");
+  if (contentLength > 16 * 1024) {
+    return NextResponse.json({ error: "Contact message is too large." }, { status: 413 });
+  }
 
   const parsed = contactSchema.safeParse(await req.json());
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });

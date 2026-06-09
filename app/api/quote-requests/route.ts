@@ -1,23 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { getLeadExpiryDate, getQuoteMatchedRegions, selectLeadRecipients, sendMoverNewLeadNotification } from "@/lib/lead-lifecycle";
 import { calculateLeadPrice } from "@/lib/lead-pricing";
 import { isMoverProfileLive } from "@/lib/mover-profile";
 import { quoteSchema } from "@/lib/validators";
-import { rateLimit } from "@/lib/rate-limit";
+import { getClientIp, rateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
   try {
-    const forwardedFor = req.headers.get("x-forwarded-for") ?? "local";
-    const ip = forwardedFor.split(",")[0]?.trim() || "local";
+    const ip = getClientIp(req);
     if (!rateLimit(`quote:${ip}`, 10).allowed) {
       return NextResponse.json({ error: "Rate limited" }, { status: 429 });
+    }
+    const contentLength = Number(req.headers.get("content-length") || "0");
+    if (contentLength > 128 * 1024) {
+      return NextResponse.json({ error: "Quote request is too large." }, { status: 413 });
     }
 
     const parsed = quoteSchema.safeParse(await req.json());
     if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
     const data = parsed.data;
+    const { transcriptRaw, transcriptFields, ...quoteData } = data;
     const moveDate = data.moveDate ? new Date(data.moveDate) : null;
     if (moveDate && Number.isNaN(moveDate.getTime())) {
       return NextResponse.json({ error: "Invalid move date." }, { status: 400 });
@@ -25,9 +30,21 @@ export async function POST(req: NextRequest) {
 
     const quote = await prisma.quoteRequest.create({
       data: {
-        ...data,
+        ...quoteData,
         moveDate,
-        transcriptionState: data.transcriptRaw ? "complete" : "manual",
+        transcriptRaw:
+          transcriptRaw === null
+            ? Prisma.JsonNull
+            : transcriptRaw === undefined
+              ? undefined
+              : (transcriptRaw as Prisma.InputJsonValue),
+        transcriptFields:
+          transcriptFields === null
+            ? Prisma.JsonNull
+            : transcriptFields === undefined
+              ? undefined
+              : (transcriptFields as Prisma.InputJsonValue),
+        transcriptionState: transcriptRaw ? "complete" : "manual",
         spreadsheetDelivery: {
           create: {},
         },

@@ -22,7 +22,9 @@ export async function POST(request: NextRequest) {
 
   const limitParam = request.nextUrl.searchParams.get("limit");
   const parsedLimit = limitParam ? Number(limitParam) : 25;
-  const limit = Number.isFinite(parsedLimit) ? parsedLimit : 25;
+  const limit = Number.isFinite(parsedLimit)
+    ? Math.min(Math.max(Math.floor(parsedLimit), 1), 100)
+    : 25;
 
   const result = await processAutomaticReviewInvites(limit);
   return NextResponse.json(result);

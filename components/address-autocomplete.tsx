@@ -90,10 +90,19 @@ export function AddressAutocomplete({
           Array.isArray(data.suggestions)
             ? data.suggestions.filter((item): item is AddressSuggestion => Boolean(item?.label))
             : [];
+        const providerAvailable =
+          typeof data !== "object" ||
+          data === null ||
+          !("available" in data) ||
+          data.available !== false;
 
         setSuggestions(nextSuggestions);
         setActiveIndex(nextSuggestions.length > 0 ? 0 : -1);
-        setSearchError(response.ok ? "" : "Address search is temporarily unavailable. You can still type the address manually.");
+        setSearchError(
+          response.ok && providerAvailable
+            ? ""
+            : "Address search is temporarily unavailable. You can still type the address manually.",
+        );
       } catch {
         if (controller.signal.aborted || searchSeq !== searchSeqRef.current) return;
         setSuggestions([]);

@@ -2,33 +2,43 @@ import { z } from "zod";
 import { NZ_SERVICE_AREAS, sanitiseNzServiceAreas } from "@/lib/nz-regions";
 
 export const contactSchema = z.object({
-  name: z.string().min(2),
-  email: z.string().email(),
+  name: z.string().trim().min(2).max(100),
+  email: z.string().trim().toLowerCase().email().max(254),
   message: z.string().min(10).max(2000),
 });
 
+const limitedTranscriptSchema = z
+  .unknown()
+  .refine((value) => {
+    try {
+      return JSON.stringify(value).length <= 50_000;
+    } catch {
+      return false;
+    }
+  }, "Voice transcript data is too large.");
+
 export const quoteSchema = z.object({
-  name: z.string().min(2),
-  email: z.string().email(),
-  phone: z.string().min(7),
-  fromPropertyType: z.string(),
-  toPropertyType: z.string(),
-  bedrooms: z.string(),
-  fromAddress: z.string().min(3),
-  fromCity: z.string().min(2),
-  fromRegion: z.string().min(2),
-  fromPostcode: z.string().min(2),
-  fromCountry: z.string().min(2),
-  toAddress: z.string().min(3),
-  toCity: z.string().min(2),
-  toRegion: z.string().min(2),
-  toPostcode: z.string().min(2),
-  toCountry: z.string().min(2),
-  moveDate: z.string().optional().nullable(),
+  name: z.string().trim().min(2).max(100),
+  email: z.string().trim().toLowerCase().email().max(254),
+  phone: z.string().trim().min(7).max(30),
+  fromPropertyType: z.string().trim().min(1).max(50),
+  toPropertyType: z.string().trim().min(1).max(50),
+  bedrooms: z.string().trim().min(1).max(20),
+  fromAddress: z.string().trim().min(3).max(200),
+  fromCity: z.string().trim().min(2).max(100),
+  fromRegion: z.string().trim().min(2).max(100),
+  fromPostcode: z.string().trim().min(2).max(20),
+  fromCountry: z.string().trim().min(2).max(100),
+  toAddress: z.string().trim().min(3).max(200),
+  toCity: z.string().trim().min(2).max(100),
+  toRegion: z.string().trim().min(2).max(100),
+  toPostcode: z.string().trim().min(2).max(20),
+  toCountry: z.string().trim().min(2).max(100),
+  moveDate: z.string().max(40).optional().nullable(),
   dateFlexible: z.boolean().default(false),
-  movingWhat: z.string().optional().nullable(),
-  transcriptRaw: z.any().optional(),
-  transcriptFields: z.any().optional(),
+  movingWhat: z.string().trim().max(2000).optional().nullable(),
+  transcriptRaw: limitedTranscriptSchema.optional(),
+  transcriptFields: limitedTranscriptSchema.optional(),
 });
 
 const passwordSchema = z
@@ -185,7 +195,7 @@ export const moverProfileSchema = z.object({
 });
 
 export const moverLogoSchema = z.object({
-  logoUrl: z.string().trim().min(1, "A logo is required"),
+  logoUrl: z.string().trim().min(1, "A logo is required").max(400_000, "Logo data is too large"),
 });
 
 export const moverDocumentTypeSchema = z.enum(["INSURANCE", "NZBN_PROOF", "LICENCE", "OTHER"]);

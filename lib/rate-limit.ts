@@ -27,6 +27,20 @@ function sweepExpiredEntries(now: number) {
   globalForRateLimit.__matchnmoveRateLimitLastSweep = now;
 }
 
+export function getClientIp(request: { headers: Headers }) {
+  const realIp = request.headers.get("x-real-ip")?.trim();
+  if (realIp) return realIp.slice(0, 128);
+
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  const proxyAddress = forwardedFor
+    ?.split(",")
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .at(-1);
+
+  return (proxyAddress || "local").slice(0, 128);
+}
+
 export function rateLimit(key: string, max = 20, windowMs = 60_000) {
   const now = Date.now();
   sweepExpiredEntries(now);

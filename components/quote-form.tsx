@@ -681,7 +681,9 @@ export function QuoteForm() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-[#101b34] to-[#0f2747] py-8 sm:py-12">
       <div className="container-shell relative text-white">
-        <p className="mb-5 max-w-2xl text-base leading-7 text-slate-100 sm:mb-6 sm:text-2xl">Fill in your details to get free, no-obligation moving quotes from trusted local movers.</p>
+        <h1 className="mb-5 max-w-2xl text-base font-semibold leading-7 text-slate-100 sm:mb-6 sm:text-2xl">
+          Fill in your details to get free, no-obligation moving quotes from trusted local movers.
+        </h1>
         <div ref={formCardRef} className="max-w-3xl rounded-[22px] border border-slate-200/80 bg-white p-4 text-slate-900 shadow-[0_20px_45px_-25px_rgba(2,6,23,0.65)] sm:rounded-2xl sm:p-7">
           <div className="mb-5 sm:mb-7">
             <div className="mb-2 flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
@@ -711,7 +713,7 @@ export function QuoteForm() {
           </div>
           {step === 1 && (
             <div className="space-y-4">
-              <h3 className="text-xl font-semibold">Your Contact Details</h3>
+              <h2 className="text-xl font-semibold">Your Contact Details</h2>
               {(["name", "email", "phone"] as const).map((k) => (
                 <label key={k} className="block">
                   <span className="mb-1 block text-sm font-medium">{fieldMeta[k].label}</span>
@@ -730,7 +732,7 @@ export function QuoteForm() {
           )}
           {step === 2 && (
             <div className="grid gap-4">
-              <h3 className="text-xl font-semibold">What type of property is your moving address?</h3>
+              <h2 className="text-xl font-semibold">What type of property is your moving address?</h2>
               <PropertyCards
                 value={form.fromPropertyType}
                 onSelect={(next) => {
@@ -821,7 +823,7 @@ export function QuoteForm() {
           )}
           {step === 3 && (
             <div className="grid gap-4">
-              <h3 className="text-xl font-semibold">Where are you moving to?</h3>
+              <h2 className="text-xl font-semibold">Where are you moving to?</h2>
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
                 <p className="text-sm font-medium">Do you know what type of property you&apos;re moving into?</p>
                 <div className="mt-3 grid grid-cols-2 gap-2 sm:flex">

@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { moverForgotPasswordSchema } from "@/lib/validators";
-import { rateLimit } from "@/lib/rate-limit";
+import { getClientIp, rateLimit } from "@/lib/rate-limit";
 import { sendPasswordResetEmail } from "@/lib/mover-auth";
 
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get("x-forwarded-for") ?? "local";
+  const ip = getClientIp(req);
   if (!rateLimit(`mover-forgot-password:${ip}`, 5).allowed) {
     return NextResponse.json({ error: "Too many reset requests. Please try again shortly." }, { status: 429 });
   }

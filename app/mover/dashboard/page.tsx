@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { LEAD_PRICING } from "@/lib/lead-pricing";
 import { serializeMoverLeadQuoteRequest } from "@/lib/mover-lead-visibility";
 import { calculateMoverProfileReadiness, isPhoneVerificationRequired } from "@/lib/mover-profile";
+import { getMoverLogoUrl } from "@/lib/mover-logo";
 import { getQuoteServiceAreas, sanitiseNzServiceAreas } from "@/lib/nz-regions";
 import { getMoverLaunchTrialSetting } from "@/lib/platform-settings";
 import { getMoverCompetitionSnapshot, getMoverLeaderboard, getMoverRatingsDashboardData } from "@/lib/reviews";
@@ -124,7 +125,7 @@ export default async function MoverDashboardPage({
       viewUrl: `/api/mover/profile/documents/${document.id}/file`,
       createdAt: document.createdAt.toISOString(),
     })),
-    logoUrl: mover.logoUrl,
+    logoUrl: getMoverLogoUrl(mover.id, mover.logoUrl),
     baseLeadPrice: LEAD_PRICING.basePrice,
     launchTrial,
     profileCompletion: readiness.completion,

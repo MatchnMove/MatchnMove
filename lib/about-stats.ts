@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { isMoverProfileLive } from "@/lib/mover-profile";
+import { getMoverLogoUrl } from "@/lib/mover-logo";
 import { ABOUT_PAGE_TAG, cacheTaggedData } from "@/lib/public-cache";
 
 type AboutPageMover = {
@@ -64,7 +65,7 @@ export const getAboutPageStats = cacheTaggedData(async (): Promise<AboutPageStat
       movers.filter(isMoverProfileLive).map((mover) => ({
         id: mover.id,
         companyName: mover.companyName,
-        logoUrl: mover.logoUrl,
+        logoUrl: getMoverLogoUrl(mover.id, mover.logoUrl),
         serviceAreas: mover.serviceAreas,
         yearsOperating: mover.yearsOperating,
       })),

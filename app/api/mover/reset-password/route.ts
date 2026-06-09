@@ -4,10 +4,10 @@ import { prisma } from "@/lib/db";
 import { consumeAuthToken, purgeAuthTokens } from "@/lib/auth-token";
 import { hashPassword } from "@/lib/password";
 import { moverResetPasswordSchema } from "@/lib/validators";
-import { rateLimit } from "@/lib/rate-limit";
+import { getClientIp, rateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get("x-forwarded-for") ?? "local";
+  const ip = getClientIp(req);
   if (!rateLimit(`mover-reset-password:${ip}`, 8).allowed) {
     return NextResponse.json({ error: "Too many password reset attempts. Please try again shortly." }, { status: 429 });
   }

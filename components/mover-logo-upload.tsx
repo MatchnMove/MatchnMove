@@ -9,7 +9,7 @@ type MoverLogoUploadProps = {
   onSaved?: (payload: { logoUrl: string; readiness?: unknown }) => void;
 };
 
-const MAX_FILE_SIZE = 2 * 1024 * 1024;
+const MAX_FILE_SIZE = 256 * 1024;
 
 export function MoverLogoUpload({ initialLogoUrl, onSaved }: MoverLogoUploadProps) {
   const [logoUrl, setLogoUrl] = useState(initialLogoUrl);
@@ -21,14 +21,14 @@ export function MoverLogoUpload({ initialLogoUrl, onSaved }: MoverLogoUploadProp
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith("image/")) {
-      setError("Please choose an image file.");
+    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+      setError("Please choose a PNG, JPG, or WEBP image.");
       setMessage(null);
       return;
     }
 
     if (file.size > MAX_FILE_SIZE) {
-      setError("Please keep the logo under 2MB.");
+      setError("Please keep the logo under 256KB.");
       setMessage(null);
       return;
     }
@@ -96,10 +96,10 @@ export function MoverLogoUpload({ initialLogoUrl, onSaved }: MoverLogoUploadProp
       <label className="mt-4 flex cursor-pointer items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(135deg,#0f172a,#1e3a5f)] px-4 py-3 text-sm font-semibold text-white transition hover:translate-y-[-1px] sm:mt-5">
         {isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <UploadCloud className="h-4 w-4" />}
         {isPending ? "Saving logo..." : "Upload logo"}
-        <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} disabled={isPending} />
+        <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={handleFileChange} disabled={isPending} />
       </label>
 
-      <p className="mt-3 text-sm leading-6 text-slate-500">PNG, JPG, WEBP, or SVG up to 2MB.</p>
+      <p className="mt-3 text-sm leading-6 text-slate-500">PNG, JPG, or WEBP up to 256KB.</p>
 
       {message ? (
         <p className="mt-4 flex items-center gap-2 text-sm font-semibold text-emerald-700">
