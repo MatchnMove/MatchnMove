@@ -5,6 +5,7 @@ import { createMoverAccount, sendVerificationEmail } from "@/lib/mover-auth";
 import { revalidatePublicSite } from "@/lib/public-cache";
 import { rateLimit } from "@/lib/rate-limit";
 import { getDatabaseUnavailableMessage, logRuntimeWarning } from "@/lib/runtime-errors";
+import { isConfiguredAdminEmail } from "@/lib/admin-auth";
 
 export async function POST(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for") ?? "local";
@@ -16,6 +17,11 @@ export async function POST(req: NextRequest) {
     const parsed = moverRegisterSchema.safeParse(await req.json());
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.issues[0]?.message || "Invalid sign up details" }, { status: 400 });
+    }
+    if (isConfiguredAdminEmail(parsed.data.email)) {
+      return NextResponse.json({
+        error: "This email is reserved for an admin account. Use Google sign-in to continue.",
+      }, { status: 400 });
     }
 
     const existingUser = await prisma.user.findUnique({ where: { email: parsed.data.email } });

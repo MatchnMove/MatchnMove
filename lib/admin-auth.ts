@@ -13,7 +13,7 @@ type AdminUser = {
   mfaVerified?: boolean;
 };
 
-function getConfiguredAdminEmails() {
+export function getConfiguredAdminEmails() {
   return new Set(
     (process.env.MOVER_ADMIN_EMAILS || "")
       .split(",")
@@ -22,9 +22,13 @@ function getConfiguredAdminEmails() {
   );
 }
 
+export function isConfiguredAdminEmail(email: string) {
+  return getConfiguredAdminEmails().has(email.trim().toLowerCase());
+}
+
 export function isAdminUser(user: AdminUser | null | undefined): user is AdminUser {
   if (!user) return false;
-  return user.role === "ADMIN" || getConfiguredAdminEmails().has(user.email.trim().toLowerCase());
+  return user.role === "ADMIN" || isConfiguredAdminEmail(user.email);
 }
 
 function extractBearerToken(req: NextRequest) {

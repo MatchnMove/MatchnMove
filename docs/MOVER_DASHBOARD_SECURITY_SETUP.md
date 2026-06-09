@@ -87,12 +87,12 @@ railway up ./services/malware-scanner --path-as-root --service malware-scanner -
 ## ACTION REQUIRED 6: Complete admin MFA
 
 1. Deploy the app with `MFA_ENCRYPTION_KEY`.
-2. Sign in using an email listed in `MOVER_ADMIN_EMAILS`.
+2. Sign in with Google using an email listed in the comma-separated `MOVER_ADMIN_EMAILS` variable.
 3. Open `/admin/verification`.
 4. The app redirects to `/admin/mfa`.
 5. Scan the QR code with an authenticator app and enter the current six-digit code.
 
-Every later browser admin session requires an authenticator code. The API admin token remains available for controlled server-to-server automation only.
+Each administrator receives a separate QR code and MFA secret. Every later browser admin session requires that administrator's authenticator code. The API admin token remains available for controlled server-to-server automation only.
 
 ## ACTION REQUIRED 7: NZBN production key
 

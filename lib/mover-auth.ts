@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { createSessionToken, setSessionCookie } from "@/lib/auth";
 import { issueAuthToken, purgeAuthTokens } from "@/lib/auth-token";
 import { sendMoverPasswordResetEmail, sendMoverSignInCodeEmail, sendMoverVerificationEmail } from "@/lib/email";
+import { isConfiguredAdminEmail } from "@/lib/admin-auth";
 import { sanitiseNzServiceAreas } from "@/lib/nz-regions";
 import { hashPassword } from "@/lib/password";
 
@@ -21,10 +22,7 @@ function normalizeServiceAreas(serviceAreas: string[]) {
 }
 
 function isAdminAccount(user: { email: string; role: string }) {
-  const configuredAdmins = (process.env.MOVER_ADMIN_EMAILS || "")
-    .split(",")
-    .map((email) => email.trim().toLowerCase());
-  return user.role === "ADMIN" || configuredAdmins.includes(user.email.trim().toLowerCase());
+  return user.role === "ADMIN" || isConfiguredAdminEmail(user.email);
 }
 
 export async function establishMoverSession(
@@ -68,6 +66,21 @@ export async function createMoverAccount(input: MoverAccountInput) {
     return createdUser;
   });
 
+  await establishMoverSession(user);
+  return user;
+}
+
+export async function createAdminAccount(input: { name: string; email: string }) {
+  const passwordHash = await hashPassword(randomBytes(32).toString("hex"));
+  const user = await prisma.user.create({
+    data: {
+      name: input.name.trim(),
+      email: input.email.trim().toLowerCase(),
+      passwordHash,
+      emailVerifiedAt: new Date(),
+      role: "ADMIN",
+    },
+  });
   await establishMoverSession(user);
   return user;
 }

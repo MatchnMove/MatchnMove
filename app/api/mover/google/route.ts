@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { OAuth2Client } from "google-auth-library";
 import { prisma } from "@/lib/db";
 import { moverGoogleSchema } from "@/lib/validators";
-import { createMoverAccount, ensureMoverCompanyProfile, establishMoverSession } from "@/lib/mover-auth";
+import { createAdminAccount, createMoverAccount, ensureMoverCompanyProfile, establishMoverSession } from "@/lib/mover-auth";
 import { revalidatePublicSite } from "@/lib/public-cache";
 import { rateLimit } from "@/lib/rate-limit";
 import { getDatabaseUnavailableMessage, logRuntimeWarning } from "@/lib/runtime-errors";
-import { isAdminUser } from "@/lib/admin-auth";
+import { isAdminUser, isConfiguredAdminEmail } from "@/lib/admin-auth";
 
 const googleClient = new OAuth2Client();
 
@@ -69,6 +69,17 @@ export async function POST(req: NextRequest) {
     });
 
     if (!existingUser) {
+      if (isConfiguredAdminEmail(googleAccount.email)) {
+        const adminUser = await createAdminAccount({
+          name: googleAccount.name,
+          email: googleAccount.email,
+        });
+        return NextResponse.json({
+          ok: true,
+          adminMfaRequired: isAdminUser({ ...adminUser, mfaVerified: false }),
+        });
+      }
+
       const newUser = await createMoverAccount({
         name: googleAccount.name,
         companyName: buildCompanyName(googleAccount.name),
@@ -99,7 +110,8 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    if (!existingUser.moverCompany) {
+    const adminMfaRequired = isAdminUser({ ...sessionUser, mfaVerified: false });
+    if (!existingUser.moverCompany && !adminMfaRequired) {
       await ensureMoverCompanyProfile({
         userId: existingUser.id,
         name: sessionUser.name || googleAccount.name,
@@ -110,7 +122,7 @@ export async function POST(req: NextRequest) {
     }
 
     await establishMoverSession(sessionUser);
-    return NextResponse.json({ ok: true, adminMfaRequired: isAdminUser({ ...sessionUser, mfaVerified: false }) });
+    return NextResponse.json({ ok: true, adminMfaRequired });
   } catch (error) {
     logRuntimeWarning("Mover Google sign-in unavailable", error);
     return NextResponse.json({ error: getDatabaseUnavailableMessage("Mover Google sign-in") }, { status: 503 });
