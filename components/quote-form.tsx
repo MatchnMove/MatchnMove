@@ -25,7 +25,7 @@ import {
   AddressAutocomplete,
   AddressSuggestion
 } from "@/components/address-autocomplete";
-import { addressSuggestionToValue, parseNominatimAddress } from "@/lib/address-search";
+import { addressSuggestionToValue } from "@/lib/address-search";
 
 type Form = {
   name: string;
@@ -304,10 +304,19 @@ export function QuoteForm() {
       async ({ coords }) => {
         try {
           const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&lat=${coords.latitude}&lon=${coords.longitude}`
+            `/api/address-search/reverse?lat=${encodeURIComponent(coords.latitude)}&lon=${encodeURIComponent(coords.longitude)}`
           );
-          const data = await res.json();
-          applyAddressSuggestion("from", parseNominatimAddress(data));
+          const data: unknown = await res.json().catch(() => ({}));
+          const suggestion =
+            typeof data === "object" && data !== null && "suggestion" in data
+              ? data.suggestion
+              : null;
+
+          if (!res.ok || !suggestion) {
+            throw new Error("Location lookup failed.");
+          }
+
+          applyAddressSuggestion("from", suggestion as AddressSuggestion);
         } catch {
           setSubmitError("Could not convert your location to an address.");
         } finally {

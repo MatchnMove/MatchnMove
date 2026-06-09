@@ -1,7 +1,7 @@
 "use client";
 
 import { KeyboardEvent, useEffect, useId, useRef, useState } from "react";
-import { MapPin } from "lucide-react";
+import { LoaderCircle, MapPin, Search } from "lucide-react";
 import type { AddressSuggestion } from "@/lib/address-search";
 
 export type { AddressSuggestion } from "@/lib/address-search";
@@ -52,16 +52,14 @@ export function AddressAutocomplete({
     }
   };
 
-  useEffect(() => {
-    if (!isOpen) return;
-
+  const searchAddresses = async () => {
     const query = value.trim();
     abortControllerRef.current?.abort();
 
     if (query.length < 3) {
       setLoading(false);
-      setHasSearched(false);
-      setSearchError("");
+      setHasSearched(true);
+      setSearchError("Enter at least 3 characters to search.");
       setSuggestions([]);
       setActiveIndex(-1);
       return;
@@ -71,56 +69,49 @@ export function AddressAutocomplete({
     abortControllerRef.current = controller;
     const searchSeq = searchSeqRef.current + 1;
     searchSeqRef.current = searchSeq;
-    const debounceTimer = setTimeout(async () => {
-      setLoading(true);
-      setHasSearched(false);
-      setSearchError("");
+    setIsOpen(true);
+    setLoading(true);
+    setHasSearched(false);
+    setSearchError("");
 
-      try {
-        const response = await fetch(`/api/address-search?q=${encodeURIComponent(query)}`, {
-          signal: controller.signal
-        });
-        const data: unknown = await response.json().catch(() => ({}));
-        if (controller.signal.aborted || searchSeq !== searchSeqRef.current) return;
+    try {
+      const response = await fetch(`/api/address-search?q=${encodeURIComponent(query)}`, {
+        signal: controller.signal
+      });
+      const data: unknown = await response.json().catch(() => ({}));
+      if (controller.signal.aborted || searchSeq !== searchSeqRef.current) return;
 
-        const nextSuggestions =
-          typeof data === "object" &&
-          data !== null &&
-          "suggestions" in data &&
-          Array.isArray(data.suggestions)
-            ? data.suggestions.filter((item): item is AddressSuggestion => Boolean(item?.label))
-            : [];
-        const providerAvailable =
-          typeof data !== "object" ||
-          data === null ||
-          !("available" in data) ||
-          data.available !== false;
+      const nextSuggestions =
+        typeof data === "object" &&
+        data !== null &&
+        "suggestions" in data &&
+        Array.isArray(data.suggestions)
+          ? data.suggestions.filter((item): item is AddressSuggestion => Boolean(item?.label))
+          : [];
 
-        setSuggestions(nextSuggestions);
-        setActiveIndex(nextSuggestions.length > 0 ? 0 : -1);
-        setSearchError(
-          response.ok && providerAvailable
-            ? ""
-            : "Address search is temporarily unavailable. You can still type the address manually.",
-        );
-      } catch {
-        if (controller.signal.aborted || searchSeq !== searchSeqRef.current) return;
-        setSuggestions([]);
-        setActiveIndex(-1);
-        setSearchError("Address search is temporarily unavailable. You can still type the address manually.");
-      } finally {
-        if (!controller.signal.aborted && searchSeq === searchSeqRef.current) {
-          setLoading(false);
-          setHasSearched(true);
-        }
+      setSuggestions(nextSuggestions);
+      setActiveIndex(nextSuggestions.length > 0 ? 0 : -1);
+      setSearchError(
+        response.ok
+          ? ""
+          : "Address search is temporarily unavailable. You can still type the address manually.",
+      );
+    } catch {
+      if (controller.signal.aborted || searchSeq !== searchSeqRef.current) return;
+      setSuggestions([]);
+      setActiveIndex(-1);
+      setSearchError("Address search is temporarily unavailable. You can still type the address manually.");
+    } finally {
+      if (!controller.signal.aborted && searchSeq === searchSeqRef.current) {
+        setLoading(false);
+        setHasSearched(true);
       }
-    }, 275);
+    }
+  };
 
-    return () => {
-      clearTimeout(debounceTimer);
-      controller.abort();
-    };
-  }, [isOpen, value]);
+  useEffect(() => {
+    return () => abortControllerRef.current?.abort();
+  }, []);
 
   const selectSuggestion = (suggestion: AddressSuggestion) => {
     onSelect(suggestion);
@@ -136,6 +127,12 @@ export function AddressAutocomplete({
       setIsOpen(false);
       setSuggestions([]);
       setActiveIndex(-1);
+      return;
+    }
+
+    if (event.key === "Enter" && suggestions.length === 0) {
+      event.preventDefault();
+      void searchAddresses();
       return;
     }
 
@@ -171,7 +168,7 @@ export function AddressAutocomplete({
           id={inputId}
           className={
             inputClassName ??
-            `w-full rounded-2xl border bg-white py-3.5 pr-4 text-[0.98rem] text-slate-900 placeholder:text-slate-400 shadow-sm transition duration-150 focus:outline-none ${
+            `w-full rounded-2xl border bg-white py-3.5 pr-24 text-[0.98rem] text-slate-900 placeholder:text-slate-400 shadow-sm transition duration-150 focus:outline-none ${
               showIcon ? "pl-10" : "pl-4"
             } ${error ? "border-red-400 focus:border-red-400 focus:ring-4 focus:ring-red-100" : "border-slate-200 focus:border-brandBlue/70 focus:ring-4 focus:ring-brandBlue/15"}`
           }
@@ -187,7 +184,11 @@ export function AddressAutocomplete({
           }}
           onChange={(event) => {
             onChange(event.target.value);
-            setIsOpen(true);
+            abortControllerRef.current?.abort();
+            setSuggestions([]);
+            setSearchError("");
+            setHasSearched(false);
+            setIsOpen(false);
           }}
           onFocus={() => {
             clearBlurTimer();
@@ -195,11 +196,22 @@ export function AddressAutocomplete({
           }}
           onKeyDown={onKeyDown}
           role="combobox"
-          aria-autocomplete="list"
+          aria-autocomplete="none"
           aria-controls={listboxId}
           aria-expanded={showDropdown}
           aria-invalid={Boolean(error)}
         />
+        <button
+          type="button"
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => void searchAddresses()}
+          disabled={loading}
+          className="absolute right-2 top-1/2 inline-flex min-h-9 -translate-y-1/2 items-center gap-1.5 rounded-xl bg-brandOrange px-3 text-sm font-semibold text-white transition hover:brightness-95 disabled:cursor-wait disabled:opacity-70"
+          aria-label="Search for this address"
+        >
+          {loading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+          <span className="hidden sm:inline">Search</span>
+        </button>
       </span>
 
       {showDropdown ? (
@@ -233,6 +245,19 @@ export function AddressAutocomplete({
               <span>{suggestion.label}</span>
             </button>
           ))}
+          {!loading && suggestions.length > 0 ? (
+            <div className="px-3 pb-1 pt-2 text-right text-[11px] text-slate-400">
+              ©{" "}
+              <a
+                href="https://www.openstreetmap.org/copyright"
+                target="_blank"
+                rel="noreferrer"
+                className="underline underline-offset-2 hover:text-slate-600"
+              >
+                OpenStreetMap contributors
+              </a>
+            </div>
+          ) : null}
         </div>
       ) : null}
 
