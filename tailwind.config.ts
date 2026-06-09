@@ -11,7 +11,7 @@ const config: Config = {
     extend: {
       colors: {
         slateBlue: "#435766",
-        accentOrange: "#c2410c",
+        accentOrange: "#de7a3a",
         brandBlue: "#5f6ee8"
       }
     }
