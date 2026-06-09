@@ -36,6 +36,7 @@ declare global {
 }
 
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+const GOOGLE_BUTTON_SCALE = 1.2;
 
 const trustPoints = [
   "Create a mover profile that saves your company details with Match 'n Move",
@@ -138,7 +139,8 @@ export default function MoverLoginPage() {
     if (!GOOGLE_CLIENT_ID || !googleReady || !googleButtonRef.current || googleRenderedRef.current) return;
     const google = window.google?.accounts?.id;
     if (!google) return;
-    const buttonWidth = Math.max(220, Math.min(400, Math.floor(googleButtonRef.current.getBoundingClientRect().width)));
+    const availableWidth = googleButtonRef.current.getBoundingClientRect().width;
+    const buttonWidth = Math.max(220, Math.min(400, Math.floor(availableWidth / GOOGLE_BUTTON_SCALE)));
 
     google.initialize({
       client_id: GOOGLE_CLIENT_ID,
@@ -428,7 +430,7 @@ export default function MoverLoginPage() {
                     {GOOGLE_CLIENT_ID ? (
                       <div
                         ref={googleButtonRef}
-                        className="mx-auto min-h-[44px] w-full max-w-[400px] [&>div]:mx-auto"
+                        className="mx-auto min-h-[48px] w-full max-w-[440px] [&>div]:origin-top-left [&>div]:scale-[1.2]"
                       />
                     ) : (
                       <div className="w-full rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-center text-sm leading-6 text-slate-500">
