@@ -6,6 +6,8 @@ export type AddressSuggestion = {
   region: string;
   postcode: string;
   country: string;
+  placeId?: string;
+  provider?: "google" | "openstreetmap";
 };
 
 export type NominatimAddress = {

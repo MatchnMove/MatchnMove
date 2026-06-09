@@ -73,8 +73,11 @@ Default seeded mover login:
 
 ## Optional integrations
 - `ADDRESS_SEARCH_BASE_URL`
-  A Nominatim-compatible `/search` endpoint for address suggestions. Production intentionally falls back to manual
-  address entry when this is unset. Do not use the public `nominatim.openstreetmap.org` endpoint for autocomplete.
+  Optional Nominatim-compatible endpoint for explicit manual searches. The public endpoint is never used for autocomplete.
+- `GOOGLE_CLOUD_PROJECT_ID`
+  Optional project override for Google Places automatic suggestions. The app otherwise infers it from
+  `GOOGLE_SHEETS_SERVICE_ACCOUNT_EMAIL`. The service account needs `roles/serviceusage.serviceUsageConsumer`,
+  Places API (New), and billing enabled.
 - `NEXT_PUBLIC_GOOGLE_CLIENT_ID`
   Enables the Google Identity Services button on the mover login page.
 - `GOOGLE_CLIENT_ID`

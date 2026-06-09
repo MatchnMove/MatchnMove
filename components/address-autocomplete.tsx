@@ -1,6 +1,6 @@
 "use client";
 
-import { KeyboardEvent, useEffect, useId, useRef, useState } from "react";
+import { KeyboardEvent, useCallback, useEffect, useId, useRef, useState } from "react";
 import { LoaderCircle, MapPin, Search } from "lucide-react";
 import type { AddressSuggestion } from "@/lib/address-search";
 
@@ -41,9 +41,12 @@ export function AddressAutocomplete({
   const [hasSearched, setHasSearched] = useState(false);
   const [searchError, setSearchError] = useState("");
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [provider, setProvider] = useState<"google" | "openstreetmap" | null>(null);
+  const [autocompleteAvailable, setAutocompleteAvailable] = useState(true);
   const abortControllerRef = useRef<AbortController | null>(null);
   const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchSeqRef = useRef(0);
+  const sessionTokenRef = useRef("");
 
   const clearBlurTimer = () => {
     if (blurTimerRef.current) {
@@ -52,14 +55,14 @@ export function AddressAutocomplete({
     }
   };
 
-  const searchAddresses = async () => {
+  const searchAddresses = useCallback(async (mode: "autocomplete" | "manual") => {
     const query = value.trim();
     abortControllerRef.current?.abort();
 
     if (query.length < 3) {
       setLoading(false);
       setHasSearched(true);
-      setSearchError("Enter at least 3 characters to search.");
+      setSearchError(mode === "manual" ? "Enter at least 3 characters to search." : "");
       setSuggestions([]);
       setActiveIndex(-1);
       return;
@@ -75,7 +78,13 @@ export function AddressAutocomplete({
     setSearchError("");
 
     try {
-      const response = await fetch(`/api/address-search?q=${encodeURIComponent(query)}`, {
+      if (mode === "autocomplete" && !sessionTokenRef.current) {
+        sessionTokenRef.current = crypto.randomUUID();
+      }
+      const params = new URLSearchParams({ q: query, mode });
+      if (mode === "autocomplete") params.set("sessionToken", sessionTokenRef.current);
+
+      const response = await fetch(`/api/address-search?${params.toString()}`, {
         signal: controller.signal
       });
       const data: unknown = await response.json().catch(() => ({}));
@@ -88,38 +97,91 @@ export function AddressAutocomplete({
         Array.isArray(data.suggestions)
           ? data.suggestions.filter((item): item is AddressSuggestion => Boolean(item?.label))
           : [];
+      const nextProvider =
+        typeof data === "object" && data !== null && "provider" in data && data.provider === "google"
+          ? "google"
+          : mode === "manual"
+            ? "openstreetmap"
+            : null;
 
       setSuggestions(nextSuggestions);
+      setProvider(nextProvider);
       setActiveIndex(nextSuggestions.length > 0 ? 0 : -1);
-      setSearchError(
-        response.ok
-          ? ""
-          : "Address search is temporarily unavailable. You can still type the address manually.",
-      );
+      if (mode === "autocomplete") {
+        setAutocompleteAvailable(response.ok);
+        if (!response.ok) setIsOpen(false);
+      }
+      setSearchError(response.ok || mode === "autocomplete" ? "" : "Address search is temporarily unavailable. You can still type the address manually.");
     } catch {
       if (controller.signal.aborted || searchSeq !== searchSeqRef.current) return;
       setSuggestions([]);
       setActiveIndex(-1);
-      setSearchError("Address search is temporarily unavailable. You can still type the address manually.");
+      if (mode === "autocomplete") {
+        setAutocompleteAvailable(false);
+        setSearchError("");
+        setIsOpen(false);
+      } else {
+        setSearchError("Address search is temporarily unavailable. You can still type the address manually.");
+      }
     } finally {
       if (!controller.signal.aborted && searchSeq === searchSeqRef.current) {
         setLoading(false);
         setHasSearched(true);
       }
     }
-  };
+  }, [value]);
 
   useEffect(() => {
     return () => abortControllerRef.current?.abort();
   }, []);
 
-  const selectSuggestion = (suggestion: AddressSuggestion) => {
-    onSelect(suggestion);
+  useEffect(() => {
+    const query = value.trim();
+    if (!autocompleteAvailable || query.length < 3) return;
+
+    const timer = setTimeout(() => {
+      void searchAddresses("autocomplete");
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [autocompleteAvailable, searchAddresses, value]);
+
+  const selectSuggestion = async (suggestion: AddressSuggestion) => {
+    let selectedSuggestion = suggestion;
+
+    if (suggestion.provider === "google" && suggestion.placeId) {
+      setLoading(true);
+      try {
+        const params = new URLSearchParams({
+          placeId: suggestion.placeId,
+          sessionToken: sessionTokenRef.current,
+        });
+        const response = await fetch(`/api/address-search/details?${params.toString()}`);
+        const data: unknown = await response.json().catch(() => ({}));
+        if (
+          !response.ok ||
+          typeof data !== "object" ||
+          data === null ||
+          !("suggestion" in data)
+        ) {
+          throw new Error("Address details unavailable.");
+        }
+        selectedSuggestion = data.suggestion as AddressSuggestion;
+      } catch {
+        setSearchError("Could not load that address. Please choose it again or type it manually.");
+        setLoading(false);
+        return;
+      }
+    }
+
+    onSelect(selectedSuggestion);
+    sessionTokenRef.current = "";
     setIsOpen(false);
     setSuggestions([]);
     setActiveIndex(-1);
     setHasSearched(false);
     setSearchError("");
+    setLoading(false);
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -132,7 +194,7 @@ export function AddressAutocomplete({
 
     if (event.key === "Enter" && suggestions.length === 0) {
       event.preventDefault();
-      void searchAddresses();
+      void searchAddresses("manual");
       return;
     }
 
@@ -150,7 +212,7 @@ export function AddressAutocomplete({
 
     if (event.key === "Enter" && activeIndex >= 0) {
       event.preventDefault();
-      selectSuggestion(suggestions[activeIndex]);
+      void selectSuggestion(suggestions[activeIndex]);
     }
   };
 
@@ -196,7 +258,7 @@ export function AddressAutocomplete({
           }}
           onKeyDown={onKeyDown}
           role="combobox"
-          aria-autocomplete="none"
+          aria-autocomplete="list"
           aria-controls={listboxId}
           aria-expanded={showDropdown}
           aria-invalid={Boolean(error)}
@@ -204,7 +266,7 @@ export function AddressAutocomplete({
         <button
           type="button"
           onMouseDown={(event) => event.preventDefault()}
-          onClick={() => void searchAddresses()}
+          onClick={() => void searchAddresses("manual")}
           disabled={loading}
           className="absolute right-2 top-1/2 inline-flex min-h-9 -translate-y-1/2 items-center gap-1.5 rounded-xl bg-brandOrange px-3 text-sm font-semibold text-white transition hover:brightness-95 disabled:cursor-wait disabled:opacity-70"
           aria-label="Search for this address"
@@ -238,14 +300,22 @@ export function AddressAutocomplete({
               className={`flex w-full items-start gap-2 rounded-xl px-3 py-2.5 text-left text-sm leading-5 transition ${
                 activeIndex === index ? "bg-blue-50 text-slate-950" : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"
               }`}
-              onClick={() => selectSuggestion(suggestion)}
+              onClick={() => void selectSuggestion(suggestion)}
               onMouseEnter={() => setActiveIndex(index)}
             >
               <MapPin className="mt-0.5 h-4 w-4 flex-none text-brandBlue" />
               <span>{suggestion.label}</span>
             </button>
           ))}
-          {!loading && suggestions.length > 0 ? (
+          {!loading && suggestions.length > 0 && provider === "google" ? (
+            <div
+              translate="no"
+              className="px-3 pb-1 pt-2 text-right text-xs font-normal tracking-normal text-[#5e5e5e]"
+            >
+              Google Maps
+            </div>
+          ) : null}
+          {!loading && suggestions.length > 0 && provider === "openstreetmap" ? (
             <div className="px-3 pb-1 pt-2 text-right text-[11px] text-slate-400">
               ©{" "}
               <a
