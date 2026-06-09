@@ -20,6 +20,7 @@ declare global {
           renderButton: (
             parent: HTMLElement,
             options: {
+              type?: string;
               theme?: string;
               text?: string;
               shape?: string;
@@ -137,7 +138,7 @@ export default function MoverLoginPage() {
     if (!GOOGLE_CLIENT_ID || !googleReady || !googleButtonRef.current || googleRenderedRef.current) return;
     const google = window.google?.accounts?.id;
     if (!google) return;
-    const buttonWidth = Math.max(220, Math.min(340, Math.floor(googleButtonRef.current.getBoundingClientRect().width)));
+    const buttonWidth = Math.max(220, Math.min(400, Math.floor(googleButtonRef.current.getBoundingClientRect().width)));
 
     google.initialize({
       client_id: GOOGLE_CLIENT_ID,
@@ -152,7 +153,8 @@ export default function MoverLoginPage() {
     });
 
     google.renderButton(googleButtonRef.current, {
-      theme: "outline",
+      type: "standard",
+      theme: "filled_blue",
       text: mode === "signup" ? "signup_with" : "signin_with",
       shape: "pill",
       size: "large",
@@ -422,9 +424,23 @@ export default function MoverLoginPage() {
                     </div>
                   </div> : null}
 
-                  {!loginCodeEmail ? <div className="mt-6 flex justify-center">
+                  {!loginCodeEmail ? <div className="mt-6 rounded-[24px] border border-indigo-200/80 bg-[linear-gradient(135deg,rgba(238,242,255,0.96),rgba(239,246,255,0.96))] p-3 shadow-[0_18px_38px_-26px_rgba(79,70,229,0.72)] sm:p-4">
                     {GOOGLE_CLIENT_ID ? (
-                      <div ref={googleButtonRef} className="min-h-[44px] w-full max-w-[340px] overflow-hidden [&>div]:!w-full [&_iframe]:!w-full" />
+                      <>
+                        <div className="mb-3 flex items-center justify-between gap-3 px-1">
+                          <div>
+                            <p className="text-sm font-bold text-slate-950">
+                              {mode === "signup" ? "Fastest way to get started" : "Fastest way back in"}
+                            </p>
+                            <p className="mt-0.5 text-xs leading-5 text-slate-500">Continue securely with your Google account</p>
+                          </div>
+                          <Sparkles className="h-5 w-5 shrink-0 text-brandBlue" />
+                        </div>
+                        <div
+                          ref={googleButtonRef}
+                          className="mx-auto min-h-[44px] w-full max-w-[400px] [&>div]:mx-auto"
+                        />
+                      </>
                     ) : (
                       <div className="w-full rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-center text-sm leading-6 text-slate-500">
                         Add <code>NEXT_PUBLIC_GOOGLE_CLIENT_ID</code> to enable one-click Google sign-in for movers.
