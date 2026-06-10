@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { MoverDashboardExperience } from "@/components/mover-dashboard-experience";
+import { isConfiguredAdminEmail } from "@/lib/admin-auth";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { LEAD_PRICING } from "@/lib/lead-pricing";
@@ -32,6 +33,9 @@ export default async function MoverDashboardPage({
 }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/mover/login");
+  if (session.user.role === "ADMIN" || isConfiguredAdminEmail(session.user.email)) {
+    redirect(session.user.mfaVerified ? "/admin/verification" : "/admin/mfa?next=/admin/verification");
+  }
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
   const mover = await prisma.moverCompany.findUnique({

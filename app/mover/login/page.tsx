@@ -64,6 +64,10 @@ function getNetworkErrorMessage(action: string) {
   return `${action} could not reach the server. Check that the local dev server is running, then try again.`;
 }
 
+function getAdminRedirectPath(value: string) {
+  return value.startsWith("/admin/") ? value : "/admin/verification";
+}
+
 export default function MoverLoginPage() {
   const googleButtonRef = useRef<HTMLDivElement | null>(null);
   const googleRenderedRef = useRef(false);
@@ -132,7 +136,11 @@ export default function MoverLoginPage() {
       }
 
       setSuccess(payload.adminMfaRequired ? "Admin sign-in accepted. Complete authenticator verification..." : "Signed in with Google. Redirecting to your mover dashboard...");
-      window.location.replace(payload.adminMfaRequired ? `/admin/mfa?next=${encodeURIComponent(redirectPath)}` : redirectPath);
+      window.location.replace(
+        payload.adminMfaRequired
+          ? `/admin/mfa?next=${encodeURIComponent(getAdminRedirectPath(redirectPath))}`
+          : redirectPath,
+      );
     } catch {
       setError(getNetworkErrorMessage("Google sign-in"));
     } finally {
@@ -228,7 +236,11 @@ export default function MoverLoginPage() {
       }
 
       setSuccess(payload.adminMfaRequired ? "Code accepted. Complete authenticator verification..." : "Welcome back. Taking you to your dashboard...");
-      window.location.replace(payload.adminMfaRequired ? `/admin/mfa?next=${encodeURIComponent(redirectPath)}` : redirectPath);
+      window.location.replace(
+        payload.adminMfaRequired
+          ? `/admin/mfa?next=${encodeURIComponent(getAdminRedirectPath(redirectPath))}`
+          : redirectPath,
+      );
     } catch {
       setError(getNetworkErrorMessage("Sign-in code verification"));
     } finally {

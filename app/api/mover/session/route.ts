@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { isAdminUser } from "@/lib/admin-auth";
 import { prisma } from "@/lib/db";
 
 const privateNoStoreHeaders = {
@@ -30,11 +31,14 @@ export async function GET() {
     return NextResponse.json({ authenticated: false }, { headers: privateNoStoreHeaders });
   }
 
+  const isAdmin = isAdminUser({ ...session.user, email: user.email });
+
   return NextResponse.json(
     {
       authenticated: true,
       accountId: session.user.id,
-      accountName: user.moverCompany?.companyName || user.name || user.email,
+      accountName: isAdmin ? user.name || user.email : user.moverCompany?.companyName || user.name || user.email,
+      accountType: isAdmin ? "admin" : "mover",
     },
     { headers: privateNoStoreHeaders },
   );

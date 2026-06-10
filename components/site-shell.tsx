@@ -12,6 +12,7 @@ import logo from "@/public/logo.webp";
 type MoverSessionState = {
   authenticated: boolean;
   accountName?: string;
+  accountType?: "admin" | "mover";
 };
 
 const navLinks = [
@@ -59,8 +60,17 @@ export function Nav() {
   const [moverSession, setMoverSession] = useState<MoverSessionState | null>(null);
   const sessionRequestRef = useRef(0);
 
-  const moverAccountHref = moverSession?.authenticated ? "/mover/dashboard" : "/mover/login";
-  const moverAccountLabel = moverSession?.authenticated && moverSession.accountName ? moverSession.accountName : "Mover Login";
+  const moverAccountHref = moverSession?.authenticated
+    ? moverSession.accountType === "admin"
+      ? "/admin/verification"
+      : "/mover/dashboard"
+    : "/mover/login";
+  const moverAccountLabel =
+    moverSession?.authenticated && moverSession.accountName
+      ? moverSession.accountType === "admin"
+        ? `Admin: ${moverSession.accountName}`
+        : moverSession.accountName
+      : "Mover Login";
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
