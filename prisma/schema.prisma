@@ -382,6 +382,7 @@ model AuthToken {
 
 model EmailDelivery {
   id                String              @id @default(cuid())
+  dedupeKey         String?             @unique
   kind              String
   recipient         String
   from              String

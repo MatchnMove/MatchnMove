@@ -14,7 +14,7 @@ async function readJsonResponse<T>(response: Response) {
   return (await response.json().catch(() => null)) as (T & { error?: string }) | null;
 }
 
-export function AdminMfaSetup() {
+export function AdminMfaSetup({ nextPath = "/admin/verification" }: { nextPath?: string }) {
   const [setup, setSetup] = useState<SetupState | null>(null);
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -45,7 +45,7 @@ export function AdminMfaSetup() {
         setError(data?.error ?? "Could not verify that code.");
         return;
       }
-      window.location.assign("/admin/verification");
+      window.location.assign(nextPath);
     } finally {
       setBusy(false);
     }

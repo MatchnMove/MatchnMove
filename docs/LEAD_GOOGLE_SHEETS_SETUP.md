@@ -79,6 +79,7 @@ GOOGLE_SHEETS_SPREADSHEET_ID=<the ID from the Sheet URL>
 GOOGLE_SHEETS_SHEET_NAME=Leads
 GOOGLE_SHEETS_EDITOR_EMAILS=you@matchnmove.co.nz,communications@matchnmove.co.nz
 GOOGLE_SHEETS_VIEWER_EMAILS=partner-one@example.com,partner-two@example.com
+LEAD_SPREADSHEET_NOTIFICATION_EMAILS=lanceoosterbroek179@gmail.com,sethclark4@gmail.com,tiaan.gouws@gmail.com
 GOOGLE_SHEETS_RETRY_BASE_MS=60000
 GOOGLE_SHEETS_RETRY_MAX_MS=21600000
 GOOGLE_SHEETS_SENDING_STALE_MS=600000
@@ -119,14 +120,17 @@ The app creates:
 3. Open `/admin/leads`.
 4. Confirm the delivery becomes `SYNCED`.
 5. Confirm the test row appears in the Google Sheet.
-6. Confirm the communications leader can edit operational columns.
-7. Confirm view-only partners cannot edit.
-8. Remove or clearly mark the test lead.
+6. Confirm each notification recipient receives one email with an **Open admin lead register** button.
+7. Confirm the button signs the teammate in, completes their authenticator check, and opens `/admin/leads`.
+8. Confirm the communications leader can edit operational columns.
+9. Confirm view-only partners cannot edit.
+10. Remove or clearly mark the test lead.
 
 ## Ongoing operations
 
 - **Sync now** processes ready deliveries immediately.
 - **Retry failed** resets failed deliveries and tries again.
+- Notification emails are deduplicated by quote and recipient, including when a Sheet delivery is retried.
 - If credentials are removed, unsynced leads remain safely queued in Postgres.
 - Never rename the `Leads` tab or remove/reorder the integration columns.
 - Review named access monthly.

@@ -127,7 +127,7 @@ export default function MoverLoginPage() {
       }
 
       setSuccess(payload.adminMfaRequired ? "Admin sign-in accepted. Complete authenticator verification..." : "Signed in with Google. Redirecting to your mover dashboard...");
-      window.location.replace(payload.adminMfaRequired ? "/admin/mfa" : redirectPath);
+      window.location.replace(payload.adminMfaRequired ? `/admin/mfa?next=${encodeURIComponent(redirectPath)}` : redirectPath);
     } catch {
       setError(getNetworkErrorMessage("Google sign-in"));
     } finally {
@@ -223,7 +223,7 @@ export default function MoverLoginPage() {
       }
 
       setSuccess(payload.adminMfaRequired ? "Code accepted. Complete authenticator verification..." : "Welcome back. Taking you to your dashboard...");
-      window.location.replace(payload.adminMfaRequired ? "/admin/mfa" : redirectPath);
+      window.location.replace(payload.adminMfaRequired ? `/admin/mfa?next=${encodeURIComponent(redirectPath)}` : redirectPath);
     } catch {
       setError(getNetworkErrorMessage("Sign-in code verification"));
     } finally {

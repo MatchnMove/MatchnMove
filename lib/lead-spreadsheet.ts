@@ -1,6 +1,7 @@
 import { JWT } from "google-auth-library";
 import { SpreadsheetDeliveryStatus, type Prisma, type QuoteRequest } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { sendAdminSpreadsheetLeadEmail } from "@/lib/email";
 
 const SHEETS_API = "https://sheets.googleapis.com/v4/spreadsheets";
 const SHEET_VERIFIED_ID_SETTING_KEY = "lead_google_sheet_verified_id";
@@ -121,6 +122,17 @@ function getConfig() {
 function isConfigured() {
   const config = getConfig();
   return Boolean(config.serviceAccountEmail && config.privateKey && config.spreadsheetId && config.sheetName);
+}
+
+function getLeadNotificationEmails() {
+  const configured = parseEmails(process.env.LEAD_SPREADSHEET_NOTIFICATION_EMAILS);
+  return configured.length > 0 ? configured : parseEmails(process.env.MOVER_ADMIN_EMAILS);
+}
+
+function getAdminLeadRegisterUrl() {
+  const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || "https://www.matchnmove.co.nz")
+    .replace(/\/$/, "");
+  return `${baseUrl}/admin/leads`;
 }
 
 function getSpreadsheetUrl(spreadsheetId = getConfig().spreadsheetId) {
@@ -423,6 +435,20 @@ export async function deliverLeadSpreadsheetRow(deliveryId: string, knownQuoteId
       await appendLeadRow(current.quoteRequest);
       quoteIds.add(current.quoteRequestId);
     }
+
+    await Promise.all(
+      getLeadNotificationEmails().map((email) =>
+        sendAdminSpreadsheetLeadEmail({
+          email,
+          quoteId: current.quoteRequest.id,
+          createdAt: current.quoteRequest.createdAt,
+          moveDate: current.quoteRequest.moveDate,
+          fromCity: current.quoteRequest.fromCity,
+          toCity: current.quoteRequest.toCity,
+          adminUrl: getAdminLeadRegisterUrl(),
+        }),
+      ),
+    );
 
     await prisma.$transaction([
       prisma.leadSpreadsheetDelivery.update({

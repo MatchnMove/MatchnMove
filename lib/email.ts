@@ -36,6 +36,16 @@ type MoverLeadEmailInput = {
   expiresAt: Date;
 };
 
+type AdminSpreadsheetLeadEmailInput = {
+  email: string;
+  quoteId: string;
+  createdAt: Date;
+  moveDate?: Date | null;
+  fromCity?: string | null;
+  toCity?: string | null;
+  adminUrl: string;
+};
+
 type VerificationReviewInput = {
   moverCompanyName: string;
   moverEmail: string;
@@ -61,12 +71,14 @@ type EmailKind =
   | "mover_sign_in_code"
   | "review_survey"
   | "mover_new_lead"
+  | "admin_spreadsheet_lead"
   | "mover_lead_expiry_warning"
   | "verification_review_submitted"
   | "verification_decision"
   | "verification_expiry_warning";
 
 type EmailMessage = {
+  dedupeKey?: string;
   kind: EmailKind;
   from: string;
   to: string;
@@ -493,18 +505,33 @@ async function sendViaSmtp(message: EmailMessage) {
 }
 
 async function queueAndTrySend(message: EmailMessage, configured: boolean): Promise<EmailSendResult> {
-  const emailDelivery = await prisma.emailDelivery.create({
-    data: {
-      kind: message.kind,
-      recipient: message.to,
-      from: message.from,
-      replyTo: message.replyTo,
-      subject: message.subject,
-      text: message.text,
-      html: message.html,
-      maxAttempts: getMaxAttempts(),
-    },
-  });
+  const createData = {
+    dedupeKey: message.dedupeKey,
+    kind: message.kind,
+    recipient: message.to,
+    from: message.from,
+    replyTo: message.replyTo,
+    subject: message.subject,
+    text: message.text,
+    html: message.html,
+    maxAttempts: getMaxAttempts(),
+  };
+  const emailDelivery = message.dedupeKey
+    ? await prisma.emailDelivery.upsert({
+        where: { dedupeKey: message.dedupeKey },
+        update: {},
+        create: createData,
+      })
+    : await prisma.emailDelivery.create({ data: createData });
+
+  if (emailDelivery.status === EmailDeliveryStatus.SENT) {
+    return {
+      sent: true,
+      skipped: true,
+      queued: false,
+      emailDeliveryId: emailDelivery.id,
+    };
+  }
 
   if (!configured) {
     await prisma.emailDelivery.update({
@@ -1033,6 +1060,70 @@ export async function sendMoverNewLeadEmail(input: MoverLeadEmailInput) {
         label: "Open lead board",
       },
       footerNote: "If you are already signed in, the dashboard link will open your lead board automatically.",
+    }),
+  };
+
+  return queueAndTrySend(message, config.configured);
+}
+
+export async function sendAdminSpreadsheetLeadEmail(input: AdminSpreadsheetLeadEmailInput) {
+  const config = getLeadEmailConfig();
+  const theme = getMoverLeadTheme();
+  const fromCity = input.fromCity?.trim() || "Origin not supplied";
+  const toCity = input.toCity?.trim() || "Destination not supplied";
+  const route = `${fromCity} to ${toCity}`;
+  const receivedLabel = formatEmailDateTime(input.createdAt);
+  const moveDateLabel = input.moveDate
+    ? new Intl.DateTimeFormat("en-NZ", {
+        dateStyle: "medium",
+        timeZone: "Pacific/Auckland",
+      }).format(input.moveDate)
+    : "Not supplied";
+  const subject = `New lead added: ${route}`;
+  const bodyHtml = `
+    ${renderNoteBox(
+      "A new customer quote request has been confirmed in the secure Google Sheet. Open the protected admin lead register to review and allocate it.",
+      theme,
+    )}
+    ${renderDetailTable(`
+      ${renderDetailRow("Quote ID", input.quoteId)}
+      ${renderDetailRow("Route", route)}
+      ${renderDetailRow("Move date", moveDateLabel)}
+      ${renderDetailRow("Received", receivedLabel)}
+    `)}
+  `;
+  const normalizedRecipient = input.email.trim().toLowerCase();
+  const message: EmailMessage = {
+    dedupeKey: `spreadsheet-lead:${input.quoteId}:${normalizedRecipient}`,
+    kind: "admin_spreadsheet_lead",
+    from: config.from,
+    to: normalizedRecipient,
+    subject,
+    text: [
+      "A new Match 'n Move lead has been confirmed in the secure Google Sheet.",
+      "",
+      `Quote ID: ${input.quoteId}`,
+      `Route: ${route}`,
+      `Move date: ${moveDateLabel}`,
+      `Received: ${receivedLabel}`,
+      "",
+      "Sign in to the protected admin lead register:",
+      input.adminUrl,
+      "",
+      "Customer contact details are intentionally kept out of this notification email.",
+    ].join("\n"),
+    html: renderEmailShell({
+      theme,
+      preheader: `A new lead for ${route} is ready in the secure lead register.`,
+      eyebrow: "New lead confirmed",
+      title: "A new lead is ready",
+      intro: "The Google Sheet sync has completed successfully.",
+      bodyHtml,
+      cta: {
+        href: input.adminUrl,
+        label: "Open admin lead register",
+      },
+      footerNote: "Customer contact details are kept inside the protected lead register and are not included in this email.",
     }),
   };
 

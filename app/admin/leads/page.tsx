@@ -7,7 +7,7 @@ export default async function AdminLeadsPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/mover/login?next=/admin/leads");
   if (!isAdminUser(session.user)) redirect("/mover/dashboard");
-  if (!session.user.mfaVerified) redirect("/admin/mfa");
+  if (!session.user.mfaVerified) redirect("/admin/mfa?next=/admin/leads");
 
   return (
     <main className="min-h-screen bg-slate-100 px-4 py-10 sm:px-6">
