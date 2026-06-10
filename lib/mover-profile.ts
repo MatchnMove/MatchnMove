@@ -14,8 +14,11 @@ export async function requireAuthenticatedMover() {
   const session = await auth();
   if (!session?.user?.id) return null;
 
-  return prisma.moverCompany.findUnique({
-    where: { userId: session.user.id },
+  return prisma.moverCompany.findFirst({
+    where: {
+      userId: session.user.id,
+      status: { not: "DELETING" },
+    },
     include: authenticatedMoverInclude,
   });
 }

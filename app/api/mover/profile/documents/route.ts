@@ -5,7 +5,7 @@ import { detectDocumentMimeType, getDocumentSha256, scanDocumentForMalware } fro
 import { sendVerificationReviewSubmitted } from "@/lib/email";
 import { calculateMoverProfileReadiness, requireAuthenticatedMover } from "@/lib/mover-profile";
 import { DOCUMENT_VERIFICATION } from "@/lib/nzbn-verification";
-import { isPrivateStorageConfigured, putPrivateDocument } from "@/lib/private-storage";
+import { deletePrivateDocument, isPrivateStorageConfigured, putPrivateDocument } from "@/lib/private-storage";
 import { revalidateAboutPage, revalidatePublicMovers } from "@/lib/public-cache";
 import { moverDocumentTypeSchema, moverDocumentUploadSchema, parseDataUrl, sanitiseFileName } from "@/lib/validators";
 
@@ -143,25 +143,33 @@ export async function POST(req: NextRequest) {
   }
 
   const expiresAt = parsed.data.expiresAt ? new Date(`${parsed.data.expiresAt}T23:59:59.999Z`) : null;
-  const document = await prisma.moverDocument.create({
-    data: {
-      moverCompanyId: mover.id,
-      type: parsed.data.type,
-      fileName,
-      mimeType: detectedMimeType,
-      detectedMimeType,
-      fileSize: buffer.byteLength,
-      fileUrl: storageKey ? null : parsed.data.fileDataUrl,
-      storageKey,
-      sha256,
-      scanStatus: scanResult.status,
-      expiresAt,
-      verificationStatus: DOCUMENT_VERIFICATION.PENDING_REVIEW,
-      verificationNote: null,
-      reviewedAt: null,
-      reviewedBy: null,
-    },
-  });
+  let document;
+  try {
+    document = await prisma.moverDocument.create({
+      data: {
+        moverCompanyId: mover.id,
+        type: parsed.data.type,
+        fileName,
+        mimeType: detectedMimeType,
+        detectedMimeType,
+        fileSize: buffer.byteLength,
+        fileUrl: storageKey ? null : parsed.data.fileDataUrl,
+        storageKey,
+        sha256,
+        scanStatus: scanResult.status,
+        expiresAt,
+        verificationStatus: DOCUMENT_VERIFICATION.PENDING_REVIEW,
+        verificationNote: null,
+        reviewedAt: null,
+        reviewedBy: null,
+      },
+    });
+  } catch (error) {
+    if (storageKey) {
+      await deletePrivateDocument(storageKey).catch(() => undefined);
+    }
+    throw error;
+  }
 
   await prisma.verificationAudit.create({
     data: {

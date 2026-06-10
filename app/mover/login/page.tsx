@@ -105,7 +105,12 @@ export default function MoverLoginPage() {
   }, [mode]);
 
   useEffect(() => {
-    setRedirectPath(getSafeRedirectPath(new URLSearchParams(window.location.search).get("next")));
+    const searchParams = new URLSearchParams(window.location.search);
+    setRedirectPath(getSafeRedirectPath(searchParams.get("next")));
+    if (searchParams.get("account") === "deleted") {
+      setMode("login");
+      setSuccess("Your mover account and its Match 'n Move data were permanently deleted.");
+    }
   }, []);
 
   const submitGoogleCredential = useEffectEvent(async (credential: string) => {

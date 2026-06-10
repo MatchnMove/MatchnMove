@@ -108,6 +108,14 @@ export const moverChangePasswordSchema = z
     path: ["confirmPassword"],
   });
 
+export const moverDeleteAccountSchema = z.object({
+  currentPassword: z.string().min(1, "Enter your current password").max(200, "Password is too long"),
+  confirmation: z.string().trim().min(1, "Enter the confirmation phrase").max(1000, "Confirmation phrase is too long"),
+  acknowledged: z.literal(true, {
+    errorMap: () => ({ message: "Confirm that you understand this action is permanent" }),
+  }),
+});
+
 export const moverResendVerificationSchema = z.object({
   email: z.string().trim().toLowerCase().email("Enter a valid email address"),
 });

@@ -1,5 +1,6 @@
 import {
   DeleteObjectCommand,
+  DeleteObjectsCommand,
   GetObjectCommand,
   PutObjectCommand,
   S3Client,
@@ -77,6 +78,29 @@ export async function deletePrivateDocument(key: string) {
   if (!isPrivateStorageConfigured()) return;
   const { bucket, client } = getStorageClient();
   await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
+}
+
+export async function deletePrivateDocuments(keys: string[]) {
+  const uniqueKeys = [...new Set(keys.filter(Boolean))];
+  if (!uniqueKeys.length) return;
+
+  const { bucket, client } = getStorageClient();
+  for (let index = 0; index < uniqueKeys.length; index += 1000) {
+    const batch = uniqueKeys.slice(index, index + 1000);
+    const result = await client.send(
+      new DeleteObjectsCommand({
+        Bucket: bucket,
+        Delete: {
+          Objects: batch.map((Key) => ({ Key })),
+          Quiet: true,
+        },
+      }),
+    );
+
+    if (result.Errors?.length) {
+      throw new Error(`Could not delete ${result.Errors.length} private account file(s).`);
+    }
+  }
 }
 
 export async function getPrivateDocumentUrl(key: string, fileName: string) {

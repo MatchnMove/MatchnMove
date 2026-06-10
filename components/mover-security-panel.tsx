@@ -6,15 +6,19 @@ import {
   ArrowRight,
   Check,
   CreditCard,
+  FileWarning,
   LoaderCircle,
   LockKeyhole,
   LogOut,
   MailCheck,
   ShieldCheck,
+  Trash2,
+  X,
 } from "lucide-react";
 import { cx } from "@/lib/utils";
 
 type SecurityMover = {
+  companyName: string;
   email: string;
   emailVerified: boolean;
   documentsCount: number;
@@ -78,6 +82,16 @@ export function MoverSecurityPanel({ mover, onOpenDestination }: Props) {
   const [resetState, setResetState] = useState<AsyncActionState>(createAsyncState);
   const [navigationState, setNavigationState] = useState<"profile" | "documents" | "payments" | null>(null);
   const [logoutLoading, setLogoutLoading] = useState(false);
+  const [deleteFormOpen, setDeleteFormOpen] = useState(false);
+  const [deleteForm, setDeleteForm] = useState({
+    currentPassword: "",
+    confirmation: "",
+    acknowledged: false,
+  });
+  const [deleteState, setDeleteState] = useState<{ loading: boolean; error: string }>({
+    loading: false,
+    error: "",
+  });
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
     password: "",
@@ -128,6 +142,12 @@ export function MoverSecurityPanel({ mover, onOpenDestination }: Props) {
   const paymentMethodReady = Boolean(billing?.paymentMethod);
   const checklistCompletion = mover.readiness.completion;
   const nextNavigationDestination = mover.readiness.nextStep?.destination === "documents" ? "documents" : "profile";
+  const deleteConfirmation = `DELETE ${mover.companyName}`;
+  const canDelete =
+    deleteForm.currentPassword.length > 0 &&
+    deleteForm.confirmation === deleteConfirmation &&
+    deleteForm.acknowledged &&
+    !deleteState.loading;
 
   const checklistItems = mover.readiness.checks.map((check) => {
     const destination = check.destination === "documents" ? "documents" : "profile";
@@ -262,6 +282,35 @@ export function MoverSecurityPanel({ mover, onOpenDestination }: Props) {
       window.location.replace("/mover/login");
     } finally {
       setLogoutLoading(false);
+    }
+  }
+
+  async function deleteAccount() {
+    if (!canDelete) return;
+
+    setDeleteState({ loading: true, error: "" });
+    try {
+      const response = await fetch("/api/mover/account", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(deleteForm),
+      });
+      const data = (await response.json().catch(() => null)) as { error?: string } | null;
+
+      if (!response.ok) {
+        setDeleteState({
+          loading: false,
+          error: data?.error ?? "Could not delete your account.",
+        });
+        return;
+      }
+
+      window.location.replace("/mover/login?account=deleted");
+    } catch {
+      setDeleteState({
+        loading: false,
+        error: "Could not reach the server to delete your account.",
+      });
     }
   }
 
@@ -473,6 +522,93 @@ export function MoverSecurityPanel({ mover, onOpenDestination }: Props) {
             </div>
 
             <StatusMessage state={resetState} className="mt-4" />
+          </section>
+
+          <section className="rounded-[24px] border border-rose-200 bg-[linear-gradient(180deg,#fff7f7,#ffffff)] p-4 shadow-sm sm:rounded-[30px] sm:p-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="max-w-2xl">
+                <div className="inline-flex items-center gap-2 rounded-full bg-rose-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-rose-700">
+                  <FileWarning className="h-4 w-4" />
+                  Danger zone
+                </div>
+                <h2 className="mt-3 text-xl font-black tracking-[-0.05em] text-slate-950 sm:text-2xl">Delete mover account</h2>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  Permanently removes this login, company profile, assigned leads, reviews, verification records, and private uploads. This cannot be undone.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setDeleteFormOpen((current) => !current);
+                  setDeleteState({ loading: false, error: "" });
+                }}
+                aria-expanded={deleteFormOpen}
+                className="inline-flex min-h-[48px] shrink-0 items-center justify-center gap-2 rounded-2xl border border-rose-300 bg-white px-4 py-2 text-sm font-semibold text-rose-700 transition hover:border-rose-400 hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2"
+              >
+                {deleteFormOpen ? <X className="h-4 w-4" /> : <Trash2 className="h-4 w-4" />}
+                {deleteFormOpen ? "Cancel deletion" : "Delete account"}
+              </button>
+            </div>
+
+            {deleteFormOpen ? (
+              <div className="mt-5 rounded-[22px] border border-rose-200 bg-white p-4 sm:rounded-[26px] sm:p-5">
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
+                  Accounts with unresolved billable lead charges cannot be deleted until billing support resolves them. Stripe may retain historical payment records where required by law.
+                </div>
+
+                <div className="mt-4 grid gap-4">
+                  <PasswordField
+                    label="Current password"
+                    value={deleteForm.currentPassword}
+                    onChange={(value) => setDeleteForm((current) => ({ ...current, currentPassword: value }))}
+                  />
+                  <label className="block">
+                    <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Confirmation phrase</span>
+                    <span className="mt-2 block text-sm leading-6 text-slate-600">
+                      Type <strong className="break-all text-slate-900">{deleteConfirmation}</strong>
+                    </span>
+                    <input
+                      type="text"
+                      value={deleteForm.confirmation}
+                      onChange={(event) => setDeleteForm((current) => ({ ...current, confirmation: event.target.value }))}
+                      autoComplete="off"
+                      spellCheck={false}
+                      className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-rose-400 focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2"
+                    />
+                  </label>
+                  <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <input
+                      type="checkbox"
+                      checked={deleteForm.acknowledged}
+                      onChange={(event) => setDeleteForm((current) => ({ ...current, acknowledged: event.target.checked }))}
+                      className="mt-1 h-4 w-4 rounded border-slate-300 text-rose-600 focus:ring-rose-500"
+                    />
+                    <span className="text-sm leading-6 text-slate-700">
+                      I understand this permanently deletes the mover account and its Match &apos;n Move data and cannot be reversed.
+                    </span>
+                  </label>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={deleteAccount}
+                  disabled={!canDelete}
+                  className="mt-4 inline-flex min-h-[50px] items-center justify-center gap-2 rounded-2xl bg-rose-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-rose-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {deleteState.loading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                  {deleteState.loading ? "Deleting account..." : "Permanently delete account"}
+                </button>
+
+                <p className="mt-3 text-xs leading-5 text-slate-500">
+                  Signed up with Google and do not know your password? Use the password reset action above to set one first.
+                </p>
+                {deleteState.error ? (
+                  <p role="alert" className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
+                    {deleteState.error}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
           </section>
         </div>
 
