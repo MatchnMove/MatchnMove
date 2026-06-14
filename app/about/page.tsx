@@ -1,5 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, BadgeCheck, Building2, Camera, Compass, Sparkles, UploadCloud, Users2 } from "lucide-react";
 import { SiteShell } from "@/components/site-shell";
@@ -16,18 +17,24 @@ export const metadata: Metadata = createPageMetadata({
 
 const teamCards = [
   {
-    name: "Founder / developer",
+    name: "Lance Oosterbroek",
+    title: "Founder / Developer",
     role: "Platform build",
+    image: "/match-n-move-web-ready-images/match-n-move-team-1-web.webp",
     note: "Building the Match 'n Move experience and the tools behind every quote."
   },
   {
-    name: "Finance lead",
+    name: "Tiaan Gouws",
+    title: "Finance Lead",
     role: "Business oversight",
+    image: "/match-n-move-web-ready-images/match-n-move-team-2-web.webp",
     note: "Guiding the money, operations, and launch decisions that keep the business steady."
   },
   {
-    name: "Partnerships lead",
+    name: "Seth Clark",
+    title: "Partnerships Lead",
     role: "Calls and comms",
+    image: "/match-n-move-web-ready-images/match-n-move-team-3-web.webp",
     note: "Managing calls, mover relationships, and business partnerships with a clear voice."
   }
 ] as const;
@@ -126,26 +133,28 @@ export default async function AboutPage() {
                 </div>
                 <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-600">
                   <Camera className="h-4 w-4 text-sky-700" />
-                  Portraits ready to add
+                  Meet the team
                 </div>
               </div>
 
               <div className="mt-5 grid gap-3 sm:mt-7 sm:gap-4 md:grid-cols-3">
-                {teamCards.map((member, index) => (
+                {teamCards.map((member) => (
                   <article
                     key={member.name}
                     className="group relative overflow-hidden rounded-[20px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] p-4 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-[0_24px_48px_-34px_rgba(15,23,42,0.35)] sm:rounded-[26px] sm:p-5"
                   >
                     <div className="absolute inset-x-0 top-0 h-1 bg-[linear-gradient(90deg,#38bdf8,#22c55e)] opacity-80" />
-                    <div className="flex h-32 items-center justify-center rounded-[18px] border border-dashed border-slate-300 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.12),transparent_55%),linear-gradient(180deg,#f8fafc,#eef6ff)] sm:h-40 sm:rounded-[22px]">
-                      <div className="text-center">
-                        <p className="text-[0.72rem] font-semibold uppercase tracking-[0.2em] text-slate-400">
-                          Photo 0{index + 1}
-                        </p>
-                        <p className="mt-2 text-sm font-semibold text-slate-700">Portrait ready</p>
-                      </div>
+                    <div className="relative aspect-[4/5] overflow-hidden rounded-[18px] bg-slate-100 sm:rounded-[22px]">
+                      <Image
+                        src={member.image}
+                        alt={`${member.name}, ${member.title} at Match 'n Move`}
+                        fill
+                        sizes="(min-width: 768px) 22vw, (min-width: 640px) 50vw, 100vw"
+                        className="object-cover transition duration-500 group-hover:scale-[1.025]"
+                      />
                     </div>
                     <p className="mt-4 text-lg font-bold text-slate-950">{member.name}</p>
+                    <p className="mt-1 text-sm font-bold text-slate-700">{member.title}</p>
                     <p className="mt-1 text-sm font-semibold uppercase tracking-[0.16em] text-sky-700">{member.role}</p>
                     <p className="mt-3 text-sm leading-6 text-slate-600">{member.note}</p>
                   </article>
