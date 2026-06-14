@@ -8,6 +8,7 @@ import { SiteShell } from "@/components/site-shell";
 import { PUBLIC_MOVER_DESCRIPTION_FALLBACK } from "@/lib/public-mover-constants";
 import { formatServiceAreaLabel } from "@/lib/nz-regions";
 import { getPublicMoverProfile, getPublicMovers } from "@/lib/public-movers";
+import { absoluteUrl, createPageMetadata, SITE_URL } from "@/lib/seo";
 
 export const revalidate = 300;
 export const dynamicParams = true;
@@ -27,14 +28,23 @@ export async function generateMetadata({
 
   if (!mover) {
     return {
-      title: "Mover profile | Match 'n Move",
+      title: "Mover Profile",
+      robots: {
+        index: false,
+        follow: false,
+      },
     };
   }
 
-  return {
-    title: `${mover.companyName} reviews | Match 'n Move`,
-    description: `Read verified customer reviews and rating details for ${mover.companyName} on Match 'n Move.`,
-  };
+  const serviceAreaSummary = mover.serviceAreas.length
+    ? ` serving ${mover.serviceAreas.slice(0, 3).map(formatServiceAreaLabel).join(", ")}`
+    : "";
+
+  return createPageMetadata({
+    title: `${mover.companyName} Reviews and Moving Services`,
+    description: `View ${mover.companyName}${serviceAreaSummary}, including verified customer reviews, ratings, experience, and service details.`,
+    path: `/movers/${mover.id}`,
+  });
 }
 
 export default async function PublicMoverProfilePage({
@@ -53,9 +63,38 @@ export default async function PublicMoverProfilePage({
     { label: "2 star", value: mover.twoStarCount },
     { label: "1 star", value: mover.oneStarCount },
   ];
+  const pageUrl = absoluteUrl(`/movers/${mover.id}`);
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Home",
+        item: SITE_URL,
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Moving companies",
+        item: absoluteUrl("/movers"),
+      },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name: mover.companyName,
+        item: pageUrl,
+      },
+    ],
+  };
 
   return (
     <SiteShell>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
       <section className="relative overflow-hidden bg-[linear-gradient(180deg,#06111f_0%,#081425_34%,#091423_68%,#07101c_100%)] py-12 text-white sm:py-18 lg:py-24">
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute left-[7%] top-12 h-44 w-44 rounded-full bg-sky-400/10 blur-[120px]" />

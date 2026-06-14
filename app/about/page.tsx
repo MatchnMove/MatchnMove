@@ -1,9 +1,18 @@
 /* eslint-disable @next/next/no-img-element */
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, BadgeCheck, Building2, Camera, Compass, Sparkles, UploadCloud, Users2 } from "lucide-react";
 import { SiteShell } from "@/components/site-shell";
 import { getAboutPageStats } from "@/lib/about-stats";
 import { NZ_SERVICE_AREAS, dedupeServiceAreaLabels, formatServiceAreaLabel } from "@/lib/nz-regions";
+import { createPageMetadata } from "@/lib/seo";
+
+export const metadata: Metadata = createPageMetadata({
+  title: "About Match 'n Move",
+  description:
+    "Learn how Match 'n Move connects New Zealand customers with relevant moving companies for free quote comparison.",
+  path: "/about",
+});
 
 const teamCards = [
   {

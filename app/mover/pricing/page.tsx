@@ -1,6 +1,15 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, BadgeDollarSign, Building2, CheckCircle2, FileText, Route, ShieldCheck, Sparkles } from "lucide-react";
 import { SiteShell } from "@/components/site-shell";
+import { createPageMetadata } from "@/lib/seo";
+
+export const metadata: Metadata = createPageMetadata({
+  title: "Moving Company Lead Pricing",
+  description:
+    "See Match 'n Move lead pricing for New Zealand moving companies, including membership, lead modifiers, and monthly billing.",
+  path: "/mover/pricing",
+});
 
 const pricingLevers = [
   {

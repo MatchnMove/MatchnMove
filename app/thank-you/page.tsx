@@ -1,6 +1,15 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Clock3, ShieldCheck, Sparkles } from "lucide-react";
 import { SiteShell } from "@/components/site-shell";
+import { createPageMetadata } from "@/lib/seo";
+
+export const metadata: Metadata = createPageMetadata({
+  title: "Quote Request Received",
+  description: "Your Match 'n Move quote request has been received.",
+  path: "/thank-you",
+  noIndex: true,
+});
 
 const nextSteps = [
   {

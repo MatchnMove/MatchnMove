@@ -2,43 +2,7 @@ import Link from "next/link";
 import { ArrowRight, ShieldCheck, Sparkles, Star } from "lucide-react";
 import { getPublicMovers } from "@/lib/public-movers";
 import { buildHeroMoverItems } from "@/src/components/hero/hero-mover-data";
-import { HomeMoverReviewTicker, type HomeMoverReviewItem } from "@/src/components/home/HomeMoverReviewTicker";
-
-const fallbackMoverReviews: HomeMoverReviewItem[] = [
-  {
-    id: "fallback-coastal-carry",
-    name: "Coastal Carry Co",
-    logoUrl: "/images/movers/coastal-carry.svg",
-    rating: 4.8,
-    reviewCount: 6,
-    badge: "Top rated",
-    tone: "bg-emerald-500",
-    profileHref: "/movers",
-    hoverLabel: "Browse profiles",
-  },
-  {
-    id: "fallback-summit-shift",
-    name: "Summit Shift Movers",
-    logoUrl: "/images/movers/summit-shift.svg",
-    rating: 4.8,
-    reviewCount: 6,
-    badge: "Top rated",
-    tone: "bg-blue-500",
-    profileHref: "/movers",
-    hoverLabel: "Browse profiles",
-  },
-  {
-    id: "fallback-harbourline",
-    name: "Harbourline Relocations",
-    logoUrl: "/images/movers/harbourline-relocations.svg",
-    rating: 4.7,
-    reviewCount: 6,
-    badge: "Top rated",
-    tone: "bg-sky-500",
-    profileHref: "/movers",
-    hoverLabel: "Browse profiles",
-  },
-];
+import { HomeMoverReviewTicker } from "@/src/components/home/HomeMoverReviewTicker";
 
 export async function MoverReviewsShowcase() {
   const moverItems = buildHeroMoverItems(await getPublicMovers()).map((mover) => ({
@@ -46,7 +10,7 @@ export async function MoverReviewsShowcase() {
     profileHref: `/movers/${mover.id}`,
   }));
   const reviewedMovers = moverItems.filter((mover) => mover.reviewCount > 0);
-  const movers = reviewedMovers.length ? reviewedMovers : moverItems.length ? moverItems : fallbackMoverReviews;
+  const movers = reviewedMovers.length ? reviewedMovers : moverItems;
 
   const ratedMovers = movers.filter((mover) => mover.reviewCount > 0 && mover.rating > 0);
   const totalReviews = movers.reduce((sum, mover) => sum + mover.reviewCount, 0);
@@ -88,7 +52,29 @@ export async function MoverReviewsShowcase() {
 
           <div className="min-w-0 w-full max-w-[560px] lg:justify-self-end">
             <h2 className="sr-only">Verified mover review cards</h2>
-            <HomeMoverReviewTicker initialMovers={movers} />
+            {movers.length > 0 ? (
+              <HomeMoverReviewTicker initialMovers={movers} />
+            ) : (
+              <div className="rounded-[28px] border border-dashed border-slate-300 bg-slate-50 p-7 shadow-inner sm:p-9">
+                <div className="inline-flex rounded-2xl bg-sky-100 p-3 text-sky-700">
+                  <ShieldCheck className="h-6 w-6" />
+                </div>
+                <h3 className="mt-5 text-2xl font-black tracking-[-0.04em] text-slate-950">
+                  Verified mover profiles are being added.
+                </h3>
+                <p className="mt-3 text-sm leading-7 text-slate-600">
+                  Public ratings and reviews will appear here only after genuine moving companies complete verification
+                  and customers submit feedback through completed Match &apos;n Move jobs.
+                </p>
+                <Link
+                  href="/quote"
+                  className="mt-5 inline-flex min-h-[48px] items-center gap-2 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white"
+                >
+                  Request moving quotes
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       </div>

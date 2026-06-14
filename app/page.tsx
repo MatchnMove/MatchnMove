@@ -1,15 +1,26 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { SiteShell } from "@/components/site-shell";
 import { Hero } from "@/src/components/hero/Hero";
 import { MoverReviewsShowcase } from "@/src/components/home/MoverReviewsShowcase";
+import { MovingQuotesSeoSection } from "@/src/components/home/MovingQuotesSeoSection";
 import { ScrollJourneySection } from "@/src/components/home/ScrollJourneySection";
+import { createPageMetadata } from "@/lib/seo";
+
+export const metadata: Metadata = createPageMetadata({
+  title: "Free Moving Quotes NZ | Match 'n Move",
+  description:
+    "Compare free moving quotes from trusted moving companies across New Zealand. Submit your move once for local, intercity, or long-distance mover quotes.",
+  path: "/",
+});
 
 export default function Home() {
   return (
     <SiteShell>
       <Hero />
       <ScrollJourneySection />
+      <MovingQuotesSeoSection />
       <MoverReviewsShowcase />
       <section className="relative overflow-hidden bg-white py-10 sm:py-16 lg:py-20">
         <div className="pointer-events-none absolute inset-0">

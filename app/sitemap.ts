@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
-
-const baseUrl = "https://www.matchnmove.co.nz";
+import { NZ_SERVICE_AREAS } from "@/lib/nz-regions";
+import { getPublicMovers } from "@/lib/public-movers";
+import { SITE_URL, toRegionSlug } from "@/lib/seo";
 
 const publicRoutes = [
   "",
@@ -14,11 +15,26 @@ const publicRoutes = [
   "/terms"
 ];
 
-export default function sitemap(): MetadataRoute.Sitemap {
-  return publicRoutes.map((route) => ({
-    url: `${baseUrl}${route}`,
-    lastModified: new Date(),
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const movers = await getPublicMovers();
+
+  const staticPages: MetadataRoute.Sitemap = publicRoutes.map((route) => ({
+    url: `${SITE_URL}${route}`,
     changeFrequency: route === "" ? "weekly" : "monthly",
-    priority: route === "" ? 1 : 0.7
+    priority: route === "" ? 1 : route === "/quote" ? 0.95 : 0.7,
   }));
+
+  const regionPages: MetadataRoute.Sitemap = NZ_SERVICE_AREAS.map((region) => ({
+    url: `${SITE_URL}/moving-quotes/${toRegionSlug(region)}`,
+    changeFrequency: "monthly",
+    priority: 0.85,
+  }));
+
+  const moverPages: MetadataRoute.Sitemap = movers.map((mover) => ({
+    url: `${SITE_URL}/movers/${mover.id}`,
+    changeFrequency: "weekly",
+    priority: 0.75,
+  }));
+
+  return [...staticPages, ...regionPages, ...moverPages];
 }

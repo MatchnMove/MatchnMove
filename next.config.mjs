@@ -12,7 +12,20 @@ const nextConfig = {
     ]
   },
   async headers() {
+    const noIndexHeaders = [
+      { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+    ];
+
     return [
+      { source: "/api/:path*", headers: noIndexHeaders },
+      { source: "/admin/:path*", headers: noIndexHeaders },
+      { source: "/review/:path*", headers: noIndexHeaders },
+      { source: "/thank-you", headers: noIndexHeaders },
+      { source: "/mover/dashboard/:path*", headers: noIndexHeaders },
+      { source: "/mover/login", headers: noIndexHeaders },
+      { source: "/mover/forgot-password", headers: noIndexHeaders },
+      { source: "/mover/reset-password", headers: noIndexHeaders },
+      { source: "/mover/verify-email", headers: noIndexHeaders },
       {
         source: "/:path*",
         headers: [

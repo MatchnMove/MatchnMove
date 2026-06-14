@@ -30,6 +30,9 @@ const footerGroups = [
       { href: "/movers", label: "Movers Directory" },
       { href: "/#how-it-works", label: "How It Works" },
       { href: "/faq", label: "FAQ" },
+      { href: "/moving-quotes/auckland", label: "Auckland Moving Quotes" },
+      { href: "/moving-quotes/wellington", label: "Wellington Moving Quotes" },
+      { href: "/moving-quotes/canterbury", label: "Christchurch Moving Quotes" },
     ],
   },
   {

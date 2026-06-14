@@ -1,8 +1,17 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, FileCheck2, ShieldCheck, Scale, Users } from "lucide-react";
 import { MobileSectionJump } from "@/components/mobile-section-jump";
 import { SiteShell } from "@/components/site-shell";
+import { createPageMetadata } from "@/lib/seo";
 import { SITE_EMAILS, toMailto } from "@/lib/site-emails";
+
+export const metadata: Metadata = createPageMetadata({
+  title: "Terms and Conditions",
+  description:
+    "Read the Match 'n Move terms covering quote requests, moving company introductions, information handling, and marketplace responsibilities.",
+  path: "/terms",
+});
 
 const principles = [
   {

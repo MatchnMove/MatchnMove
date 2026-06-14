@@ -1,6 +1,14 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { SiteShell } from "@/components/site-shell";
+import { createPageMetadata } from "@/lib/seo";
 import { SITE_EMAILS, toMailto } from "@/lib/site-emails";
+
+export const metadata: Metadata = createPageMetadata({
+  title: "Privacy Policy",
+  description: "How Match 'n Move collects, uses, protects, and shares information submitted with moving quote requests.",
+  path: "/privacy",
+});
 
 export default function PrivacyPage() {
   return (

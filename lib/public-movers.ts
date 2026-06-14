@@ -24,6 +24,7 @@ const publicMoverEligibilitySelect = Prisma.validator<Prisma.MoverCompanySelect>
   phoneVerifiedAt: true,
   nzbn: true,
   nzbnVerificationStatus: true,
+  nzbnVerificationSource: true,
   nzbnVerificationError: true,
   authorizedRepresentativeName: true,
   authorizedRepresentativeRole: true,
@@ -49,7 +50,8 @@ type PublicMoverCandidate = Prisma.MoverCompanyGetPayload<{ select: typeof publi
 type PublicMover = Prisma.MoverCompanyGetPayload<{ select: typeof publicMoverSelect }>;
 
 export function isMoverPubliclyVisible(mover: PublicMoverCandidate) {
-  return Boolean(mover.companyName.trim()) && isMoverProfileLive(mover);
+  const isSeedRecord = mover.nzbnVerificationSource === "SEED" || mover.id.startsWith("demo-");
+  return !isSeedRecord && Boolean(mover.companyName.trim()) && isMoverProfileLive(mover);
 }
 
 function toPublicMover(mover: PublicMoverCandidate): PublicMover {

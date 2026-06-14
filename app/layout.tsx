@@ -1,48 +1,68 @@
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import { ReactNode } from "react";
-import { InitialLoadingScreen } from "@/components/initial-loading-screen";
-
-const siteUrl = "https://www.matchnmove.co.nz";
-const siteName = "Match 'n Move";
-const siteDescription =
-  "Get free moving quotes from trusted New Zealand furniture removal companies. Tell Match 'n Move once, compare movers, and choose the best fit.";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_PHONE, SITE_URL, absoluteUrl } from "@/lib/seo";
+import { SITE_EMAILS } from "@/lib/site-emails";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
-  applicationName: siteName,
+  metadataBase: new URL(SITE_URL),
+  applicationName: SITE_NAME,
   title: {
-    default: `${siteName} | Free Moving Quotes NZ`,
-    template: `%s | ${siteName}`
+    default: `Free Moving Quotes NZ | ${SITE_NAME}`,
+    template: `%s | ${SITE_NAME}`
   },
-  description: siteDescription,
-  keywords: [
-    "Match 'n Move",
-    "moving quotes NZ",
-    "furniture removal quotes",
-    "New Zealand movers",
-    "moving companies New Zealand"
-  ],
-  alternates: {
-    canonical: "/"
+  description: SITE_DESCRIPTION,
+  category: "Moving and relocation services",
+  creator: SITE_NAME,
+  publisher: SITE_NAME,
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
   },
   icons: {
     icon: [{ url: "/logo-mark.png", type: "image/png" }],
-    shortcut: [{ url: "/logo-mark.png", type: "image/png" }]
+    shortcut: [{ url: "/logo-mark.png", type: "image/png" }],
+    apple: [{ url: "/logo-mark.png", type: "image/png" }],
   },
   openGraph: {
-    title: `${siteName} | Free Moving Quotes NZ`,
-    description: siteDescription,
-    url: siteUrl,
-    siteName,
+    title: `Free Moving Quotes NZ | ${SITE_NAME}`,
+    description: SITE_DESCRIPTION,
+    url: SITE_URL,
+    siteName: SITE_NAME,
     locale: "en_NZ",
-    type: "website"
+    type: "website",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: `${SITE_NAME} - free moving quotes across New Zealand`,
+      },
+    ],
   },
   twitter: {
-    card: "summary",
-    title: `${siteName} | Free Moving Quotes NZ`,
-    description: siteDescription
-  }
+    card: "summary_large_image",
+    title: `Free Moving Quotes NZ | ${SITE_NAME}`,
+    description: SITE_DESCRIPTION,
+    images: ["/opengraph-image"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
+  verification: process.env.GOOGLE_SITE_VERIFICATION
+    ? {
+        google: process.env.GOOGLE_SITE_VERIFICATION,
+      }
+    : undefined,
 };
 
 export const viewport: Viewport = {
@@ -54,22 +74,63 @@ const structuredData = {
   "@graph": [
     {
       "@type": "Organization",
-      "@id": `${siteUrl}/#organization`,
-      name: siteName,
-      url: siteUrl,
-      logo: `${siteUrl}/logo.webp`
+      "@id": `${SITE_URL}/#organization`,
+      name: SITE_NAME,
+      url: SITE_URL,
+      logo: {
+        "@type": "ImageObject",
+        url: absoluteUrl("/logo.webp"),
+      },
+      email: SITE_EMAILS.contact,
+      telephone: SITE_PHONE,
+      areaServed: {
+        "@type": "Country",
+        name: "New Zealand",
+      },
+      contactPoint: [
+        {
+          "@type": "ContactPoint",
+          contactType: "customer support",
+          email: SITE_EMAILS.support,
+          telephone: SITE_PHONE,
+          areaServed: "NZ",
+          availableLanguage: "English",
+        },
+      ],
     },
     {
       "@type": "WebSite",
-      "@id": `${siteUrl}/#website`,
-      name: siteName,
-      url: siteUrl,
-      description: siteDescription,
+      "@id": `${SITE_URL}/#website`,
+      name: SITE_NAME,
+      alternateName: "Match n Move",
+      url: SITE_URL,
+      description: SITE_DESCRIPTION,
+      inLanguage: "en-NZ",
       publisher: {
-        "@id": `${siteUrl}/#organization`
-      }
-    }
-  ]
+        "@id": `${SITE_URL}/#organization`,
+      },
+    },
+    {
+      "@type": "Service",
+      "@id": `${SITE_URL}/#moving-quote-service`,
+      name: "Free moving quote comparison",
+      description: SITE_DESCRIPTION,
+      serviceType: "Moving quote comparison",
+      provider: {
+        "@id": `${SITE_URL}/#organization`,
+      },
+      areaServed: {
+        "@type": "Country",
+        name: "New Zealand",
+      },
+      offers: {
+        "@type": "Offer",
+        price: "0",
+        priceCurrency: "NZD",
+        description: "Free for customers to request and compare moving quotes.",
+      },
+    },
+  ],
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
@@ -80,7 +141,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
         />
-        <InitialLoadingScreen />
         {children}
       </body>
     </html>

@@ -4,14 +4,17 @@ import { ArrowRight, ShieldCheck } from "lucide-react";
 import { PublicMoversDirectory } from "@/components/public-movers-directory";
 import { SiteShell } from "@/components/site-shell";
 import { getPublicMovers } from "@/lib/public-movers";
+import { createPageMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export const metadata: Metadata = {
-  title: "Trusted Movers | Match 'n Move",
-  description: "Browse trusted movers on Match 'n Move and learn more about each moving company before requesting quotes.",
-};
+export const metadata: Metadata = createPageMetadata({
+  title: "Trusted Moving Companies NZ",
+  description:
+    "Browse trusted New Zealand moving companies, service areas, ratings, and verified customer reviews before requesting free moving quotes.",
+  path: "/movers",
+});
 
 export default async function MoversPage() {
   const movers = await getPublicMovers();
