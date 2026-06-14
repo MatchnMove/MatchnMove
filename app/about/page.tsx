@@ -17,25 +17,25 @@ export const metadata: Metadata = createPageMetadata({
 
 const teamCards = [
   {
+    name: "Seth Clark",
+    title: "Partnerships Lead",
+    role: "Calls and comms",
+    image: "/match-n-move-web-ready-images/match-n-move-team-1-web.webp",
+    note: "Managing calls, mover relationships, and business partnerships with a clear voice."
+  },
+  {
     name: "Lance Oosterbroek",
     title: "Founder / Developer",
     role: "Platform build",
-    image: "/match-n-move-web-ready-images/match-n-move-team-1-web.webp",
+    image: "/match-n-move-web-ready-images/match-n-move-team-2-web.webp",
     note: "Building the Match 'n Move experience and the tools behind every quote."
   },
   {
     name: "Tiaan Gouws",
     title: "Finance Lead",
     role: "Business oversight",
-    image: "/match-n-move-web-ready-images/match-n-move-team-2-web.webp",
-    note: "Guiding the money, operations, and launch decisions that keep the business steady."
-  },
-  {
-    name: "Seth Clark",
-    title: "Partnerships Lead",
-    role: "Calls and comms",
     image: "/match-n-move-web-ready-images/match-n-move-team-3-web.webp",
-    note: "Managing calls, mover relationships, and business partnerships with a clear voice."
+    note: "Guiding the money, operations, and launch decisions that keep the business steady."
   }
 ] as const;
 
