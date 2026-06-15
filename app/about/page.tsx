@@ -18,7 +18,7 @@ export const metadata: Metadata = createPageMetadata({
 const teamCards = [
   {
     name: "Seth Clark",
-    title: "Partnerships Lead",
+    title: "Founder / Partnerships Lead",
     role: "Calls and comms",
     image: "/match-n-move-web-ready-images/match-n-move-team-1-web.webp",
     note: "Managing calls, mover relationships, and business partnerships with a clear voice."
@@ -32,7 +32,7 @@ const teamCards = [
   },
   {
     name: "Tiaan Gouws",
-    title: "Finance Lead",
+    title: "Founder / Finance Lead",
     role: "Business oversight",
     image: "/match-n-move-web-ready-images/match-n-move-team-3-web.webp",
     note: "Guiding the money, operations, and launch decisions that keep the business steady."
