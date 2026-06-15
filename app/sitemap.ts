@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { NZ_SERVICE_AREAS } from "@/lib/nz-regions";
 import { getPublicMovers } from "@/lib/public-movers";
+import { movingResources } from "@/lib/moving-resources";
 import { SITE_URL, toRegionSlug } from "@/lib/seo";
 
 const publicRoutes = [
@@ -10,6 +11,8 @@ const publicRoutes = [
   "/about",
   "/faq",
   "/contact",
+  "/resources",
+  "/resources/moving-cost-calculator",
   "/mover/pricing",
   "/privacy",
   "/terms"
@@ -36,5 +39,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.75,
   }));
 
-  return [...staticPages, ...regionPages, ...moverPages];
+  const resourcePages: MetadataRoute.Sitemap = movingResources.map((resource) => ({
+    url: `${SITE_URL}/resources/${resource.slug}`,
+    changeFrequency: "monthly",
+    priority: resource.slug === "nz-moving-costs-2026" ? 0.9 : 0.8,
+  }));
+
+  return [...staticPages, ...resourcePages, ...regionPages, ...moverPages];
 }

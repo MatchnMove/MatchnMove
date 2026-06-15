@@ -5,6 +5,7 @@ import { SiteShell } from "@/components/site-shell";
 import { Hero } from "@/src/components/hero/Hero";
 import { MoverReviewsShowcase } from "@/src/components/home/MoverReviewsShowcase";
 import { MovingQuotesSeoSection } from "@/src/components/home/MovingQuotesSeoSection";
+import { ResourceHighlights } from "@/src/components/home/ResourceHighlights";
 import { ScrollJourneySection } from "@/src/components/home/ScrollJourneySection";
 import { createPageMetadata } from "@/lib/seo";
 
@@ -21,6 +22,7 @@ export default function Home() {
       <Hero />
       <ScrollJourneySection />
       <MovingQuotesSeoSection />
+      <ResourceHighlights />
       <MoverReviewsShowcase />
       <section className="relative overflow-hidden bg-white py-10 sm:py-16 lg:py-20">
         <div className="pointer-events-none absolute inset-0">

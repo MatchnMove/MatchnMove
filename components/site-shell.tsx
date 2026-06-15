@@ -16,10 +16,10 @@ type MoverSessionState = {
 };
 
 const navLinks = [
+  { href: "/resources", label: "Resources" },
   { href: "/contact", label: "Contact us" },
   { href: "/about", label: "About us" },
   { href: "/faq", label: "FAQs" },
-  { href: "/terms", label: "Terms" },
 ];
 
 const footerGroups = [
@@ -30,9 +30,20 @@ const footerGroups = [
       { href: "/movers", label: "Movers Directory" },
       { href: "/#how-it-works", label: "How It Works" },
       { href: "/faq", label: "FAQ" },
+      { href: "/resources", label: "Moving Resources" },
+      { href: "/resources/moving-cost-calculator", label: "Cost Calculator" },
       { href: "/moving-quotes/auckland", label: "Auckland Moving Quotes" },
       { href: "/moving-quotes/wellington", label: "Wellington Moving Quotes" },
       { href: "/moving-quotes/canterbury", label: "Christchurch Moving Quotes" },
+    ],
+  },
+  {
+    title: "Guides & Tools",
+    links: [
+      { href: "/resources/nz-moving-costs-2026", label: "NZ Moving Costs 2026" },
+      { href: "/resources/moving-house-checklist", label: "Moving Checklist" },
+      { href: "/resources/inter-island-moving-guide", label: "Inter-Island Guide" },
+      { href: "/resources/compare-moving-quotes", label: "Compare Moving Quotes" },
     ],
   },
   {
@@ -272,7 +283,7 @@ export function Footer() {
             </div>
           </div>
 
-          <div className="grid gap-8 py-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-10 lg:py-12">
+          <div className="grid gap-8 py-10 md:grid-cols-2 xl:grid-cols-[repeat(4,minmax(0,1fr))_minmax(0,1.08fr)] xl:gap-8 xl:py-12">
             {footerGroups.map((group) => (
               <div key={group.title}>
                 <h3 className="text-sm font-bold uppercase tracking-[0.18em] text-slate-900">{group.title}</h3>
