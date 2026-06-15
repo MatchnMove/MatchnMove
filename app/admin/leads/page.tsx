@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { AdminLogoutButton } from "@/components/admin-logout-button";
 import { LeadSpreadsheetAdminPanel } from "@/components/lead-spreadsheet-admin-panel";
 import { isAdminUser } from "@/lib/admin-auth";
 import { auth } from "@/lib/auth";
@@ -12,14 +13,17 @@ export default async function AdminLeadsPage() {
   return (
     <main className="min-h-screen bg-slate-100 px-4 py-10 sm:px-6">
       <div className="mx-auto max-w-6xl">
-        <div className="mb-7">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-teal-700">Admin operations</p>
-          <h1 className="mt-2 text-3xl font-black tracking-[-0.045em] text-slate-950 sm:text-4xl">
-            Secure Google Sheets lead register
-          </h1>
-          <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
-            Verify the company-owned Google Sheet, review team access, and monitor automatic lead delivery.
-          </p>
+        <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-teal-700">Admin operations</p>
+            <h1 className="mt-2 text-3xl font-black tracking-[-0.045em] text-slate-950 sm:text-4xl">
+              Secure Google Sheets lead register
+            </h1>
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
+              Verify the company-owned Google Sheet, review team access, and monitor automatic lead delivery.
+            </p>
+          </div>
+          <AdminLogoutButton className="shrink-0" />
         </div>
         <LeadSpreadsheetAdminPanel />
       </div>

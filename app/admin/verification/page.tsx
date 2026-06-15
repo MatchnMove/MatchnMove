@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { AdminLogoutButton } from "@/components/admin-logout-button";
 import { AdminMoverVerificationPanel } from "@/components/admin-mover-verification-panel";
 import { isAdminUser } from "@/lib/admin-auth";
 import { auth } from "@/lib/auth";
@@ -85,12 +86,15 @@ export default async function AdminVerificationPage() {
               <p className="text-sm font-semibold uppercase tracking-[0.16em] text-sky-700">Admin verification</p>
               <h1 className="mt-2 text-3xl font-black tracking-[-0.05em] text-slate-950">Mover verification queue</h1>
             </div>
-            <Link
-              href="/admin/leads"
-              className="inline-flex min-h-10 items-center justify-center rounded-xl bg-teal-700 px-4 text-sm font-bold text-white hover:bg-teal-800"
-            >
-              Google Sheets lead register
-            </Link>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Link
+                href="/admin/leads"
+                className="inline-flex min-h-10 items-center justify-center rounded-xl bg-teal-700 px-4 text-sm font-bold text-white hover:bg-teal-800"
+              >
+                Google Sheets lead register
+              </Link>
+              <AdminLogoutButton />
+            </div>
           </div>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
             Approve only details that match the NZBN Register and submitted evidence. A mover profile is not public and cannot open new leads until all required checks pass.

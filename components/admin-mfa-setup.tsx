@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { LoaderCircle, ShieldCheck } from "lucide-react";
 import Image from "next/image";
+import { AdminLogoutButton } from "@/components/admin-logout-button";
 
 type SetupState = {
   enabled: boolean;
@@ -54,12 +55,15 @@ export function AdminMfaSetup({ nextPath = "/admin/verification" }: { nextPath?:
   return (
     <main className="min-h-screen bg-slate-100 px-4 py-6 sm:py-10">
       <section className="mx-auto max-w-xl rounded-[8px] border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
-        <div className="flex items-start gap-3 sm:items-center">
-          <div className="shrink-0 rounded-[8px] bg-emerald-100 p-3 text-emerald-700"><ShieldCheck className="h-6 w-6" /></div>
-          <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">Admin security</p>
-            <h1 className="mt-1 text-xl font-black text-slate-950 sm:text-2xl">Authenticator verification</h1>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex items-start gap-3 sm:items-center">
+            <div className="shrink-0 rounded-[8px] bg-emerald-100 p-3 text-emerald-700"><ShieldCheck className="h-6 w-6" /></div>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">Admin security</p>
+              <h1 className="mt-1 text-xl font-black text-slate-950 sm:text-2xl">Authenticator verification</h1>
+            </div>
           </div>
+          <AdminLogoutButton className="shrink-0" />
         </div>
 
         {!setup && !error ? <div className="mt-8 flex items-center gap-2 text-sm text-slate-600"><LoaderCircle className="h-4 w-4 animate-spin" />Loading secure setup...</div> : null}
