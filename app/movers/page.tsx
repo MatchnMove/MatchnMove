@@ -14,6 +14,24 @@ export const metadata: Metadata = createPageMetadata({
   path: "/movers",
 });
 
+const verificationChecks = [
+  {
+    icon: FileCheck2,
+    title: "Business details",
+    copy: "Mover profiles are checked for company identity, service areas, and the information customers need before comparing quotes.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Evidence review",
+    copy: "Insurance, NZBN evidence, contact details, and profile documents can be reviewed before a company is made public.",
+  },
+  {
+    icon: Clock3,
+    title: "Customer-first launch",
+    copy: "The directory opens only when listings are useful enough for customers to compare with confidence.",
+  },
+] as const;
+
 export default async function MoversPage() {
   return (
     <SiteShell>
@@ -55,15 +73,15 @@ export default async function MoversPage() {
                 <div>
                   <div className="inline-flex items-center gap-2 rounded-full border border-amber-200/25 bg-amber-300/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-amber-100">
                     <Wrench className="h-4 w-4" />
-                    Directory maintenance
+                    Verification in progress
                   </div>
                   <h2 className="mt-5 text-2xl font-black tracking-[-0.04em] text-white sm:text-3xl">
-                    We&apos;re preparing the mover directory for verified listings.
+                    We&apos;re verifying mover profiles before publishing the directory.
                   </h2>
                   <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">
-                    The directory is temporarily unavailable while we review and prepare mover profiles. This does not
-                    affect moving quote requests: you can safely submit your move details now, and Match &apos;n Move
-                    will use them only to help arrange relevant, no-obligation quotes.
+                    The public directory is intentionally held back until listings are useful, checked, and ready for
+                    customers to compare. Quote requests still work: Match &apos;n Move uses your move details to arrange
+                    relevant, no-obligation quotes without publishing unfinished mover profiles.
                   </p>
                   <Link
                     href="/quote"
@@ -77,21 +95,36 @@ export default async function MoversPage() {
                 <div className="grid gap-3">
                   <MaintenancePoint
                     icon={FileCheck2}
-                    title="Your details still work"
-                    copy="Quote requests continue to be received and handled through the normal secure process."
+                    title="Quote matching still works"
+                    copy="Customers can still submit move details and be matched through the normal secure process."
                   />
                   <MaintenancePoint
                     icon={ShieldCheck}
-                    title="Listings are being checked"
-                    copy="Profiles will return only when they are ready for customers to view and compare."
+                    title="Profiles are checked first"
+                    copy="Mover listings should earn trust before customers are asked to compare them publicly."
                   />
                   <MaintenancePoint
                     icon={Clock3}
-                    title="Temporary interruption"
-                    copy="This page will reopen as the verified mover directory is made ready."
+                    title="Launch with confidence"
+                    copy="The directory will open when verified profiles, reviews, and service details are ready."
                   />
                 </div>
               </div>
+            </div>
+
+            <div className="mt-8 grid gap-4 lg:grid-cols-3">
+              {verificationChecks.map((check) => {
+                const Icon = check.icon;
+                return (
+                  <article key={check.title} className="rounded-[26px] border border-white/10 bg-slate-950/25 p-5">
+                    <div className="inline-flex rounded-2xl bg-sky-300/10 p-3 text-sky-200">
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <h2 className="mt-4 text-lg font-bold text-white">{check.title}</h2>
+                    <p className="mt-2 text-sm leading-7 text-slate-300">{check.copy}</p>
+                  </article>
+                );
+              })}
             </div>
           </div>
         </div>

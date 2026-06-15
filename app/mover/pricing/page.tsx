@@ -122,6 +122,36 @@ const securityLayers = [
   },
 ] as const;
 
+const exampleLeadPrices = [
+  {
+    title: "Standard local apartment move",
+    price: "$20",
+    detail: "A typical local lead with no urgent timing or long-haul modifier.",
+  },
+  {
+    title: "Large local home",
+    price: "$30",
+    detail: "$20 base lead plus the larger-home modifier.",
+  },
+  {
+    title: "Urgent long-haul move",
+    price: "$60",
+    detail: "$20 base lead, urgent timing, and same-island long-haul planning.",
+  },
+  {
+    title: "Between-islands move",
+    price: "$65+",
+    detail: "$20 base lead plus the inter-island modifier; large or urgent moves can add more.",
+  },
+] as const;
+
+const moverControls = [
+  "See the lead price before opening customer contact details.",
+  "Use service areas so your team receives routes you can actually quote.",
+  "Track every opened lead in billing history before month-end invoicing.",
+  "Contact support if a lead is clearly unusable or outside the stated route.",
+] as const;
+
 export default function MoverPricingPage() {
   return (
     <SiteShell>
@@ -214,6 +244,42 @@ export default function MoverPricingPage() {
                 <p>No checkout step blocks the mover from opening the lead.</p>
                 <p>The lead price is shown before unlock so the team knows what will appear on the invoice.</p>
                 <p>Pricing uses fixed rules instead of vague variable charges.</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.05fr)_minmax(20rem,0.95fr)]">
+            <div className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-sky-700">Example lead prices</p>
+              <h2 className="mt-3 text-[clamp(2rem,4vw,3.2rem)] font-black tracking-[-0.05em] text-slate-950">
+                A quicker way to understand likely costs
+              </h2>
+              <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                {exampleLeadPrices.map((example) => (
+                  <article key={example.title} className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <h3 className="font-semibold text-slate-900">{example.title}</h3>
+                      <p className="shrink-0 rounded-full bg-white px-3 py-1 text-sm font-black text-orange-600 shadow-sm">
+                        {example.price}
+                      </p>
+                    </div>
+                    <p className="mt-3 text-sm leading-7 text-slate-600">{example.detail}</p>
+                  </article>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-[32px] border border-slate-200 bg-[linear-gradient(145deg,#0f172a,#17324f)] p-6 text-white shadow-sm sm:p-7">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-200">Cost control</p>
+              <h2 className="mt-3 text-[clamp(1.9rem,4vw,3rem)] font-black tracking-[-0.05em] text-white">
+                Movers stay in control before they open a lead.
+              </h2>
+              <div className="mt-6 space-y-3">
+                {moverControls.map((control) => (
+                  <div key={control} className="rounded-[22px] border border-white/10 bg-white/[0.06] px-4 py-4">
+                    <p className="text-sm leading-7 text-slate-200">{control}</p>
+                  </div>
+                ))}
               </div>
             </div>
           </div>

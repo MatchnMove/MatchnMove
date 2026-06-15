@@ -76,6 +76,18 @@ type ExtraDetails = {
   toStorageSize: string;
 };
 
+const steps = [
+  { number: 1, label: "Contact", summary: "How movers can reach you" },
+  { number: 2, label: "Pickup", summary: "Where the move starts" },
+  { number: 3, label: "Destination", summary: "Route, date, and items" }
+] as const;
+
+const trustNotes = [
+  "Free for customers",
+  "Shared only with relevant movers",
+  "No obligation to book"
+] as const;
+
 const init: Form = {
   name: "",
   email: "",
@@ -195,6 +207,7 @@ export function QuoteForm() {
   const [form, setForm] = useState<Form>(init);
   const [extra, setExtra] = useState<ExtraDetails>(initExtra);
   const [errors, setErrors] = useState<Errors>({});
+  const [sharingConsent, setSharingConsent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [locating, setLocating] = useState(false);
@@ -427,6 +440,10 @@ export function QuoteForm() {
       setSubmitError("Please fix the highlighted fields.");
       return;
     }
+    if (!sharingConsent) {
+      setSubmitError("Please confirm that Match 'n Move may share this request with relevant moving companies.");
+      return;
+    }
     setSubmitError("");
     setLoading(true);
     try {
@@ -465,7 +482,9 @@ export function QuoteForm() {
         body: JSON.stringify(payload)
       });
       if (res.ok) {
-        router.push("/thank-you");
+        const data = (await res.json().catch(() => null)) as { id?: string } | null;
+        const requestId = data?.id ? `?id=${encodeURIComponent(data.id)}` : "";
+        router.push(`/thank-you${requestId}`);
         return;
       }
 
@@ -690,14 +709,28 @@ export function QuoteForm() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-[#101b34] to-[#0f2747] py-8 sm:py-12">
       <div className="container-shell relative text-white">
-        <h1 className="mb-5 max-w-2xl text-base font-semibold leading-7 text-slate-100 sm:mb-6 sm:text-2xl">
-          Fill in your details to get free, no-obligation moving quotes from trusted local movers.
-        </h1>
+        <div className="mb-5 max-w-3xl sm:mb-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-200">Free moving quote request</p>
+          <h1 className="mt-2 max-w-2xl text-2xl font-black leading-tight text-white sm:text-4xl">
+            Tell us once, then compare quotes from movers who fit your route.
+          </h1>
+          <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-200 sm:text-base">
+            This request gives movers the detail they need to price the same job. You stay in control and choose only
+            when a quote feels right.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {trustNotes.map((note) => (
+              <span key={note} className="rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-xs font-semibold text-slate-100">
+                {note}
+              </span>
+            ))}
+          </div>
+        </div>
         <div ref={formCardRef} className="max-w-3xl rounded-[22px] border border-slate-200/80 bg-white p-4 text-slate-900 shadow-[0_20px_45px_-25px_rgba(2,6,23,0.65)] sm:rounded-2xl sm:p-7">
           <div className="mb-5 sm:mb-7">
             <div className="mb-2 flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
               <span>Progress</span>
-              <span>Step {step} of 3</span>
+              <span>{steps[step - 1].label} · Step {step} of 3</span>
             </div>
             <div className="h-2 overflow-hidden rounded-full bg-slate-200">
               <div
@@ -706,23 +739,31 @@ export function QuoteForm() {
               />
             </div>
             <div className="mt-3 grid grid-cols-3 gap-2">
-              {[1, 2, 3].map((n) => (
-                <div key={n} className="flex items-center gap-2">
+              {steps.map((item) => (
+                <div key={item.number} className="flex items-start gap-2">
                   <span
                     className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-semibold transition-colors ${
-                      step >= n ? "bg-brandBlue text-white" : "bg-slate-200 text-slate-500"
+                      step >= item.number ? "bg-brandBlue text-white" : "bg-slate-200 text-slate-500"
                     }`}
                   >
-                    {n}
+                    {item.number}
                   </span>
-                  <span className={`hidden text-xs sm:inline ${step >= n ? "text-slate-700" : "text-slate-400"}`}>Step {n}</span>
+                  <span className={`hidden text-xs sm:block ${step >= item.number ? "text-slate-700" : "text-slate-400"}`}>
+                    <span className="block font-semibold">{item.label}</span>
+                    <span className="mt-0.5 block font-normal normal-case tracking-normal">{item.summary}</span>
+                  </span>
                 </div>
               ))}
             </div>
           </div>
           {step === 1 && (
             <div className="space-y-4">
-              <h2 className="text-xl font-semibold">Your Contact Details</h2>
+              <div>
+                <h2 className="text-xl font-semibold">Your contact details</h2>
+                <p className="mt-1 text-sm leading-6 text-slate-500">
+                  Movers use this to send quotes and ask practical questions about timing, access, or inventory.
+                </p>
+              </div>
               {(["name", "email", "phone"] as const).map((k) => (
                 <label key={k} className="block">
                   <span className="mb-1 block text-sm font-medium">{fieldMeta[k].label}</span>
@@ -741,7 +782,12 @@ export function QuoteForm() {
           )}
           {step === 2 && (
             <div className="grid gap-4">
-              <h2 className="text-xl font-semibold">What type of property is your moving address?</h2>
+              <div>
+                <h2 className="text-xl font-semibold">Where are movers picking up from?</h2>
+                <p className="mt-1 text-sm leading-6 text-slate-500">
+                  Access details help prevent surprise charges and make the first quote more accurate.
+                </p>
+              </div>
               <PropertyCards
                 value={form.fromPropertyType}
                 onSelect={(next) => {
@@ -832,7 +878,12 @@ export function QuoteForm() {
           )}
           {step === 3 && (
             <div className="grid gap-4">
-              <h2 className="text-xl font-semibold">Where are you moving to?</h2>
+              <div>
+                <h2 className="text-xl font-semibold">Where are you moving to?</h2>
+                <p className="mt-1 text-sm leading-6 text-slate-500">
+                  Add your destination, preferred date, and item notes so each mover prices the same scope.
+                </p>
+              </div>
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
                 <p className="text-sm font-medium">Do you know what type of property you&apos;re moving into?</p>
                 <div className="mt-3 grid grid-cols-2 gap-2 sm:flex">
@@ -1078,7 +1129,7 @@ export function QuoteForm() {
                 </div>
                 <textarea
                   className={`min-h-24 w-full rounded-xl border p-3 shadow-sm transition-colors duration-150 focus:ring-4 focus:outline-none ${errors.movingWhat ? "border-red-500 focus:border-red-400 focus:ring-red-100" : "border-slate-200 focus:border-brandBlue/60 focus:ring-brandBlue/15"}`}
-                  placeholder="Type items manually (one per line) or use the Select Items popup."
+                  placeholder="Type items manually, one per line. Include anything important: piano, heavy appliances, fragile items, stairs, parking limits, long carry, packing help, or storage needs."
                   value={form.movingWhat}
                   onChange={(e) => update("movingWhat", e.target.value)}
                 />
@@ -1169,9 +1220,29 @@ export function QuoteForm() {
                   </div>
                 )}
               </div>
-              <label className="flex gap-2">
-                <input type="checkbox" checked={form.dateFlexible} onChange={(e) => update("dateFlexible", e.target.checked)} />
-                Date flexible
+              <label className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                <input className="mt-1 h-4 w-4 rounded border-slate-300 text-brandBlue focus:ring-brandBlue" type="checkbox" checked={form.dateFlexible} onChange={(e) => update("dateFlexible", e.target.checked)} />
+                <span>
+                  <span className="block text-sm font-semibold text-slate-900">My move date is flexible</span>
+                  <span className="mt-1 block text-sm leading-6 text-slate-500">Flexible dates can help movers offer more options or sharper pricing.</span>
+                </span>
+              </label>
+              <label className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-4">
+                <input
+                  className="mt-1 h-4 w-4 rounded border-slate-300 text-brandBlue focus:ring-brandBlue"
+                  type="checkbox"
+                  checked={sharingConsent}
+                  onChange={(event) => {
+                    setSharingConsent(event.target.checked);
+                    if (event.target.checked) setSubmitError("");
+                  }}
+                />
+                <span>
+                  <span className="block text-sm font-semibold text-slate-900">I agree to share this request with relevant movers</span>
+                  <span className="mt-1 block text-sm leading-6 text-slate-500">
+                    Match &apos;n Move will use these details to match your job with suitable moving companies. Your request is free and no-obligation.
+                  </span>
+                </span>
               </label>
               {submitError && <p className="text-sm text-red-600">{submitError}</p>}
               <div className="flex flex-col gap-3 sm:flex-row">

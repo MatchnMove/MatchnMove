@@ -32,7 +32,15 @@ const nextSteps = [
   }
 ] as const;
 
-export default function ThankYouPage() {
+export default async function ThankYouPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ id?: string | string[] }>;
+}) {
+  const params = searchParams ? await searchParams : {};
+  const rawRequestId = Array.isArray(params.id) ? params.id[0] : params.id;
+  const requestReference = rawRequestId ? `MN-${rawRequestId.slice(0, 8).toUpperCase()}` : null;
+
   return (
     <SiteShell>
       <section className="relative overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(56,189,248,0.18),transparent_28%),radial-gradient(circle_at_82%_18%,rgba(34,197,94,0.16),transparent_24%),linear-gradient(180deg,#081323_0%,#0c2037_42%,#102845_100%)] py-14 text-white sm:py-16 lg:py-20">
@@ -61,6 +69,21 @@ export default function ThankYouPage() {
                   the usual back-and-forth.
                 </p>
 
+                <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.07] px-4 py-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-100/75">Reference</p>
+                    <p className="mt-2 break-words text-lg font-black text-white">{requestReference ?? "Sent"}</p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.07] px-4 py-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-100/75">Expected timing</p>
+                    <p className="mt-2 text-lg font-black text-white">24 hours</p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.07] px-4 py-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-100/75">Cost to compare</p>
+                    <p className="mt-2 text-lg font-black text-white">$0</p>
+                  </div>
+                </div>
+
                 <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                   <Link
                     href="/"
@@ -70,16 +93,20 @@ export default function ThankYouPage() {
                     <ArrowRight className="h-4 w-4" />
                   </Link>
                   <Link
-                    href="/contact"
+                    href={requestReference ? `/contact?subject=${encodeURIComponent(`Update quote request ${requestReference}`)}` : "/contact"}
                     className="inline-flex min-h-[54px] items-center justify-center rounded-2xl border border-white/12 bg-white/[0.08] px-6 py-3 text-base font-semibold text-white transition hover:border-white/20 hover:bg-white/[0.12]"
                   >
-                    Contact us
+                    Update request details
                   </Link>
                 </div>
               </div>
 
               <aside className="rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.1),rgba(255,255,255,0.05))] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] sm:p-6">
                 <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-100">What happens next</p>
+                <p className="mt-2 text-sm leading-6 text-slate-300">
+                  Keep an eye on your phone and inbox. Movers may contact you directly if they need access details,
+                  photos, or inventory clarification before pricing.
+                </p>
                 <div className="mt-5 space-y-3">
                   {nextSteps.map((step) => {
                     const Icon = step.icon;

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Mail, Phone, Send, Sparkles } from "lucide-react";
 import { SiteShell } from "@/components/site-shell";
 import { SITE_EMAILS, toMailto } from "@/lib/site-emails";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 type ContactForm = {
   name: string;
@@ -15,6 +15,20 @@ export default function ContactPage() {
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [statusMessage, setStatusMessage] = useState("");
   const [form, setForm] = useState<ContactForm>({ name: "", email: "", message: "" });
+
+  useEffect(() => {
+    const subject = new URLSearchParams(window.location.search).get("subject");
+    if (!subject) return;
+
+    const timer = window.setTimeout(() => {
+      setForm((current) => ({
+        ...current,
+        message: current.message || `${subject}\n\nHi Match 'n Move team,\n\nI would like to update this request with:`,
+      }));
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, []);
 
   async function submitContactMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
