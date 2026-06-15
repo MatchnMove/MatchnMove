@@ -2,7 +2,18 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, BadgeCheck, Building2, Camera, Compass, Sparkles, UploadCloud, Users2 } from "lucide-react";
+import {
+  ArrowRight,
+  BadgeCheck,
+  Building2,
+  Camera,
+  Compass,
+  HeartHandshake,
+  Lightbulb,
+  Sparkles,
+  UploadCloud,
+  Users2,
+} from "lucide-react";
 import { SiteShell } from "@/components/site-shell";
 import { getAboutPageStats } from "@/lib/about-stats";
 import { NZ_SERVICE_AREAS, dedupeServiceAreaLabels, formatServiceAreaLabel } from "@/lib/nz-regions";
@@ -11,7 +22,7 @@ import { createPageMetadata } from "@/lib/seo";
 export const metadata: Metadata = createPageMetadata({
   title: "About Match 'n Move",
   description:
-    "Learn how Match 'n Move connects New Zealand customers with relevant moving companies for free quote comparison.",
+    "Meet the family behind Match 'n Move and learn how their shared skills and South African moving-quote experience are shaping a better way to move in New Zealand.",
   path: "/about",
 });
 
@@ -21,21 +32,21 @@ const teamCards = [
     title: "Founder / Partnerships Lead",
     role: "Calls and comms",
     image: "/match-n-move-web-ready-images/match-n-move-team-1-web.webp",
-    note: "Managing calls, mover relationships, and business partnerships with a clear voice."
+    note: "Building genuine relationships with movers and customers, and making sure every conversation is clear, helpful, and human."
   },
   {
     name: "Lance Oosterbroek",
     title: "Founder / Developer",
     role: "Platform build",
     image: "/match-n-move-web-ready-images/match-n-move-team-2-web.webp",
-    note: "Building the Match 'n Move experience and the tools behind every quote."
+    note: "Turning the family's idea into a dependable digital platform and building the tools behind every quote."
   },
   {
     name: "Tiaan Gouws",
     title: "Founder / Finance Lead",
     role: "Business oversight",
     image: "/match-n-move-web-ready-images/match-n-move-team-3-web.webp",
-    note: "Guiding the money, operations, and launch decisions that keep the business steady."
+    note: "Bringing financial guidance, practical oversight, and experience from helping build South African quote platform AskDonkey."
   }
 ] as const;
 
@@ -97,8 +108,8 @@ export default async function AboutPage() {
                   Making moving feel more modern, calm, and connected.
                 </h1>
                 <p className="mt-5 max-w-2xl text-sm leading-7 text-slate-200 sm:text-base">
-                  We&apos;re building a cleaner way for customers to discover trusted moving companies and for movers to
-                  grow through a platform that feels polished from first click to final quote.
+                  We&apos;re a family building something together: a cleaner way for customers to discover trusted moving
+                  companies, and for movers to grow through a platform that feels personal from first click to final quote.
                 </p>
               </div>
 
@@ -122,13 +133,94 @@ export default async function AboutPage() {
             </div>
           </div>
 
+          <section className="mt-8 overflow-hidden rounded-[24px] border border-slate-200 bg-white/95 shadow-[0_28px_80px_-48px_rgba(15,23,42,0.38)] sm:mt-10 sm:rounded-[34px]">
+            <div className="grid lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
+              <div className="p-5 sm:p-8 lg:p-10">
+                <div className="inline-flex items-center gap-2 rounded-full bg-rose-50 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-rose-700 sm:text-sm">
+                  <HeartHandshake className="h-4 w-4" />
+                  The family behind the business
+                </div>
+                <h2 className="mt-5 max-w-[16ch] text-[clamp(2rem,8vw,4.4rem)] font-black leading-[1] tracking-[-0.035em] text-slate-950 sm:leading-[0.95] sm:tracking-[-0.055em]">
+                  Built to bring our family closer, and help others move forward.
+                </h2>
+
+                <div className="mt-6 max-w-3xl space-y-4 text-sm leading-7 text-slate-600 sm:text-base sm:leading-8">
+                  <p>
+                    Match &apos;n Move began with a simple idea: create a family project we could be proud of, and build
+                    something meaningful together. Tiaan is father-in-law to both Seth and Lance, but our connection is
+                    more than a family tree. It is the trust to challenge one another, lean on one another, and keep
+                    showing up with the same purpose.
+                  </p>
+                  <p>
+                    Each of us arrived with different strengths. Seth brings communication, energy, and a natural ability
+                    to build relationships. Lance brings the technical skill and care needed to turn an ambitious idea
+                    into a platform people can rely on. Tiaan brings business perspective, financial discipline, and the
+                    steady experience to help guide long-term decisions.
+                  </p>
+                  <p>
+                    We believe those differences make us stronger. Match &apos;n Move gives us a place to combine what
+                    each of us has learned, grow alongside one another, and create a business shaped by family values:
+                    honesty, responsibility, hard work, and looking after people properly. Our ambition is to grow the
+                    platform to its fullest potential without losing the personal commitment that started it.
+                  </p>
+                </div>
+
+                <div className="mt-7 flex flex-wrap gap-2">
+                  {["Family owned", "Complementary skills", "Long-term thinking", "People first"].map((value) => (
+                    <span
+                      key={value}
+                      className="rounded-full border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm font-semibold text-slate-700"
+                    >
+                      {value}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <aside className="relative overflow-hidden bg-[linear-gradient(145deg,#0f172a,#17324f)] p-5 text-white sm:p-8 lg:p-10">
+                <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-sky-400/15 blur-3xl" />
+                <div className="pointer-events-none absolute -bottom-20 -left-16 h-52 w-52 rounded-full bg-emerald-400/15 blur-3xl" />
+
+                <div className="relative">
+                  <div className="inline-flex rounded-2xl bg-white/10 p-3 text-emerald-200">
+                    <Lightbulb className="h-6 w-6" />
+                  </div>
+                  <p className="mt-5 text-sm font-semibold uppercase tracking-[0.2em] text-emerald-200">
+                    Experience behind the idea
+                  </p>
+                  <h3 className="mt-3 text-[clamp(1.8rem,7vw,3.4rem)] font-black leading-[1] tracking-[-0.035em] text-white sm:leading-[0.96] sm:tracking-[-0.05em]">
+                    From AskDonkey in South Africa to Match &apos;n Move in New Zealand.
+                  </h3>
+                  <p className="mt-5 text-sm leading-7 text-slate-300 sm:text-base">
+                    Before Match &apos;n Move, Tiaan helped build AskDonkey.co.za, an online service created in South
+                    Africa to provide free furniture-moving quotes to households and businesses. It connected customers
+                    with trusted removal companies and made it easier to compare options for household and corporate
+                    moves across the country.
+                  </p>
+                  <p className="mt-4 text-sm leading-7 text-slate-300 sm:text-base">
+                    That experience gave our family first-hand insight into the value of a clear quote process, strong
+                    mover relationships, and trust on both sides of a move. Match &apos;n Move carries those lessons
+                    forward, rebuilt thoughtfully for New Zealand and shaped by the combined skills of a new generation.
+                  </p>
+
+                  <div className="mt-7 rounded-[22px] border border-white/10 bg-white/[0.06] p-5 backdrop-blur">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-200">What carries forward</p>
+                    <p className="mt-3 text-lg font-bold leading-7 text-white">
+                      Make comparison simpler. Treat movers as partners. Help people make a big decision with confidence.
+                    </p>
+                  </div>
+                </div>
+              </aside>
+            </div>
+          </section>
+
           <div className="mt-8 grid gap-5 sm:mt-10 sm:gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(340px,0.95fr)] lg:items-start">
             <div className="overflow-hidden rounded-[24px] border border-slate-200 bg-white/90 p-4 shadow-[0_26px_70px_-46px_rgba(15,23,42,0.35)] backdrop-blur sm:rounded-[30px] sm:p-7">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">Our team</p>
                   <h2 className="mt-3 text-[clamp(1.75rem,8vw,3.5rem)] font-black leading-[1] tracking-[-0.03em] text-slate-950 sm:leading-[0.95] sm:tracking-[-0.05em]">
-                    The team bringing Match &apos;n Move to launch.
+                    Three perspectives. One family vision.
                   </h2>
                 </div>
                 <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-600">
