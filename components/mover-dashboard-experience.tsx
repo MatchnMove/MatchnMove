@@ -590,7 +590,16 @@ export function MoverDashboardExperience({
           </aside>
 
           <main className="space-y-3 sm:space-y-4">
-            {profile.status !== "ACTIVE" ? (
+            {profile.status === "TEST" ? (
+              <div className="rounded-[24px] border border-sky-200 bg-sky-50 p-4 text-sky-950 shadow-sm sm:rounded-[30px] sm:p-5">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-700">Test account</p>
+                <p className="mt-2 text-lg font-black">This profile is isolated from the live marketplace</p>
+                <p className="mt-2 text-sm leading-6 text-sky-900">
+                  Public listings, rankings, verification queues, real lead matching, and lead actions are disabled for
+                  this account.
+                </p>
+              </div>
+            ) : profile.status !== "ACTIVE" ? (
               <div className="rounded-[24px] border border-rose-200 bg-rose-50 p-4 text-rose-900 shadow-sm sm:rounded-[30px] sm:p-5">
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-rose-700">Account suspended</p>
                 <p className="mt-2 text-lg font-black">Lead access and lead actions are disabled</p>

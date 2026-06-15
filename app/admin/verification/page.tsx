@@ -28,6 +28,7 @@ export default async function AdminVerificationPage() {
     getMoverLaunchTrialSetting(),
     prisma.moverCompany.findMany({
       where: {
+        status: "ACTIVE",
         nzbnVerificationStatus: NZBN_VERIFICATION.PENDING_REVIEW,
       },
       select: {
@@ -51,6 +52,9 @@ export default async function AdminVerificationPage() {
     prisma.moverDocument.findMany({
       where: {
         verificationStatus: DOCUMENT_VERIFICATION.PENDING_REVIEW,
+        moverCompany: {
+          status: "ACTIVE",
+        },
       },
       include: {
         moverCompany: {

@@ -17,6 +17,7 @@
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:seed": "tsx prisma/seed.ts",
     "admin:cleanup-mover-account": "node scripts/cleanup-admin-mover-account.mjs",
+    "movers:cleanup-test-data": "node scripts/cleanup-test-movers.mjs",
     "seed:demo-movers": "node scripts/seed-demo-movers.mjs",
     "seed:shared-load": "node scripts/seed-shared-load-data.mjs",
     "load:test": "node scripts/load-scenario.mjs"

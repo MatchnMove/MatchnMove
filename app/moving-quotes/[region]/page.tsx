@@ -260,9 +260,10 @@ export default async function RegionalMovingQuotesPage({
               </div>
             ) : (
               <div className="mt-6 rounded-[22px] border border-dashed border-slate-300 bg-slate-50 p-6">
-                <p className="font-semibold text-slate-900">Public profiles for this region are still being added.</p>
+                <p className="font-semibold text-slate-900">The mover directory is temporarily under maintenance.</p>
                 <p className="mt-2 text-sm leading-7 text-slate-600">
-                  You can still submit a quote request so Match &apos;n Move can connect your route with relevant movers.
+                  You can still submit your move details securely so Match &apos;n Move can arrange relevant,
+                  no-obligation quotes while verified listings are being prepared.
                 </p>
               </div>
             )}
@@ -288,4 +289,3 @@ export default async function RegionalMovingQuotesPage({
     </SiteShell>
   );
 }
-

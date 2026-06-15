@@ -60,11 +60,11 @@ export async function MoverReviewsShowcase() {
                   <ShieldCheck className="h-6 w-6" />
                 </div>
                 <h3 className="mt-5 text-2xl font-black tracking-[-0.04em] text-slate-950">
-                  Verified mover profiles are being added.
+                  The mover review board is temporarily under maintenance.
                 </h3>
                 <p className="mt-3 text-sm leading-7 text-slate-600">
-                  Public ratings and reviews will appear here only after genuine moving companies complete verification
-                  and customers submit feedback through completed Match &apos;n Move jobs.
+                  We&apos;re reviewing the profiles and feedback shown here. You can still submit your move details
+                  securely to request free, no-obligation quotes while this section is being prepared.
                 </p>
                 <Link
                   href="/quote"

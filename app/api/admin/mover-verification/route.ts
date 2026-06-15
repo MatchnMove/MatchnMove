@@ -10,6 +10,7 @@ export async function GET(req: NextRequest) {
   const [nzbnReviews, documentReviews] = await Promise.all([
     prisma.moverCompany.findMany({
       where: {
+        status: "ACTIVE",
         nzbnVerificationStatus: NZBN_VERIFICATION.PENDING_REVIEW,
       },
       select: {
@@ -33,6 +34,9 @@ export async function GET(req: NextRequest) {
     prisma.moverDocument.findMany({
       where: {
         verificationStatus: DOCUMENT_VERIFICATION.PENDING_REVIEW,
+        moverCompany: {
+          status: "ACTIVE",
+        },
       },
       include: {
         moverCompany: {
