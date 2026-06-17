@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import { ReactNode } from "react";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_PHONE, SITE_URL, absoluteUrl } from "@/lib/seo";
 import { SITE_EMAILS } from "@/lib/site-emails";
+import { GoogleAnalytics } from "./google-analytics";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -137,6 +138,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body>
+        <GoogleAnalytics measurementId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID} />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
