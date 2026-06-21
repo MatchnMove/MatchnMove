@@ -40,8 +40,8 @@ export function ResourceArticle({ resource }: { resource: MovingResource }) {
 
       <section className="bg-[linear-gradient(180deg,#eef5fb_0%,#ffffff_32%)] py-10 sm:py-14">
         <div className="container-shell">
-          <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_300px] xl:items-start">
-            <article className="space-y-6">
+          <div className="grid min-w-0 gap-8 xl:grid-cols-[minmax(0,1fr)_300px] xl:items-start">
+            <article className="min-w-0 space-y-6">
               {resource.sections.map((section) => (
                 <ResourceSectionBlock key={section.heading} section={section} />
               ))}
@@ -101,7 +101,7 @@ function ResourceSectionBlock({ section }: { section: ResourceSection }) {
           <div className="rounded-2xl bg-white p-3 text-sky-700 shadow-sm">
             <Info className="h-5 w-5" />
           </div>
-          <div>
+          <div className="min-w-0">
             <h2 className="text-2xl font-black tracking-[-0.04em] text-slate-950">{section.heading}</h2>
             <p className="mt-3 text-base leading-8 text-slate-700">{section.copy}</p>
           </div>
@@ -111,7 +111,7 @@ function ResourceSectionBlock({ section }: { section: ResourceSection }) {
   }
 
   return (
-    <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
+    <section className="min-w-0 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
       <h2 className="text-2xl font-black tracking-[-0.04em] text-slate-950 sm:text-3xl">{section.heading}</h2>
 
       {"intro" in section && section.intro ? (
@@ -151,7 +151,31 @@ function ResourceSectionBlock({ section }: { section: ResourceSection }) {
 
       {section.type === "table" ? (
         <>
-          <div className="mt-5 overflow-x-auto rounded-[22px] border border-slate-200">
+          <div className="mt-5 grid gap-3 sm:hidden">
+            {section.rows.map((row) => (
+              <dl key={row.join("-")} className="overflow-hidden rounded-[20px] border border-slate-200 bg-white">
+                {row.map((cell, cellIndex) => (
+                  <div
+                    key={`${cell}-${cellIndex}`}
+                    className={`grid gap-1 px-4 py-3 ${cellIndex > 0 ? "border-t border-slate-200" : "bg-slate-950 text-white"}`}
+                  >
+                    <dt
+                      className={`text-[0.68rem] font-bold uppercase tracking-[0.14em] ${
+                        cellIndex > 0 ? "text-slate-500" : "text-sky-200"
+                      }`}
+                    >
+                      {section.columns[cellIndex]}
+                    </dt>
+                    <dd className={`break-words text-sm leading-6 ${cellIndex > 0 ? "text-slate-700" : "font-semibold text-white"}`}>
+                      {cell}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            ))}
+          </div>
+
+          <div className="mt-5 hidden max-w-full overflow-x-auto rounded-[22px] border border-slate-200 sm:block">
             <table className="w-full min-w-[680px] border-collapse text-left">
               <thead className="bg-slate-950 text-white">
                 <tr>
@@ -226,4 +250,3 @@ function SourceNotes({ resourceSlug }: { resourceSlug: string }) {
     </section>
   );
 }
-
