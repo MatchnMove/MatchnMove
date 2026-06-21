@@ -86,8 +86,8 @@ export function MovingCostCalculator() {
   }, [busyTiming, city, difficultAccess, heavyItem, homeSize, packing, routeType]);
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
-      <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+    <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
+      <div className="min-w-0 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
         <div className="flex items-center gap-3">
           <div className="rounded-2xl bg-sky-50 p-3 text-sky-700">
             <Calculator className="h-6 w-6" />
@@ -227,7 +227,7 @@ function CalculatorSelect({
         value={value}
         disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
-        className="min-h-[52px] w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-800 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100 disabled:cursor-not-allowed"
+        className="min-h-[52px] min-w-0 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-800 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100 disabled:cursor-not-allowed"
       >
         {options.map(([optionValue, optionLabel]) => (
           <option key={optionValue} value={optionValue}>{optionLabel}</option>
@@ -271,4 +271,3 @@ function CalculatorCheck({
     </label>
   );
 }
-
