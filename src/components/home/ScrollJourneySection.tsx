@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ShieldCheck, Sparkles, WalletCards, type LucideIcon } from "lucide-react";
-import { motion, useInView, useMotionValueEvent, useScroll, useSpring, useTransform } from "framer-motion";
+import { motion, useInView, useMotionValueEvent, useReducedMotion, useScroll, useSpring, useTransform } from "framer-motion";
 import { useRef, useState } from "react";
 
 const steps = [
@@ -105,7 +105,7 @@ function StepCard({
     <motion.article
       animate={{ scale: stateClasses.scale, opacity: stateClasses.opacity, y: stateClasses.y }}
       transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-      className={`rounded-[22px] border px-4 py-4 backdrop-blur-xl md:rounded-[28px] md:px-6 md:py-6 ${stateClasses.card}`}
+      className={`transform-gpu rounded-[22px] border px-4 py-4 sm:backdrop-blur-xl md:rounded-[28px] md:px-6 md:py-6 ${stateClasses.card}`}
     >
       <div className="flex items-center gap-3 md:gap-4">
         <div
@@ -143,7 +143,7 @@ function BenefitCard({
   const cardRef = useRef<HTMLDivElement | null>(null);
   const isInView = useInView(cardRef, { once: true, margin: "-15% 0px -10% 0px" });
   const isInteractive = Boolean(href);
-  const cardClassName = `group relative h-full overflow-hidden rounded-[22px] border bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.04))] px-4 py-4 backdrop-blur-xl sm:rounded-[28px] sm:px-6 sm:py-6 ${
+  const cardClassName = `group relative h-full overflow-hidden rounded-[22px] border bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.04))] px-4 py-4 sm:rounded-[28px] sm:px-6 sm:py-6 sm:backdrop-blur-xl ${
     isInteractive
       ? "cursor-pointer border-white/12 transition duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#091423]"
       : "border-white/12"
@@ -218,9 +218,11 @@ function BenefitCard({
 export function ScrollJourneySection() {
   const sectionRef = useRef<HTMLElement | null>(null);
   const timelineRef = useRef<HTMLDivElement | null>(null);
+  const prefersReducedMotion = useReducedMotion();
   const [stepStates, setStepStates] = useState<Array<"active" | "complete" | "upcoming">>(
     steps.map((_, index) => getStepState(0, index, steps.length)),
   );
+  const stepStatesRef = useRef(stepStates);
   const { scrollYProgress } = useScroll({
     target: sectionRef,
     offset: ["start 80%", "end 80%"],
@@ -232,13 +234,19 @@ export function ScrollJourneySection() {
   });
 
   const easedProgress = useSpring(timelineProgress, { stiffness: 130, damping: 28, mass: 0.2 });
-  const progressHeight = useTransform(easedProgress, [0, 1], ["0%", "100%"]);
   const headerOpacity = useTransform(scrollYProgress, [0, 0.16, 0.28], [0.42, 0.72, 1]);
   const headerY = useTransform(scrollYProgress, [0, 0.28], [18, 0]);
   const sectionGlow = useTransform(scrollYProgress, [0, 1], [0.28, 0.6]);
 
   useMotionValueEvent(easedProgress, "change", (latest) => {
-    setStepStates(steps.map((_, index) => getStepState(latest, index, steps.length)));
+    const nextStates = steps.map((_, index) => getStepState(latest, index, steps.length));
+
+    if (nextStates.every((state, index) => state === stepStatesRef.current[index])) {
+      return;
+    }
+
+    stepStatesRef.current = nextStates;
+    setStepStates(nextStates);
   });
 
   return (
@@ -248,12 +256,12 @@ export function ScrollJourneySection() {
       className="relative overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.26),transparent_28%),radial-gradient(circle_at_85%_18%,rgba(56,189,248,0.16),transparent_24%),linear-gradient(180deg,#06111f_0%,#081425_28%,#091524_58%,#07111d_100%)] text-white"
     >
       <motion.div
-        style={{ opacity: sectionGlow }}
-        className="pointer-events-none absolute inset-x-0 top-0 h-80 bg-[radial-gradient(circle_at_30%_30%,rgba(96,165,250,0.24),transparent_38%),radial-gradient(circle_at_70%_10%,rgba(59,130,246,0.14),transparent_28%)] blur-3xl"
+        style={{ opacity: prefersReducedMotion ? 0.44 : sectionGlow }}
+        className="pointer-events-none absolute inset-x-0 top-0 h-80 transform-gpu bg-[radial-gradient(circle_at_30%_30%,rgba(96,165,250,0.24),transparent_38%),radial-gradient(circle_at_70%_10%,rgba(59,130,246,0.14),transparent_28%)] sm:blur-3xl"
       />
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(120deg,transparent,rgba(148,163,184,0.035),transparent)]" />
-      <div className="pointer-events-none absolute left-[12%] top-28 h-44 w-44 rounded-full bg-blue-400/10 blur-[120px]" />
-      <div className="pointer-events-none absolute right-[10%] top-1/3 h-56 w-56 rounded-full bg-cyan-300/10 blur-[140px]" />
+      <div className="pointer-events-none absolute left-[12%] top-28 hidden h-44 w-44 rounded-full bg-blue-400/10 blur-[120px] sm:block" />
+      <div className="pointer-events-none absolute right-[10%] top-1/3 hidden h-56 w-56 rounded-full bg-cyan-300/10 blur-[140px] sm:block" />
 
       <div className="relative mx-auto max-w-[1240px] px-4 py-12 sm:px-6 sm:py-24 lg:px-8 lg:py-28">
         <div ref={timelineRef} className="grid gap-10 lg:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)] lg:gap-12">
@@ -269,8 +277,8 @@ export function ScrollJourneySection() {
           <div className="relative">
             <div className="absolute left-[22px] top-2 bottom-2 w-px bg-gradient-to-b from-white/5 via-white/10 to-white/5 md:left-7" />
             <motion.div
-              style={{ height: progressHeight }}
-              className="absolute left-[21px] top-2 w-[3px] origin-top rounded-full bg-[linear-gradient(180deg,rgba(255,210,182,0.35),rgba(222,122,58,0.95),rgba(255,190,144,0.45))] shadow-[0_0_28px_rgba(222,122,58,0.55)] md:left-[26px]"
+              style={{ scaleY: prefersReducedMotion ? 1 : easedProgress }}
+              className="absolute bottom-2 left-[21px] top-2 w-[3px] origin-top transform-gpu rounded-full bg-[linear-gradient(180deg,rgba(255,210,182,0.35),rgba(222,122,58,0.95),rgba(255,190,144,0.45))] shadow-[0_0_28px_rgba(222,122,58,0.55)] will-change-transform md:left-[26px]"
             />
 
             <div className="space-y-4 md:space-y-7">
