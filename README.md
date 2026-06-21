@@ -31,6 +31,9 @@ Default seeded mover login:
 - `Password123!`
 
 ## Railway deployment
+
+See [Production operations](docs/PRODUCTION_OPERATIONS.md) for the launch-scale monitoring, backup, health-check, and scaling checklist.
+
 1. Create a new Railway project and attach a Postgres service.
 2. Add environment variables from `.env.example`.
 3. Deploy this repo (Railway auto-detects `railway.json`).
