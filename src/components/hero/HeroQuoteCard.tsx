@@ -7,6 +7,7 @@ import {
   AddressSuggestion
 } from "@/components/address-autocomplete";
 import { addressSuggestionToValue } from "@/lib/address-search";
+import { trackAnalyticsEvent } from "@/lib/analytics";
 
 type AddressState = {
   address: string;
@@ -36,6 +37,18 @@ export function HeroQuoteCard() {
   const [from, setFrom] = useState<AddressState>(emptyAddress);
   const [to, setTo] = useState<AddressState>(emptyAddress);
   const [errors, setErrors] = useState<{ from?: string; to?: string }>({});
+  const [started, setStarted] = useState(false);
+
+  const trackStart = () => {
+    if (started) {
+      return;
+    }
+
+    setStarted(true);
+    trackAnalyticsEvent("quote_start", {
+      source: "homepage_hero",
+    });
+  };
 
   const updateFromAddress = (address: string) => {
     setFrom((current) => ({ ...current, address }));
@@ -49,6 +62,7 @@ export function HeroQuoteCard() {
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    trackStart();
 
     const nextErrors = {
       from: from.address.trim() ? undefined : "Enter your pickup address to start.",
@@ -57,6 +71,11 @@ export function HeroQuoteCard() {
 
     if (nextErrors.from || nextErrors.to) {
       setErrors(nextErrors);
+      trackAnalyticsEvent("quote_route_validation_error", {
+        source: "homepage_hero",
+        missing_from: Boolean(nextErrors.from),
+        missing_to: Boolean(nextErrors.to),
+      });
       return;
     }
 
@@ -71,6 +90,12 @@ export function HeroQuoteCard() {
       toRegion: to.region,
       toPostcode: to.postcode,
       toCountry: to.country || "New Zealand"
+    });
+
+    trackAnalyticsEvent("quote_route_complete", {
+      source: "homepage_hero",
+      from_region: from.region || undefined,
+      to_region: to.region || undefined,
     });
 
     window.location.href = `/quote?${params.toString()}`;
@@ -90,8 +115,17 @@ export function HeroQuoteCard() {
           label="Moving from"
           placeholder="Pickup address"
           value={from.address}
-          onChange={updateFromAddress}
+          onChange={(address) => {
+            trackStart();
+            updateFromAddress(address);
+          }}
           onSelect={(suggestion) => {
+            trackStart();
+            trackAnalyticsEvent("quote_address_selected", {
+              source: "homepage_hero",
+              address_type: "from",
+              region: suggestion.region || undefined,
+            });
             setFrom(buildAddressState(suggestion));
             setErrors((current) => ({ ...current, from: undefined }));
           }}
@@ -105,8 +139,17 @@ export function HeroQuoteCard() {
           label="Moving to"
           placeholder="Drop-off address"
           value={to.address}
-          onChange={updateToAddress}
+          onChange={(address) => {
+            trackStart();
+            updateToAddress(address);
+          }}
           onSelect={(suggestion) => {
+            trackStart();
+            trackAnalyticsEvent("quote_address_selected", {
+              source: "homepage_hero",
+              address_type: "to",
+              region: suggestion.region || undefined,
+            });
             setTo(buildAddressState(suggestion));
             setErrors((current) => ({ ...current, to: undefined }));
           }}
@@ -126,6 +169,11 @@ export function HeroQuoteCard() {
           Get free quotes
           <ArrowRight className="h-4 w-4" />
         </button>
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2 text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-slate-200/90">
+        <span className="rounded-full border border-white/12 bg-white/10 px-2.5 py-1">Free</span>
+        <span className="rounded-full border border-white/12 bg-white/10 px-2.5 py-1">No obligation</span>
+        <span className="rounded-full border border-white/12 bg-white/10 px-2.5 py-1">NZ movers</span>
       </div>
     </form>
   );

@@ -179,6 +179,13 @@ export function Nav() {
         </nav>
         <div className="flex items-center gap-2 sm:gap-3">
           <Link
+            href="/quote"
+            className="hidden min-h-[40px] items-center justify-center gap-2 rounded-xl bg-brandBlue px-4 py-2 text-[0.92rem] font-semibold leading-none text-white shadow-[0_14px_28px_-18px_rgba(47,115,255,0.8)] transition hover:translate-y-[-1px] hover:bg-brandBlue/90 sm:inline-flex md:hidden lg:inline-flex lg:px-5"
+          >
+            Get free quotes
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+          <Link
             href={moverAccountHref}
             title={moverAccountLabel}
             className="hidden max-w-[13rem] whitespace-nowrap rounded-lg bg-accentOrange px-2.5 py-2 text-[0.82rem] font-semibold leading-none text-white shadow-sm sm:inline-flex sm:rounded sm:px-4 sm:py-2 sm:text-base lg:max-w-[16rem]"
@@ -220,6 +227,14 @@ export function Nav() {
               className="absolute right-4 top-[calc(100%+0.75rem)] z-50 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-[28px] border border-slate-200 bg-white/95 p-3 shadow-[0_24px_70px_-32px_rgba(15,23,42,0.35)] backdrop-blur-xl md:hidden"
             >
               <nav className="flex flex-col">
+                <Link
+                  href="/quote"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="mb-2 inline-flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-brandBlue px-4 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-brandBlue/90"
+                >
+                  Get free quotes
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
                 {navLinks.map((link) => (
                   <Link
                     key={link.href}

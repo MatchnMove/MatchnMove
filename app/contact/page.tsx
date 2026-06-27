@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { Mail, Phone, Send, Sparkles } from "lucide-react";
 import { SiteShell } from "@/components/site-shell";
+import { trackAnalyticsEvent } from "@/lib/analytics";
 import { SITE_EMAILS, toMailto } from "@/lib/site-emails";
 import { FormEvent, useEffect, useState } from "react";
 
@@ -32,6 +33,9 @@ export default function ContactPage() {
 
   async function submitContactMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    trackAnalyticsEvent("contact_form_submit_attempt", {
+      source: "contact_page",
+    });
     setStatus("sending");
     setStatusMessage("");
 
@@ -46,21 +50,36 @@ export default function ContactPage() {
       if (!response.ok) {
         setStatus("error");
         setStatusMessage(payload?.error?.formErrors?.[0] ?? payload?.error ?? "Please check your details and try again.");
+        trackAnalyticsEvent("contact_form_submit_error", {
+          source: "contact_page",
+          status_code: response.status,
+        });
         return;
       }
 
       if (!payload?.emailSent) {
         setStatus("error");
         setStatusMessage("Your message was saved, but the email notification is not configured yet.");
+        trackAnalyticsEvent("contact_form_submit_error", {
+          source: "contact_page",
+          status_code: "email_not_configured",
+        });
         return;
       }
 
       setStatus("sent");
       setStatusMessage("Message sent successfully.");
+      trackAnalyticsEvent("contact_form_submit_success", {
+        source: "contact_page",
+      });
       setForm({ name: "", email: "", message: "" });
     } catch {
       setStatus("error");
       setStatusMessage("Could not send your message. Please try again.");
+      trackAnalyticsEvent("contact_form_submit_error", {
+        source: "contact_page",
+        status_code: "network",
+      });
     }
   }
 

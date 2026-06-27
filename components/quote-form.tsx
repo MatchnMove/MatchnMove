@@ -26,6 +26,7 @@ import {
   AddressSuggestion
 } from "@/components/address-autocomplete";
 import { addressSuggestionToValue } from "@/lib/address-search";
+import { trackAnalyticsEvent } from "@/lib/analytics";
 
 type Form = {
   name: string;
@@ -225,6 +226,14 @@ export function QuoteForm() {
   const prefillAppliedRef = useRef(false);
   const router = useRouter();
 
+  const trackQuoteFormEvent = (eventName: string, params: Record<string, string | number | boolean | undefined> = {}) => {
+    trackAnalyticsEvent(eventName, {
+      source: "quote_form",
+      step,
+      ...params,
+    });
+  };
+
   const update = <K extends keyof Form>(k: K, v: Form[K]) => {
     setForm((f) => ({ ...f, [k]: v }));
     setErrors((prev) => ({ ...prev, [k]: undefined }));
@@ -261,11 +270,20 @@ export function QuoteForm() {
 
     if (Object.keys(prefill).length > 0) {
       setForm((current) => ({ ...current, ...prefill }));
+      trackAnalyticsEvent("quote_prefill_applied", {
+        source: "homepage_hero",
+        has_from_region: Boolean(prefill.fromRegion),
+        has_to_region: Boolean(prefill.toRegion),
+      });
     }
   }, []);
 
   const applyAddressSuggestion = (kind: "from" | "to", suggestion: AddressSuggestion) => {
     const address = addressSuggestionToValue(suggestion);
+    trackQuoteFormEvent("quote_address_selected", {
+      address_type: kind,
+      region: suggestion.region || undefined,
+    });
     setForm((prev) =>
       kind === "from"
         ? {
@@ -307,6 +325,7 @@ export function QuoteForm() {
   };
 
   const shareLocation = () => {
+    trackQuoteFormEvent("quote_location_click");
     if (!navigator.geolocation) {
       setSubmitError("Location sharing is not supported in this browser.");
       return;
@@ -431,17 +450,34 @@ export function QuoteForm() {
   };
 
   const goNext = () => {
-    if (!validateStep(step)) return;
-    transitionToStep(Math.min(3, step + 1));
+    const currentStep = step;
+    if (!validateStep(currentStep)) {
+      trackQuoteFormEvent("quote_step_validation_error", {
+        step_number: currentStep,
+      });
+      return;
+    }
+
+    trackQuoteFormEvent("quote_step_complete", {
+      step_number: currentStep,
+    });
+    transitionToStep(Math.min(3, currentStep + 1));
   };
 
   const submit = async () => {
+    trackQuoteFormEvent("quote_submit_attempt", {
+      selected_items_count: Object.values(itemQuantities).filter((qty) => qty > 0).length,
+      date_flexible: form.dateFlexible,
+    });
+
     if (!validateStep(1) || !validateStep(2) || !validateStep(3)) {
       setSubmitError("Please fix the highlighted fields.");
+      trackQuoteFormEvent("quote_submit_validation_error");
       return;
     }
     if (!sharingConsent) {
       setSubmitError("Please confirm that Match 'n Move may share this request with relevant moving companies.");
+      trackQuoteFormEvent("quote_submit_consent_missing");
       return;
     }
     setSubmitError("");
@@ -484,6 +520,11 @@ export function QuoteForm() {
       if (res.ok) {
         const data = (await res.json().catch(() => null)) as { id?: string } | null;
         const requestId = data?.id ? `?id=${encodeURIComponent(data.id)}` : "";
+        trackQuoteFormEvent("quote_submit_success", {
+          request_created: Boolean(data?.id),
+          from_region: form.fromRegion || undefined,
+          to_region: form.toRegion || undefined,
+        });
         router.push(`/thank-you${requestId}`);
         return;
       }
@@ -504,8 +545,14 @@ export function QuoteForm() {
       } else {
         setSubmitError(serverError || "Submission failed. Please try again.");
       }
+      trackQuoteFormEvent("quote_submit_error", {
+        status_code: res.status,
+      });
     } catch {
       setSubmitError("Network error while submitting the form. Please try again.");
+      trackQuoteFormEvent("quote_submit_error", {
+        status_code: "network",
+      });
     } finally {
       setLoading(false);
     }
@@ -513,6 +560,10 @@ export function QuoteForm() {
 
   const updateItemQty = (itemId: string, nextQty: number) => {
     const safeQty = Math.min(MAX_ITEM_QTY, Math.max(0, Math.floor(nextQty)));
+    trackQuoteFormEvent("quote_items_updated", {
+      item_id: itemId,
+      quantity: safeQty,
+    });
     setItemQuantities((prev) => {
       if (safeQty <= 0) {
         const rest = Object.fromEntries(Object.entries(prev).filter(([key]) => key !== itemId)) as Record<string, number>;
