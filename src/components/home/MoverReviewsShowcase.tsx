@@ -19,6 +19,40 @@ export async function MoverReviewsShowcase() {
       ? ratedMovers.reduce((sum, mover) => sum + mover.rating, 0) / ratedMovers.length
       : 0;
 
+  if (movers.length === 0) {
+    return (
+      <section className="relative border-y border-slate-200 bg-white px-4 py-10 sm:px-6 sm:py-14 lg:px-8 lg:py-20">
+        <div className="mx-auto max-w-6xl">
+          <div className="rounded-[28px] border border-slate-200 bg-[linear-gradient(135deg,#f8fafc,#eff6ff)] p-6 sm:p-9 lg:p-12">
+            <p className="inline-flex items-center gap-2 rounded-full border border-sky-100 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-sky-700">
+              <ShieldCheck className="h-4 w-4" />
+              A safer way to request moving quotes
+            </p>
+            <h2 className="mt-5 max-w-3xl text-3xl font-black tracking-[-0.04em] text-slate-950 sm:text-5xl">
+              Share your move once. Stay in control of what happens next.
+            </h2>
+            <p className="mt-5 max-w-3xl text-base leading-8 text-slate-600">
+              We use your route and move details to identify relevant moving companies. Requesting quotes is free,
+              there is no obligation to book, and your contact details are used only for your quote request.
+            </p>
+            <div className="mt-7 grid gap-3 sm:grid-cols-3">
+              <TrustPoint icon={ShieldCheck} title="Relevant matching" copy="Your request is shared only for the move you submit." />
+              <TrustPoint icon={Sparkles} title="No booking obligation" copy="Compare any responses and decide in your own time." />
+              <TrustPoint icon={Star} title="Free for customers" copy="There is no fee to request or compare moving quotes." />
+            </div>
+            <Link
+              href="/quote"
+              className="mt-7 inline-flex min-h-[52px] items-center gap-2 rounded-2xl bg-slate-950 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+            >
+              Request free moving quotes
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section id="mover-reviews" className="relative border-y border-slate-200 bg-white px-4 py-10 sm:px-6 sm:py-14 lg:px-8 lg:py-20">
       <div className="relative mx-auto max-w-6xl">
@@ -79,6 +113,16 @@ export async function MoverReviewsShowcase() {
         </div>
       </div>
     </section>
+  );
+}
+
+function TrustPoint({ icon: Icon, title, copy }: { icon: typeof ShieldCheck; title: string; copy: string }) {
+  return (
+    <div className="rounded-2xl border border-white bg-white/80 p-5 shadow-sm">
+      <Icon className="h-5 w-5 text-sky-700" />
+      <p className="mt-4 font-semibold text-slate-950">{title}</p>
+      <p className="mt-2 text-sm leading-6 text-slate-600">{copy}</p>
+    </div>
   );
 }
 

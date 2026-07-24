@@ -78,9 +78,9 @@ type ExtraDetails = {
 };
 
 const steps = [
-  { number: 1, label: "Contact", summary: "How movers can reach you" },
-  { number: 2, label: "Pickup", summary: "Where the move starts" },
-  { number: 3, label: "Destination", summary: "Route, date, and items" }
+  { number: 1, label: "Pickup", summary: "Where the move starts" },
+  { number: 2, label: "Destination", summary: "Route, date, and items" },
+  { number: 3, label: "Contact", summary: "Where movers send quotes" }
 ] as const;
 
 const trustNotes = [
@@ -93,7 +93,7 @@ const init: Form = {
   name: "",
   email: "",
   phone: "",
-  fromPropertyType: "Apartment",
+  fromPropertyType: "House",
   toPropertyType: "House",
   bedrooms: "1",
   fromAddress: "",
@@ -129,12 +129,12 @@ const fieldMeta: Record<keyof Form, { label: string; placeholder: string; requir
   fromPropertyType: { label: "Current Property Type", placeholder: "Apartment", required: true },
   toPropertyType: { label: "Destination Property Type", placeholder: "House", required: true },
   bedrooms: { label: "Number of Bedrooms", placeholder: "1", required: true },
-  fromAddress: { label: "Current Address", placeholder: "Start typing your current address", required: true },
+  fromAddress: { label: "Pickup suburb or address", placeholder: "e.g. Mount Eden, Auckland", required: true },
   fromCity: { label: "Current City", placeholder: "Auckland", required: true },
   fromRegion: { label: "Current Region", placeholder: "Auckland Region", required: true },
   fromPostcode: { label: "Current Postcode", placeholder: "1010", required: true },
   fromCountry: { label: "Current Country", placeholder: "New Zealand", required: true },
-  toAddress: { label: "Destination Address", placeholder: "Start typing your destination address", required: true },
+  toAddress: { label: "Destination suburb or address", placeholder: "e.g. Te Aro, Wellington", required: true },
   toCity: { label: "Destination City", placeholder: "Wellington", required: true },
   toRegion: { label: "Destination Region", placeholder: "Wellington Region", required: true },
   toPostcode: { label: "Destination Postcode", placeholder: "6011", required: true },
@@ -224,6 +224,7 @@ export function QuoteForm() {
   const datePickerRef = useRef<HTMLDivElement | null>(null);
   const formCardRef = useRef<HTMLDivElement | null>(null);
   const prefillAppliedRef = useRef(false);
+  const attributionRef = useRef<Record<string, string>>({});
   const router = useRouter();
 
   const trackQuoteFormEvent = (eventName: string, params: Record<string, string | number | boolean | undefined> = {}) => {
@@ -249,6 +250,30 @@ export function QuoteForm() {
     prefillAppliedRef.current = true;
 
     const params = new URLSearchParams(window.location.search);
+    const referrerParams = (() => {
+      try {
+        return new URL(document.referrer).searchParams;
+      } catch {
+        return new URLSearchParams();
+      }
+    })();
+    const attributionKeys = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "gclid", "fbclid"] as const;
+    attributionRef.current = {
+      landingPage: window.location.href,
+      referrer: document.referrer,
+      ...Object.fromEntries(
+        attributionKeys.flatMap((key) => {
+          const value = params.get(key) || referrerParams.get(key);
+          return value ? [[key, value]] : [];
+        })
+      ),
+    };
+    trackAnalyticsEvent("quote_form_view", {
+      source: params.get("utm_source") || referrerParams.get("utm_source") || (document.referrer ? "referral" : "direct"),
+      campaign: params.get("utm_campaign") || referrerParams.get("utm_campaign") || undefined,
+      has_prefill: params.has("fromAddress") || params.has("toAddress"),
+    });
+
     const keys = [
       "fromAddress",
       "fromCity",
@@ -388,7 +413,7 @@ export function QuoteForm() {
   const validateStep = (targetStep: number) => {
     const nextErrors: Errors = {};
 
-    if (targetStep === 1) {
+    if (targetStep === 3) {
       const keys: Array<keyof Form> = ["name", "email", "phone"];
       for (const key of keys) {
         const err = validateField(key, form[key]);
@@ -396,8 +421,8 @@ export function QuoteForm() {
       }
     }
 
-    if (targetStep === 2) {
-      const keys: Array<keyof Form> = ["fromAddress", "fromCity", "fromRegion", "fromPostcode", "fromCountry"];
+    if (targetStep === 1) {
+      const keys: Array<keyof Form> = ["fromAddress"];
       for (const key of keys) {
         const err = validateField(key, form[key]);
         if (err) nextErrors[key] = err;
@@ -416,8 +441,8 @@ export function QuoteForm() {
       }
     }
 
-    if (targetStep === 3) {
-      const keys: Array<keyof Form> = ["toAddress", "toCity", "toRegion", "toPostcode", "toCountry", "moveDate"];
+    if (targetStep === 2) {
+      const keys: Array<keyof Form> = ["toAddress", "moveDate"];
       for (const key of keys) {
         const err = validateField(key, form[key]);
         if (err) nextErrors[key] = err;
@@ -502,11 +527,18 @@ export function QuoteForm() {
         },
         selectedItems: commonItems
           .filter((item) => (itemQuantities[item.id] ?? 0) > 0)
-          .map((item) => ({ item: item.label, qty: itemQuantities[item.id] }))
+          .map((item) => ({ item: item.label, qty: itemQuantities[item.id] })),
+        attribution: attributionRef.current,
       };
 
       const payload = {
         ...form,
+        fromCity: form.fromCity.trim() || form.fromAddress.trim(),
+        fromRegion: form.fromRegion.trim() || "Not provided",
+        fromPostcode: form.fromPostcode.trim() || "Not provided",
+        toCity: form.toCity.trim() || form.toAddress.trim(),
+        toRegion: form.toRegion.trim() || "Not provided",
+        toPostcode: form.toPostcode.trim() || "Not provided",
         movingWhat: form.movingWhat.trim(),
         toPropertyType: normalizedToPropertyType,
         moveDate: form.moveDate.trim() ? form.moveDate : null,
@@ -598,6 +630,10 @@ export function QuoteForm() {
   }, [itemQuantities]);
 
   const transitionToStep = (nextStep: number) => {
+    trackQuoteFormEvent("quote_step_view", {
+      step_number: nextStep,
+      step_name: steps[nextStep - 1]?.label,
+    });
     setStep(nextStep);
     window.requestAnimationFrame(() => {
       const target = formCardRef.current;
@@ -807,12 +843,12 @@ export function QuoteForm() {
               ))}
             </div>
           </div>
-          {step === 1 && (
+          {step === 3 && (
             <div className="space-y-4">
               <div>
-                <h2 className="text-xl font-semibold">Your contact details</h2>
+                <h2 className="text-xl font-semibold">Where should movers send your quotes?</h2>
                 <p className="mt-1 text-sm leading-6 text-slate-500">
-                  Movers use this to send quotes and ask practical questions about timing, access, or inventory.
+                  Your details are shared only with relevant movers for this request. There is no obligation to book.
                 </p>
               </div>
               {(["name", "email", "phone"] as const).map((k) => (
@@ -828,10 +864,33 @@ export function QuoteForm() {
                   {errors[k] && <span className="mt-1 block text-sm text-red-600">{errors[k]}</span>}
                 </label>
               ))}
-              <button className={primaryButtonClass} onClick={goNext}>Next</button>
+              <label className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                <input
+                  className="mt-1 h-4 w-4 rounded border-slate-300 text-brandBlue focus:ring-brandBlue"
+                  type="checkbox"
+                  checked={sharingConsent}
+                  onChange={(event) => {
+                    setSharingConsent(event.target.checked);
+                    if (event.target.checked) setSubmitError("");
+                  }}
+                />
+                <span>
+                  <span className="block text-sm font-semibold text-slate-900">I agree to share this request with relevant movers</span>
+                  <span className="mt-1 block text-sm leading-6 text-slate-500">
+                    Match &apos;n Move uses these details only to match this job with suitable moving companies.
+                  </span>
+                </span>
+              </label>
+              {submitError && <p className="text-sm text-red-600">{submitError}</p>}
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <button className={secondaryButtonClass} onClick={() => transitionToStep(2)}>Back</button>
+                <button onClick={submit} disabled={loading} className={`${primaryButtonClass} disabled:cursor-not-allowed disabled:opacity-70`}>
+                  {loading ? "Submitting..." : "Request my free quotes"}
+                </button>
+              </div>
             </div>
           )}
-          {step === 2 && (
+          {step === 1 && (
             <div className="grid gap-4">
               <div>
                 <h2 className="text-xl font-semibold">Where are movers picking up from?</h2>
@@ -909,25 +968,13 @@ export function QuoteForm() {
               >
                 {locating ? "Detecting location..." : "Use my current location"}
               </button>
-              {(["fromCity", "fromRegion", "fromPostcode", "fromCountry"] as const).map((k) => (
-                <label key={k} className="block">
-                  <span className="mb-1 block text-sm font-medium">{fieldMeta[k].label}</span>
-                  <input
-                    className={`${fieldClass} ${errors[k] ? "border-red-500 focus:border-red-400 focus:ring-red-100" : ""}`}
-                    placeholder={fieldMeta[k].placeholder}
-                    value={form[k]}
-                    onChange={(e) => update(k, e.target.value)}
-                  />
-                  {errors[k] && <span className="mt-1 block text-sm text-red-600">{errors[k]}</span>}
-                </label>
-              ))}
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <button className={secondaryButtonClass} onClick={() => transitionToStep(1)}>Back</button>
-                <button className={primaryButtonClass} onClick={goNext}>Next</button>
-              </div>
+              <p className="text-xs leading-5 text-slate-500">
+                Choose a suggested address when available. We&apos;ll use it to identify the correct service area automatically.
+              </p>
+              <button className={primaryButtonClass} onClick={goNext}>Continue to destination</button>
             </div>
           )}
-          {step === 3 && (
+          {step === 2 && (
             <div className="grid gap-4">
               <div>
                 <h2 className="text-xl font-semibold">Where are you moving to?</h2>
@@ -1027,19 +1074,9 @@ export function QuoteForm() {
                 error={errors.toAddress}
                 labelClassName="mb-1 block text-sm font-medium"
               />
-              {(["toCity", "toRegion", "toPostcode", "toCountry"] as const).map((k) => (
-                <label key={k} className="block">
-                  <span className="mb-1 block text-sm font-medium">{fieldMeta[k].label}</span>
-                  <input
-                    className={`${fieldClass} ${errors[k] ? "border-red-500 focus:border-red-400 focus:ring-red-100" : ""}`}
-                    placeholder={fieldMeta[k].placeholder}
-                    type={fieldMeta[k].type ?? "text"}
-                    value={form[k]}
-                    onChange={(e) => update(k, e.target.value)}
-                  />
-                  {errors[k] && <span className="mt-1 block text-sm text-red-600">{errors[k]}</span>}
-                </label>
-              ))}
+              <p className="text-xs leading-5 text-slate-500">
+                A suburb or general destination is enough to begin. Choose a suggestion when available for the best match.
+              </p>
               <div className="block">
                 <span className="mb-1 block text-sm font-medium">{fieldMeta.moveDate.label}</span>
                 <div className="relative" ref={datePickerRef}>
@@ -1278,29 +1315,9 @@ export function QuoteForm() {
                   <span className="mt-1 block text-sm leading-6 text-slate-500">Flexible dates can help movers offer more options or sharper pricing.</span>
                 </span>
               </label>
-              <label className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-4">
-                <input
-                  className="mt-1 h-4 w-4 rounded border-slate-300 text-brandBlue focus:ring-brandBlue"
-                  type="checkbox"
-                  checked={sharingConsent}
-                  onChange={(event) => {
-                    setSharingConsent(event.target.checked);
-                    if (event.target.checked) setSubmitError("");
-                  }}
-                />
-                <span>
-                  <span className="block text-sm font-semibold text-slate-900">I agree to share this request with relevant movers</span>
-                  <span className="mt-1 block text-sm leading-6 text-slate-500">
-                    Match &apos;n Move will use these details to match your job with suitable moving companies. Your request is free and no-obligation.
-                  </span>
-                </span>
-              </label>
-              {submitError && <p className="text-sm text-red-600">{submitError}</p>}
               <div className="flex flex-col gap-3 sm:flex-row">
-                <button className={secondaryButtonClass} onClick={() => transitionToStep(2)}>Back</button>
-                <button onClick={submit} disabled={loading} className={`${primaryButtonClass} disabled:cursor-not-allowed disabled:opacity-70`}>
-                  {loading ? "Submitting..." : "Submit"}
-                </button>
+                <button className={secondaryButtonClass} onClick={() => transitionToStep(1)}>Back</button>
+                <button className={primaryButtonClass} onClick={goNext}>Continue to contact details</button>
               </div>
             </div>
           )}

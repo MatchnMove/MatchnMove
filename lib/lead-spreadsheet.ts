@@ -61,6 +61,13 @@ type SpreadsheetMetadata = {
     item?: unknown;
     qty?: unknown;
   }>;
+  attribution?: {
+    utm_source?: unknown;
+    utm_medium?: unknown;
+    utm_campaign?: unknown;
+    utm_content?: unknown;
+    referrer?: unknown;
+  };
 };
 
 type GoogleSheetMetadata = {
@@ -308,6 +315,18 @@ function describeItems(quote: QuoteRequest) {
   return [cleanCell(quote.movingWhat), selectedItems].filter(Boolean).join(" | ");
 }
 
+function describeAttribution(metadata: SpreadsheetMetadata) {
+  const attribution = metadata.attribution;
+  if (!attribution) return "";
+  return [
+    attribution.utm_source ? `Source: ${cleanCell(attribution.utm_source, 100)}` : "",
+    attribution.utm_medium ? `Medium: ${cleanCell(attribution.utm_medium, 100)}` : "",
+    attribution.utm_campaign ? `Campaign: ${cleanCell(attribution.utm_campaign, 150)}` : "",
+    attribution.utm_content ? `Ad: ${cleanCell(attribution.utm_content, 150)}` : "",
+    !attribution.utm_source && attribution.referrer ? `Referrer: ${cleanCell(attribution.referrer, 300)}` : "",
+  ].filter(Boolean).join(" | ");
+}
+
 function getLeadPriority(moveDate: Date | null) {
   if (!moveDate) return "Date unknown";
   const daysUntilMove = Math.ceil((moveDate.getTime() - Date.now()) / 86_400_000);
@@ -343,7 +362,7 @@ export function buildLeadSpreadsheetRow(quote: QuoteRequest) {
     cleanCell(quote.toCountry, 100),
     cleanCell(quote.toPropertyType, 100),
     describeProperty(metadata.destinationProperty),
-    describeItems(quote),
+    [describeItems(quote), describeAttribution(metadata)].filter(Boolean).join(" | "),
     "",
     "",
     "Not contacted",

@@ -91,10 +91,10 @@ export default function Home() {
                   <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between border-b border-white/10 bg-slate-950/80 px-4 py-3 backdrop-blur">
                     <div>
                       <p className="text-xs uppercase tracking-[0.18em] text-emerald-300/80">Mover partner preview</p>
-                      <p className="mt-1 text-sm font-semibold text-white">Live lead dashboard</p>
+                      <p className="mt-1 text-sm font-semibold text-white">Example lead workspace</p>
                     </div>
                     <div className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-200">
-                      Verified
+                      Preview
                     </div>
                   </div>
 
@@ -109,8 +109,8 @@ export default function Home() {
 
                   <div className="absolute bottom-3 left-3 right-3 rounded-xl border border-white/10 bg-slate-900/88 px-3 py-2.5 shadow-xl backdrop-blur sm:bottom-4 sm:left-4 sm:right-auto sm:rounded-2xl sm:px-4 sm:py-3">
                     <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-slate-400">This week</p>
-                    <p className="mt-1 text-xl font-black tracking-[-0.03em] text-white sm:text-2xl sm:tracking-[-0.04em]">12 new leads</p>
-                    <p className="mt-1 text-sm text-emerald-300">Qualified requests in your area</p>
+                    <p className="mt-1 text-xl font-black tracking-[-0.03em] text-white sm:text-2xl sm:tracking-[-0.04em]">New request</p>
+                    <p className="mt-1 text-sm text-emerald-300">Route and timing ready to review</p>
                   </div>
                 </div>
               </div>

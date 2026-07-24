@@ -91,6 +91,11 @@ export function HeroQuoteCard() {
       toPostcode: to.postcode,
       toCountry: to.country || "New Zealand"
     });
+    const currentParams = new URLSearchParams(window.location.search);
+    for (const key of ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "gclid", "fbclid"]) {
+      const value = currentParams.get(key);
+      if (value) params.set(key, value);
+    }
 
     trackAnalyticsEvent("quote_route_complete", {
       source: "homepage_hero",
