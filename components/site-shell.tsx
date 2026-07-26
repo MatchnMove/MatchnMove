@@ -154,11 +154,11 @@ export function Nav() {
   }, [loadMoverSession]);
 
   return (
-    <header className="relative bg-white border-b">
-      <div className="container-shell flex items-center justify-between gap-3 py-2.5 sm:gap-4 sm:py-3">
+    <header className="relative z-30 border-b border-slate-200/80 bg-white">
+      <div className="container-shell flex items-center justify-between gap-3 py-2 sm:gap-4 sm:py-3">
         <Link
           href="/"
-          className="relative flex h-9 w-[150px] items-center sm:h-12 sm:w-[220px] lg:h-14 lg:w-[265px]"
+          className="relative flex h-9 w-[158px] items-center sm:h-12 sm:w-[220px] lg:h-14 lg:w-[265px]"
           aria-label="Match 'n Move home"
         >
           <Image
@@ -198,7 +198,7 @@ export function Nav() {
             aria-controls="mobile-nav"
             aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
             onClick={() => setMobileMenuOpen((open) => !open)}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 md:h-10 md:w-10 md:hidden"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#07162b] text-white shadow-[0_8px_18px_-10px_rgba(7,22,43,0.8)] transition hover:bg-slate-800 md:h-10 md:w-10 md:hidden"
           >
             {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
