@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Clock3, FileCheck2, ShieldCheck, Wrench } from "lucide-react";
+import { ArrowRight, ShieldCheck } from "lucide-react";
+import { PublicMoversDirectory } from "@/components/public-movers-directory";
 import { SiteShell } from "@/components/site-shell";
+import { getPublicMovers } from "@/lib/public-movers";
 import { createPageMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
@@ -14,25 +16,9 @@ export const metadata: Metadata = createPageMetadata({
   path: "/movers",
 });
 
-const verificationChecks = [
-  {
-    icon: FileCheck2,
-    title: "Business details",
-    copy: "Mover profiles are checked for company identity, service areas, and the information customers need before comparing quotes.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Evidence review",
-    copy: "Insurance, NZBN evidence, contact details, and profile documents can be reviewed before a company is made public.",
-  },
-  {
-    icon: Clock3,
-    title: "Customer-first launch",
-    copy: "The directory opens only when listings are useful enough for customers to compare with confidence.",
-  },
-] as const;
-
 export default async function MoversPage() {
+  const movers = await getPublicMovers();
+
   return (
     <SiteShell>
       <section className="relative overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.18),transparent_28%),radial-gradient(circle_at_82%_20%,rgba(34,211,238,0.12),transparent_22%),linear-gradient(180deg,#06111f_0%,#081425_34%,#091423_68%,#07101c_100%)] py-8 text-white sm:py-18 lg:py-24">
@@ -68,91 +54,20 @@ export default async function MoversPage() {
               </Link>
             </div>
 
-            <div className="mt-10 overflow-hidden rounded-[28px] border border-sky-200/20 bg-[linear-gradient(145deg,rgba(14,116,144,0.18),rgba(255,255,255,0.05))]">
-              <div className="grid gap-8 px-6 py-8 sm:px-8 sm:py-10 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-center">
-                <div>
-                  <div className="inline-flex items-center gap-2 rounded-full border border-amber-200/25 bg-amber-300/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-amber-100">
-                    <Wrench className="h-4 w-4" />
-                    Verification in progress
-                  </div>
-                  <h2 className="mt-5 text-2xl font-black tracking-[-0.04em] text-white sm:text-3xl">
-                    We&apos;re verifying mover profiles before publishing the directory.
-                  </h2>
-                  <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">
-                    The public directory is intentionally held back until listings are useful, checked, and ready for
-                    customers to compare. Quote requests still work: Match &apos;n Move uses your move details to arrange
-                    relevant, no-obligation quotes without publishing unfinished mover profiles.
-                  </p>
-                  <Link
-                    href="/quote"
-                    className="mt-6 inline-flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition hover:-translate-y-0.5 hover:bg-sky-50"
-                  >
-                    Request moving quotes
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
-                </div>
-
-                <div className="grid gap-3">
-                  <MaintenancePoint
-                    icon={FileCheck2}
-                    title="Quote matching still works"
-                    copy="Customers can still submit move details and be matched through the normal secure process."
-                  />
-                  <MaintenancePoint
-                    icon={ShieldCheck}
-                    title="Profiles are checked first"
-                    copy="Mover listings should earn trust before customers are asked to compare them publicly."
-                  />
-                  <MaintenancePoint
-                    icon={Clock3}
-                    title="Launch with confidence"
-                    copy="The directory will open when verified profiles, reviews, and service details are ready."
-                  />
-                </div>
+            {movers.length > 0 ? (
+              <PublicMoversDirectory movers={movers} />
+            ) : (
+              <div className="mt-10 rounded-[28px] border border-dashed border-white/14 bg-white/[0.05] px-6 py-10 text-center">
+                <p className="text-lg font-semibold text-white">Trusted mover profiles are on the way.</p>
+                <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-slate-300">
+                  We don&apos;t have any publicly visible mover profiles to show right now. Check back soon or request
+                  quotes directly and we&apos;ll help connect you with available movers.
+                </p>
               </div>
-            </div>
-
-            <div className="mt-8 grid gap-4 lg:grid-cols-3">
-              {verificationChecks.map((check) => {
-                const Icon = check.icon;
-                return (
-                  <article key={check.title} className="rounded-[26px] border border-white/10 bg-slate-950/25 p-5">
-                    <div className="inline-flex rounded-2xl bg-sky-300/10 p-3 text-sky-200">
-                      <Icon className="h-5 w-5" />
-                    </div>
-                    <h2 className="mt-4 text-lg font-bold text-white">{check.title}</h2>
-                    <p className="mt-2 text-sm leading-7 text-slate-300">{check.copy}</p>
-                  </article>
-                );
-              })}
-            </div>
+            )}
           </div>
         </div>
       </section>
     </SiteShell>
-  );
-}
-
-function MaintenancePoint({
-  icon: Icon,
-  title,
-  copy,
-}: {
-  icon: typeof ShieldCheck;
-  title: string;
-  copy: string;
-}) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-slate-950/25 p-4">
-      <div className="flex items-start gap-3">
-        <div className="rounded-xl bg-sky-300/10 p-2 text-sky-200">
-          <Icon className="h-5 w-5" />
-        </div>
-        <div>
-          <p className="font-semibold text-white">{title}</p>
-          <p className="mt-1 text-sm leading-6 text-slate-300">{copy}</p>
-        </div>
-      </div>
-    </div>
   );
 }
