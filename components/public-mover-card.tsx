@@ -15,6 +15,7 @@ export type PublicMoverCardData = {
   averageRating: number;
   totalReviewCount: number;
   leaderboardEligible: boolean;
+  isVerifiedProfile: boolean;
 };
 
 type PublicMoverCardProps = {
@@ -52,8 +53,8 @@ export function PublicMoverCard({ mover }: PublicMoverCardProps) {
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-lg font-black tracking-[-0.04em] text-white">{mover.companyName}</h2>
                 <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-sky-100">
-                  <ShieldCheck className="h-3.5 w-3.5" />
-                  Verified
+                  {mover.isVerifiedProfile ? <ShieldCheck className="h-3.5 w-3.5" /> : <Building2 className="h-3.5 w-3.5" />}
+                  {mover.isVerifiedProfile ? "Verified" : "New listing"}
                 </span>
               </div>
               <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-300">

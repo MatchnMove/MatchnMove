@@ -47,11 +47,30 @@ const publicMoverEligibilitySelect = Prisma.validator<Prisma.MoverCompanySelect>
 });
 
 type PublicMoverCandidate = Prisma.MoverCompanyGetPayload<{ select: typeof publicMoverEligibilitySelect }>;
-type PublicMover = Prisma.MoverCompanyGetPayload<{ select: typeof publicMoverSelect }>;
+type PublicMover = Prisma.MoverCompanyGetPayload<{ select: typeof publicMoverSelect }> & {
+  isVerifiedProfile: boolean;
+};
+
+function getManuallyPublishedMoverIds() {
+  return new Set(
+    (process.env.MANUAL_PUBLIC_MOVER_IDS ?? "")
+      .split(",")
+      .map((id) => id.trim())
+      .filter(Boolean),
+  );
+}
+
+function isMoverManuallyPublished(moverId: string) {
+  return getManuallyPublishedMoverIds().has(moverId);
+}
 
 export function isMoverPubliclyVisible(mover: PublicMoverCandidate) {
   const isSeedRecord = mover.nzbnVerificationSource === "SEED" || mover.id.startsWith("demo-");
-  return !isSeedRecord && Boolean(mover.companyName.trim()) && isMoverProfileLive(mover);
+  return (
+    !isSeedRecord &&
+    Boolean(mover.companyName.trim()) &&
+    (isMoverProfileLive(mover) || isMoverManuallyPublished(mover.id))
+  );
 }
 
 function toPublicMover(mover: PublicMoverCandidate): PublicMover {
@@ -65,6 +84,7 @@ function toPublicMover(mover: PublicMoverCandidate): PublicMover {
     averageRating: mover.averageRating,
     totalReviewCount: mover.totalReviewCount,
     leaderboardEligible: mover.leaderboardEligible,
+    isVerifiedProfile: isMoverProfileLive(mover),
   };
 }
 
@@ -149,6 +169,7 @@ const loadPublicMoverProfile = cacheTaggedData(async (moverId: string) => {
       averageRating: mover.averageRating,
       totalReviewCount: mover.totalReviewCount,
       leaderboardEligible: mover.leaderboardEligible,
+      isVerifiedProfile: isMoverProfileLive(mover),
       status: mover.status,
       communicationAverage: mover.communicationAverage,
       punctualityAverage: mover.punctualityAverage,

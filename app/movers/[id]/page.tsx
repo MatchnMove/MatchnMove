@@ -114,8 +114,8 @@ export default async function PublicMoverProfilePage({
 
               <div>
                 <p className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.08] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-sky-100">
-                  <ShieldCheck className="h-4 w-4" />
-                  Verified customer reviews
+                  {mover.isVerifiedProfile ? <ShieldCheck className="h-4 w-4" /> : <Building2 className="h-4 w-4" />}
+                  {mover.isVerifiedProfile ? "Verified mover profile" : "New mover profile"}
                 </p>
                 <h1 className="mt-4 text-[clamp(2.4rem,7vw,4.8rem)] font-black leading-[0.92] tracking-[-0.06em] text-white">
                   {mover.companyName}
