@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowRight, Mail, Menu, ShieldCheck, Sparkles, X } from "lucide-react";
+import { ArrowRight, ChevronDown, Mail, Menu, ShieldCheck, Sparkles, X } from "lucide-react";
 import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { SITE_EMAILS, toMailto } from "@/lib/site-emails";
 import logo from "@/public/logo.webp";
@@ -15,12 +15,44 @@ type MoverSessionState = {
   accountType?: "admin" | "mover";
 };
 
-const navLinks = [
-  { href: "/resources", label: "Resources" },
-  { href: "/contact", label: "Contact us" },
-  { href: "/about", label: "About us" },
-  { href: "/faq", label: "FAQs" },
-];
+const navGroups = [
+  {
+    label: "Get moving",
+    links: [
+      { href: "/quote", label: "Get free moving quotes", copy: "Tell us about your move once." },
+      { href: "/#how-it-works", label: "How it works", copy: "See the three simple steps." },
+      { href: "/faq", label: "Moving FAQs", copy: "Quick answers before you begin." },
+    ],
+  },
+  {
+    label: "Find movers",
+    links: [
+      { href: "/movers", label: "Movers directory", copy: "Browse public mover profiles." },
+      { href: "/#mover-reviews", label: "Mover reviews", copy: "Compare verified customer feedback." },
+      { href: "/moving-quotes/auckland", label: "Auckland moving quotes", copy: "Find movers for Auckland routes." },
+      { href: "/moving-quotes/wellington", label: "Wellington moving quotes", copy: "Find movers for Wellington routes." },
+      { href: "/moving-quotes/canterbury", label: "Christchurch moving quotes", copy: "Find movers for Canterbury routes." },
+    ],
+  },
+  {
+    label: "Resources",
+    links: [
+      { href: "/resources", label: "All moving resources", copy: "Guides and planning tools in one place." },
+      { href: "/resources/moving-cost-calculator", label: "Moving cost calculator", copy: "Build a broad moving budget." },
+      { href: "/resources/nz-moving-costs-2026", label: "NZ moving costs 2026", copy: "Understand common price drivers." },
+      { href: "/resources/moving-house-checklist", label: "Moving-house checklist", copy: "Stay organised before moving day." },
+      { href: "/resources/inter-island-moving-guide", label: "Inter-Island guide", copy: "Plan a move between the islands." },
+    ],
+  },
+  {
+    label: "About",
+    links: [
+      { href: "/about", label: "About Match 'n Move", copy: "Why we built a simpler way to move." },
+      { href: "/contact", label: "Contact us", copy: "Talk with the Match 'n Move team." },
+      { href: "/mover/pricing", label: "Mover pricing", copy: "Information for moving companies." },
+    ],
+  },
+] as const;
 
 const footerGroups = [
   {
@@ -170,11 +202,34 @@ export function Nav() {
             className="object-contain object-left"
           />
         </Link>
-        <nav className="hidden md:flex gap-8 font-semibold">
-          {navLinks.map((link) => (
-            <Link key={link.href} href={link.href}>
-              {link.label}
-            </Link>
+        <nav className="hidden items-center gap-1 font-semibold md:flex" aria-label="Main navigation">
+          {navGroups.map((group) => (
+            <div key={group.label} className="group relative">
+              <button
+                type="button"
+                className="inline-flex min-h-[42px] items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-50 hover:text-slate-950 focus-visible:bg-slate-50 focus-visible:outline-none lg:px-4 lg:text-base"
+              >
+                {group.label}
+                <ChevronDown className="h-4 w-4 text-slate-400 transition duration-200 group-hover:rotate-180 group-focus-within:rotate-180" />
+              </button>
+              <div className="pointer-events-none invisible absolute left-1/2 top-full z-50 w-[21rem] -translate-x-1/2 translate-y-2 rounded-[22px] border border-slate-200 bg-white p-2 opacity-0 shadow-[0_24px_70px_-30px_rgba(15,23,42,0.35)] transition duration-200 group-hover:pointer-events-auto group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100">
+                <div className="p-2">
+                  <p className="text-[0.68rem] font-bold uppercase tracking-[0.18em] text-sky-700">{group.label}</p>
+                </div>
+                {group.links.map((link, index) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={`block rounded-2xl px-4 py-3 transition hover:bg-sky-50 focus-visible:bg-sky-50 focus-visible:outline-none ${
+                      group.label === "Find movers" && index === 0 ? "bg-[linear-gradient(135deg,#eff8ff,#f0fdf4)]" : ""
+                    }`}
+                  >
+                    <span className="block text-sm font-bold text-slate-950">{link.label}</span>
+                    <span className="mt-1 block text-xs font-normal leading-5 text-slate-500">{link.copy}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
           ))}
         </nav>
         <div className="flex items-center gap-2 sm:gap-3">
@@ -224,7 +279,7 @@ export function Nav() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 28 }}
               transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-              className="absolute right-4 top-[calc(100%+0.75rem)] z-50 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-[28px] border border-slate-200 bg-white/95 p-3 shadow-[0_24px_70px_-32px_rgba(15,23,42,0.35)] backdrop-blur-xl md:hidden"
+              className="absolute right-4 top-[calc(100%+0.75rem)] z-50 max-h-[calc(100svh-6rem)] w-[min(24rem,calc(100vw-2rem))] overflow-y-auto rounded-[28px] border border-slate-200 bg-white/95 p-3 shadow-[0_24px_70px_-32px_rgba(15,23,42,0.35)] backdrop-blur-xl md:hidden"
             >
               <nav className="flex flex-col">
                 <Link
@@ -235,15 +290,33 @@ export function Nav() {
                   Get free quotes
                   <ArrowRight className="h-4 w-4" />
                 </Link>
-                {navLinks.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="rounded-2xl px-4 py-3 text-base font-semibold text-slate-800 transition hover:bg-slate-50"
-                  >
-                    {link.label}
-                  </Link>
+                <Link
+                  href="/movers"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="mb-3 rounded-[22px] border border-sky-200 bg-[linear-gradient(135deg,#eff8ff,#f0fdf4)] p-4 shadow-sm"
+                >
+                  <span className="flex items-center justify-between gap-3 text-base font-black text-slate-950">
+                    Movers directory
+                    <ArrowRight className="h-4 w-4 text-sky-700" />
+                  </span>
+                  <span className="mt-1.5 block text-sm leading-6 text-slate-600">Browse mover profiles, service areas, and public reviews.</span>
+                </Link>
+                {navGroups.map((group) => (
+                  <div key={group.label} className="border-t border-slate-200 px-1 py-3 first:border-t-0">
+                    <p className="px-3 text-[0.68rem] font-bold uppercase tracking-[0.18em] text-slate-400">{group.label}</p>
+                    <div className="mt-1.5 grid gap-0.5">
+                      {group.links.filter((link) => link.href !== "/quote" && link.href !== "/movers").map((link) => (
+                        <Link
+                          key={link.href}
+                          href={link.href}
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
+                        >
+                          {link.label}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
                 ))}
                 <Link
                   href={moverAccountHref}

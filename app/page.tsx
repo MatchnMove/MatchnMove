@@ -4,6 +4,7 @@ import Link from "next/link";
 import { SiteShell } from "@/components/site-shell";
 import { Hero } from "@/src/components/hero/Hero";
 import { MoverReviewsShowcase } from "@/src/components/home/MoverReviewsShowcase";
+import { MobileQuoteCta } from "@/src/components/home/MobileQuoteCta";
 import { MovingQuotesSeoSection } from "@/src/components/home/MovingQuotesSeoSection";
 import { ResourceHighlights } from "@/src/components/home/ResourceHighlights";
 import { ScrollJourneySection } from "@/src/components/home/ScrollJourneySection";
@@ -21,10 +22,10 @@ export default function Home() {
     <SiteShell>
       <Hero />
       <ScrollJourneySection />
+      <MoverReviewsShowcase />
       <MovingQuotesSeoSection />
       <ResourceHighlights />
-      <MoverReviewsShowcase />
-      <section className="relative overflow-hidden bg-white py-10 sm:py-16 lg:py-20">
+      <section data-analytics-section="homepage_for_movers" className="relative overflow-hidden bg-white py-10 sm:py-16 lg:py-20">
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute left-[8%] top-8 h-32 w-32 rounded-full bg-emerald-100 blur-3xl sm:h-48 sm:w-48" />
           <div className="absolute right-[10%] top-10 h-40 w-40 rounded-full bg-sky-100/80 blur-3xl sm:h-56 sm:w-56" />
@@ -118,6 +119,7 @@ export default function Home() {
           </div>
         </div>
       </section>
+      <MobileQuoteCta />
     </SiteShell>
   );
 }

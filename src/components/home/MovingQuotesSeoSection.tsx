@@ -23,7 +23,7 @@ const benefits = [
 
 export function MovingQuotesSeoSection() {
   return (
-    <section className="bg-[linear-gradient(180deg,#f8fafc_0%,#eef6fb_100%)] py-12 sm:py-16 lg:py-20">
+    <section data-analytics-section="homepage_quote_details" className="bg-[linear-gradient(180deg,#f8fafc_0%,#eef6fb_100%)] py-12 sm:py-16 lg:py-20">
       <div className="container-shell">
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)] lg:items-start">
           <div>
@@ -107,4 +107,3 @@ export function MovingQuotesSeoSection() {
     </section>
   );
 }
-

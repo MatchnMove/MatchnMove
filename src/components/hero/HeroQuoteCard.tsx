@@ -177,14 +177,14 @@ export function HeroQuoteCard() {
           type="submit"
           className="inline-flex min-h-[46px] w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(110deg,#f7931e,#ffad38)] px-5 py-2.5 text-[0.95rem] font-extrabold text-[#07162b] shadow-[0_16px_30px_-16px_rgba(247,147,30,0.9)] transition duration-200 hover:translate-y-[-1px] hover:shadow-[0_20px_36px_-16px_rgba(247,147,30,0.9)] focus:outline-none focus:ring-4 focus:ring-orange-200 active:translate-y-0 sm:min-h-[48px] sm:w-auto sm:min-w-[210px] sm:rounded-2xl sm:text-base"
         >
-          Compare free quotes
+          Start my free quote request
           <ArrowRight className="h-4 w-4" />
         </button>
       </div>
       <div className="mt-2.5 flex items-center justify-between gap-3 text-[0.7rem] font-semibold text-slate-500 sm:text-xs">
         <span className="inline-flex items-center gap-1">
           <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-          Trusted NZ moving companies
+          One request, relevant NZ movers
         </span>
         <span>100% free</span>
       </div>

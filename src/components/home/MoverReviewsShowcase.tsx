@@ -21,7 +21,7 @@ export async function MoverReviewsShowcase() {
 
   if (movers.length === 0) {
     return (
-      <section className="relative border-y border-slate-200 bg-white px-4 py-10 sm:px-6 sm:py-14 lg:px-8 lg:py-20">
+      <section data-analytics-section="homepage_mover_proof" className="relative border-y border-slate-200 bg-white px-4 py-10 sm:px-6 sm:py-14 lg:px-8 lg:py-20">
         <div className="mx-auto max-w-6xl">
           <div className="rounded-[28px] border border-slate-200 bg-[linear-gradient(135deg,#f8fafc,#eff6ff)] p-6 sm:p-9 lg:p-12">
             <p className="inline-flex items-center gap-2 rounded-full border border-sky-100 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-sky-700">
@@ -54,7 +54,7 @@ export async function MoverReviewsShowcase() {
   }
 
   return (
-    <section id="mover-reviews" className="relative border-y border-slate-200 bg-white px-4 py-10 sm:px-6 sm:py-14 lg:px-8 lg:py-20">
+    <section id="mover-reviews" data-analytics-section="homepage_mover_proof" className="relative border-y border-slate-200 bg-white px-4 py-10 sm:px-6 sm:py-14 lg:px-8 lg:py-20">
       <div className="relative mx-auto max-w-6xl">
         <div className="grid items-center gap-8 lg:grid-cols-[minmax(0,0.92fr)_minmax(430px,1fr)] lg:gap-14">
           <div className="hidden lg:block">

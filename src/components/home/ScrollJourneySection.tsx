@@ -252,6 +252,7 @@ export function ScrollJourneySection() {
   return (
     <section
       id="how-it-works"
+      data-analytics-section="homepage_how_it_works"
       ref={sectionRef}
       className="relative overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.26),transparent_28%),radial-gradient(circle_at_85%_18%,rgba(56,189,248,0.16),transparent_24%),linear-gradient(180deg,#06111f_0%,#081425_28%,#091524_58%,#07111d_100%)] text-white"
     >

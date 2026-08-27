@@ -30,7 +30,7 @@ const highlights = [
 
 export function ResourceHighlights() {
   return (
-    <section className="bg-white py-12 sm:py-16 lg:py-20">
+    <section data-analytics-section="homepage_resources" className="bg-white py-12 sm:py-16 lg:py-20">
       <div className="container-shell">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
@@ -78,4 +78,3 @@ export function ResourceHighlights() {
     </section>
   );
 }
-

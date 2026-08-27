@@ -36,6 +36,25 @@ function GoogleAnalyticsEngagementEvents() {
   const pathname = usePathname();
 
   useEffect(() => {
+    const viewedSections = new Set<string>();
+    const sectionObserver = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          const sectionName = (entry.target as HTMLElement).dataset.analyticsSection;
+          if (!sectionName || viewedSections.has(sectionName)) continue;
+          viewedSections.add(sectionName);
+          trackAnalyticsEvent("homepage_section_view", {
+            section_name: sectionName,
+            page_path: pathname || window.location.pathname,
+          });
+        }
+      },
+      { threshold: 0.45 },
+    );
+
+    document.querySelectorAll<HTMLElement>("[data-analytics-section]").forEach((section) => sectionObserver.observe(section));
+
     const onClick = (event: MouseEvent) => {
       const target = event.target instanceof Element ? event.target : null;
       const link = target?.closest("a");
@@ -50,6 +69,7 @@ function GoogleAnalyticsEngagementEvents() {
         link_text: linkText,
         link_url: href,
         page_path: pathname || window.location.pathname,
+        source: link.dataset.analyticsSource || undefined,
       };
 
       if (href.startsWith("tel:")) {
@@ -83,7 +103,10 @@ function GoogleAnalyticsEngagementEvents() {
     };
 
     document.addEventListener("click", onClick);
-    return () => document.removeEventListener("click", onClick);
+    return () => {
+      document.removeEventListener("click", onClick);
+      sectionObserver.disconnect();
+    };
   }, [pathname]);
 
   return null;
