@@ -68,7 +68,7 @@ const storyCards = [
 export const dynamic = "force-dynamic";
 
 export default async function AboutPage() {
-  const [movers, successfulMoves] = await getAboutPageStats();
+  const [movers, successfulMoves, moverCount] = await getAboutPageStats();
 
   const moversWithLogos = movers.filter((mover) => Boolean(mover.logoUrl));
   const networkServiceAreas = dedupeServiceAreaLabels(movers.flatMap((mover) => mover.serviceAreas).filter(Boolean));
@@ -114,7 +114,7 @@ export default async function AboutPage() {
               <div className="grid gap-2.5 sm:grid-cols-3 sm:gap-3 lg:grid-cols-1">
                 <div className="rounded-[18px] border border-white/10 bg-white/[0.08] px-4 py-3 backdrop-blur sm:rounded-[24px] sm:py-4">
                   <p className="text-xs uppercase tracking-[0.18em] text-sky-100/75">Mover profiles</p>
-                  <p className="mt-2 text-3xl font-black tracking-[-0.05em] text-white">{movers.length}</p>
+                  <p className="mt-2 text-3xl font-black tracking-[-0.05em] text-white">{moverCount}</p>
                   <p className="mt-1 text-sm text-slate-300">Companies currently in the network.</p>
                 </div>
                 <div className="rounded-[18px] border border-white/10 bg-white/[0.08] px-4 py-3 backdrop-blur sm:rounded-[24px] sm:py-4">

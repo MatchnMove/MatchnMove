@@ -11,7 +11,7 @@ type AboutPageMover = {
   yearsOperating: number | null;
 };
 
-type AboutPageStats = [AboutPageMover[], number];
+type AboutPageStats = [AboutPageMover[], number, number];
 
 export const getAboutPageStats = cacheTaggedData(async (): Promise<AboutPageStats> => {
   try {
@@ -70,8 +70,9 @@ export const getAboutPageStats = cacheTaggedData(async (): Promise<AboutPageStat
         yearsOperating: mover.yearsOperating,
       })),
       successfulMoves,
+      movers.length,
     ];
   } catch {
-    return [[], 0];
+    return [[], 0, 0];
   }
 }, ["about-page-stats"], [ABOUT_PAGE_TAG]);
