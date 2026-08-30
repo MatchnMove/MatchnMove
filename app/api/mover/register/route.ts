@@ -34,8 +34,7 @@ export async function POST(req: NextRequest) {
       companyName: parsed.data.companyName,
       email: parsed.data.email,
       phone: parsed.data.phone,
-      password: parsed.data.password,
-      serviceAreas: parsed.data.serviceAreas
+      password: parsed.data.password
     });
 
     let verificationResult: Awaited<ReturnType<typeof sendVerificationEmail>> = {

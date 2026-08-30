@@ -1,12 +1,10 @@
 "use client";
 
 import { Nav } from "@/components/site-shell";
-import { NzRegionSelector } from "@/components/nz-region-selector";
 import Link from "next/link";
 import Script from "next/script";
 import { FormEvent, useEffect, useEffectEvent, useRef, useState } from "react";
 import { ArrowRight, BadgeCheck, Building2, Eye, EyeOff, LockKeyhole, ShieldCheck, Sparkles } from "lucide-react";
-import { type NzServiceArea } from "@/lib/nz-regions";
 
 declare global {
   interface Window {
@@ -45,8 +43,8 @@ const trustPoints = [
 ];
 
 const onboardingSteps = [
-  { label: "Create account", detail: "Business details, secure password, coverage regions" },
-  { label: "Verify profile", detail: "Confirm email, add NZBN details, upload logo and documents" },
+  { label: "Create account", detail: "Business details and a secure password" },
+  { label: "Complete profile", detail: "Add coverage regions, NZBN details, logo and documents" },
   { label: "Go live", detail: "Verified movers can appear publicly and open lead details" }
 ];
 
@@ -83,7 +81,6 @@ export default function MoverLoginPage() {
     phone: "",
     password: "",
     confirmPassword: "",
-    serviceAreas: ["Auckland"] as NzServiceArea[],
     acceptedTerms: false
   });
   const [submitting, setSubmitting] = useState(false);
@@ -258,10 +255,7 @@ export default function MoverLoginPage() {
       const res = await fetch("/api/mover/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...signupForm,
-          serviceAreas: signupForm.serviceAreas
-        })
+        body: JSON.stringify(signupForm)
       });
 
       const payload = (await res.json().catch(() => ({}))) as { error?: string; verificationEmailSent?: boolean };
@@ -437,7 +431,7 @@ export default function MoverLoginPage() {
                           {mode === "signup" ? "Mover company onboarding" : "Secure mover login"}
                         </p>
                         <p className="text-sm leading-6 text-slate-500">
-                          {mode === "signup" ? `${signupForm.serviceAreas.length} coverage region${signupForm.serviceAreas.length === 1 ? "" : "s"} ready to save` : "Stay signed in on this device"}
+                          {mode === "signup" ? "Start with your account details, then complete your profile" : "Stay signed in on this device"}
                         </p>
                       </div>
                     </div>
@@ -510,14 +504,6 @@ export default function MoverLoginPage() {
                           />
                         </label>
                       </div>
-
-                      <NzRegionSelector
-                        selectedRegions={signupForm.serviceAreas}
-                        onChange={(regions) => setSignupForm((current) => ({ ...current, serviceAreas: regions }))}
-                        title="Coverage regions"
-                        description="Choose the official NZ regions your moving company services so the right leads reach your dashboard."
-                        className="bg-white"
-                      />
 
                       <div className="grid gap-4">
                         <label className="block min-w-0">

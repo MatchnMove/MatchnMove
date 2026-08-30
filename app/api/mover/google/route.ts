@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
         companyName: buildCompanyName(googleAccount.name),
         email: googleAccount.email,
         phone: "",
-        serviceAreas: ["Auckland"]
+        serviceAreas: []
       });
 
       await prisma.user.update({
@@ -116,7 +116,7 @@ export async function POST(req: NextRequest) {
         userId: existingUser.id,
         name: sessionUser.name || googleAccount.name,
         companyName: buildCompanyName(sessionUser.name || googleAccount.name),
-        serviceAreas: ["Auckland"]
+        serviceAreas: []
       });
       revalidatePublicSite();
     }

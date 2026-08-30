@@ -68,7 +68,6 @@ export const moverRegisterSchema = z
     phone: z.string().trim().min(7, "Enter a valid phone number"),
     password: passwordSchema,
     confirmPassword: z.string(),
-    serviceAreas: z.array(z.enum(NZ_SERVICE_AREAS)).min(1, "Choose at least one coverage region"),
     acceptedTerms: z.literal(true, {
       errorMap: () => ({ message: "You must accept the terms and privacy policy" }),
     }),

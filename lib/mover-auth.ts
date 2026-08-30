@@ -14,7 +14,7 @@ type MoverAccountInput = {
   email: string;
   phone: string;
   password?: string;
-  serviceAreas: string[];
+  serviceAreas?: string[];
 };
 
 function normalizeServiceAreas(serviceAreas: string[]) {
@@ -42,7 +42,7 @@ export async function createMoverAccount(input: MoverAccountInput) {
   const passwordToHash = input.password || randomBytes(24).toString("hex");
   const passwordHash = await hashPassword(passwordToHash);
   const email = input.email.trim().toLowerCase();
-  const serviceAreas = normalizeServiceAreas(input.serviceAreas);
+  const serviceAreas = normalizeServiceAreas(input.serviceAreas ?? []);
 
   const user = await prisma.$transaction(async (tx) => {
     const createdUser = await tx.user.create({
@@ -92,7 +92,7 @@ export async function ensureMoverCompanyProfile(params: {
   phone?: string | null;
   serviceAreas?: string[];
 }) {
-  const serviceAreas = normalizeServiceAreas(params.serviceAreas || ["Auckland"]);
+  const serviceAreas = normalizeServiceAreas(params.serviceAreas ?? []);
 
   return prisma.moverCompany.upsert({
     where: { userId: params.userId },
