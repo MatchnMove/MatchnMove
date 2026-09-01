@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/db";
-import { isMoverProfileLive } from "@/lib/mover-profile";
 import { getMoverLogoUrl } from "@/lib/mover-logo";
 import { ABOUT_PAGE_TAG, cacheTaggedData } from "@/lib/public-cache";
 
@@ -13,6 +12,10 @@ type AboutPageMover = {
 
 type AboutPageStats = [AboutPageMover[], number, number];
 
+function isRealMover(mover: { id: string; nzbnVerificationSource: string | null }) {
+  return mover.nzbnVerificationSource !== "SEED" && !mover.id.startsWith("demo-");
+}
+
 export const getAboutPageStats = cacheTaggedData(async (): Promise<AboutPageStats> => {
   try {
     const [movers, successfulMoves] = await Promise.all([
@@ -21,34 +24,10 @@ export const getAboutPageStats = cacheTaggedData(async (): Promise<AboutPageStat
         select: {
           id: true,
           companyName: true,
-          businessDescription: true,
-          contactPerson: true,
-          phone: true,
-          phoneVerifiedAt: true,
-          nzbn: true,
-          nzbnVerificationStatus: true,
-          nzbnVerificationError: true,
-          authorizedRepresentativeName: true,
-          authorizedRepresentativeRole: true,
-          authorityDeclaredAt: true,
+          nzbnVerificationSource: true,
           logoUrl: true,
           serviceAreas: true,
           yearsOperating: true,
-          documents: {
-            select: {
-              id: true,
-              type: true,
-              verificationStatus: true,
-              expiresAt: true,
-              scanStatus: true,
-              detectedMimeType: true,
-            },
-          },
-          user: {
-            select: {
-              emailVerifiedAt: true,
-            },
-          },
         },
         orderBy: { createdAt: "desc" },
       }),
@@ -62,7 +41,7 @@ export const getAboutPageStats = cacheTaggedData(async (): Promise<AboutPageStat
     ]);
 
     return [
-      movers.filter(isMoverProfileLive).map((mover) => ({
+      movers.filter(isRealMover).map((mover) => ({
         id: mover.id,
         companyName: mover.companyName,
         logoUrl: getMoverLogoUrl(mover.id, mover.logoUrl),
@@ -70,7 +49,7 @@ export const getAboutPageStats = cacheTaggedData(async (): Promise<AboutPageStat
         yearsOperating: mover.yearsOperating,
       })),
       successfulMoves,
-      movers.length,
+      movers.filter(isRealMover).length,
     ];
   } catch {
     return [[], 0, 0];
