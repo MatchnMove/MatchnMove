@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { AdminLogoutButton } from "@/components/admin-logout-button";
+import { AdminNavigation } from "@/components/admin-navigation";
 import { AdminMoverVerificationPanel } from "@/components/admin-mover-verification-panel";
 import { isAdminUser } from "@/lib/admin-auth";
 import { auth } from "@/lib/auth";
@@ -81,18 +81,13 @@ export default async function AdminVerificationPage() {
     <section className="min-h-screen bg-[linear-gradient(180deg,#eef4fb_0%,#f7f9fc_100%)] px-4 py-5">
       <div className="mx-auto max-w-[1400px]">
         <div className="mb-4 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.16em] text-sky-700">Admin verification</p>
               <h1 className="mt-2 text-3xl font-black tracking-[-0.05em] text-slate-950">Mover verification queue</h1>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row">
-              <Link
-                href="/admin/leads"
-                className="inline-flex min-h-10 items-center justify-center rounded-xl bg-teal-700 px-4 text-sm font-bold text-white hover:bg-teal-800"
-              >
-                Google Sheets lead register
-              </Link>
+              <AdminNavigation current="verification" />
               <AdminLogoutButton />
             </div>
           </div>

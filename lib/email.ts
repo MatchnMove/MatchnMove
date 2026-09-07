@@ -3,6 +3,7 @@ import SMTPPool from "nodemailer/lib/smtp-pool";
 import SMTPTransport from "nodemailer/lib/smtp-transport";
 import { EmailDeliveryStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { getMoverNewLeadDedupeKey } from "@/lib/lead-notification";
 import { SITE_EMAILS } from "@/lib/site-emails";
 
 type ContactEmailInput = {
@@ -29,6 +30,7 @@ type ReviewSurveyEmailInput = {
 };
 
 type MoverLeadEmailInput = {
+  leadId?: string;
   email: string;
   moverName?: string | null;
   moverCompanyName: string;
@@ -1031,6 +1033,7 @@ export async function sendMoverNewLeadEmail(input: MoverLeadEmailInput) {
   `;
 
   const message: EmailMessage = {
+    dedupeKey: input.leadId ? getMoverNewLeadDedupeKey(input.leadId) : undefined,
     kind: "mover_new_lead",
     from: config.from,
     to: input.email,

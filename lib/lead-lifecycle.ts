@@ -340,6 +340,7 @@ async function findReplacementMover(quoteRequestId: string, matchedRegions: stri
 
 function buildLeadEmailInput(lead: LeadEmailContext) {
   return {
+    leadId: lead.id,
     email: lead.moverCompany.user.email,
     moverName: lead.moverCompany.contactPerson || lead.moverCompany.user.name || lead.moverCompany.companyName,
     moverCompanyName: lead.moverCompany.companyName,
