@@ -3,7 +3,7 @@ import SMTPPool from "nodemailer/lib/smtp-pool";
 import SMTPTransport from "nodemailer/lib/smtp-transport";
 import { EmailDeliveryStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { getMoverNewLeadDedupeKey } from "@/lib/lead-notification";
+import { getMoverLeadExpiryWarningDedupeKey, getMoverNewLeadDedupeKey } from "@/lib/lead-notification";
 import { SITE_EMAILS } from "@/lib/site-emails";
 
 type ContactEmailInput = {
@@ -36,6 +36,13 @@ type MoverLeadEmailInput = {
   moverCompanyName: string;
   dashboardUrl: string;
   expiresAt: Date;
+};
+
+type MoverLeadAlertTestEmailInput = {
+  email: string;
+  moverName?: string | null;
+  moverCompanyName: string;
+  dashboardUrl: string;
 };
 
 type AdminSpreadsheetLeadEmailInput = {
@@ -73,6 +80,7 @@ type EmailKind =
   | "mover_sign_in_code"
   | "review_survey"
   | "mover_new_lead"
+  | "mover_lead_alert_test"
   | "admin_spreadsheet_lead"
   | "mover_lead_expiry_warning"
   | "verification_review_submitted"
@@ -159,10 +167,25 @@ function isSmtpConfigured() {
   return Boolean(config.host && config.port);
 }
 
-function getEffectiveFrom(configuredFrom: string) {
+function getMailboxAddress(value: string) {
+  const bracketedAddress = value.match(/<([^<>\r\n]+)>/)?.[1]?.trim();
+  const address = bracketedAddress || value.trim();
+  return /^[^\s@<>]+@[^\s@<>]+$/.test(address) ? address : "";
+}
+
+function formatMailbox(displayName: string, value: string) {
+  const address = getMailboxAddress(value);
+  if (!address) return value;
+
+  const safeDisplayName = displayName.replace(/[\r\n"]/g, "").trim();
+  return safeDisplayName ? `"${safeDisplayName}" <${address}>` : address;
+}
+
+function getEffectiveFrom(configuredFrom: string, displayName?: string) {
   const smtpUser = process.env.SMTP_USER?.trim() ?? "";
   const forceSmtpUserFrom = process.env.EMAIL_FORCE_SMTP_USER_FROM === "true";
-  return forceSmtpUserFrom && smtpUser ? smtpUser : configuredFrom;
+  const effectiveFrom = forceSmtpUserFrom && smtpUser ? smtpUser : configuredFrom;
+  return displayName ? formatMailbox(displayName, effectiveFrom) : effectiveFrom;
 }
 
 function getContactNotificationConfig() {
@@ -223,11 +246,17 @@ function getLeadEmailConfig() {
     process.env.DEFAULT_FROM_EMAIL,
     process.env.CONTACT_FROM_EMAIL,
     SITE_EMAILS.noReply,
-  ));
+  ), process.env.LEAD_FROM_NAME?.trim() || "Match 'n Move Leads");
+  const replyTo = getFirstConfiguredValue(
+    process.env.LEAD_REPLY_TO_EMAIL,
+    process.env.SUPPORT_EMAIL,
+    SITE_EMAILS.support,
+  );
 
   return {
     configured: isSmtpConfigured() && Boolean(from),
     from,
+    replyTo,
   };
 }
 
@@ -241,6 +270,7 @@ function getVerificationEmailConfig() {
   );
   return {
     ...base,
+    from: getEffectiveFrom(base.from, "Match 'n Move Verification"),
     reviewTo,
     configuredForReview: base.configured && Boolean(reviewTo),
   };
@@ -252,12 +282,14 @@ export function getContactEmailConfig() {
 
 function getTransporter() {
   const config = getSmtpConfig();
+  const requireTls = !config.secure && process.env.SMTP_REQUIRE_TLS !== "false";
   if (process.env.EMAIL_SMTP_POOL === "true") {
     const poolOptions: SMTPPool.Options = {
       pool: true,
       host: config.host,
       port: config.port,
       secure: config.secure,
+      requireTLS: requireTls,
       name: process.env.SMTP_NAME || "matchnmove.co.nz",
       auth: config.auth,
       maxConnections: getNumberEnv("EMAIL_SMTP_MAX_CONNECTIONS", 3),
@@ -271,6 +303,7 @@ function getTransporter() {
     host: config.host,
     port: config.port,
     secure: config.secure,
+    requireTLS: requireTls,
     name: process.env.SMTP_NAME || "matchnmove.co.nz",
     auth: config.auth,
   };
@@ -494,7 +527,15 @@ function renderSupportBox(theme: EmailTheme) {
   `;
 }
 
-async function sendViaSmtp(message: EmailMessage) {
+function getStableMessageId(emailDeliveryId: string, kind: EmailKind) {
+  const domain = (process.env.SMTP_NAME || "matchnmove.co.nz")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9.-]/g, "") || "matchnmove.co.nz";
+  return `<${kind}.${emailDeliveryId}@${domain}>`;
+}
+
+async function sendViaSmtp(message: EmailMessage, emailDeliveryId: string) {
   const transporter = getTransporter();
   return transporter.sendMail({
     from: message.from,
@@ -503,6 +544,11 @@ async function sendViaSmtp(message: EmailMessage) {
     subject: message.subject,
     text: message.text,
     html: message.html,
+    messageId: getStableMessageId(emailDeliveryId, message.kind),
+    headers: {
+      "Auto-Submitted": "auto-generated",
+      "X-MatchnMove-Category": message.kind,
+    },
   });
 }
 
@@ -607,7 +653,11 @@ export async function deliverQueuedEmail(emailDeliveryId: string) {
       subject: claimed.subject,
       text: claimed.text,
       html: claimed.html,
-    });
+    }, claimed.id);
+
+    if (providerResult.rejected?.length && !providerResult.accepted?.length) {
+      throw new Error(`SMTP provider rejected the recipient: ${providerResult.response || "no response supplied"}`);
+    }
 
     await prisma.emailDelivery.update({
       where: { id: claimed.id },
@@ -735,6 +785,7 @@ export async function getEmailDiagnostics(limit = 10) {
       host: smtp.host || null,
       port: smtp.port || null,
       secure: smtp.secure,
+      requireTls: !smtp.secure && process.env.SMTP_REQUIRE_TLS !== "false",
       hasAuthUser: Boolean(smtp.user),
       hasAuthPassword: Boolean(process.env.SMTP_PASS?.trim()),
       smtpName: process.env.SMTP_NAME || "matchnmove.co.nz",
@@ -743,6 +794,7 @@ export async function getEmailDiagnostics(limit = 10) {
       authFrom: getAuthEmailConfig().from || null,
       reviewFrom: getReviewEmailConfig().from || null,
       leadFrom: getLeadEmailConfig().from || null,
+      leadReplyTo: getLeadEmailConfig().replyTo || null,
     },
     queue: {
       counts: Object.fromEntries(statusCounts.map((item) => [item.status, item._count._all])),
@@ -1019,7 +1071,7 @@ export async function sendMoverNewLeadEmail(input: MoverLeadEmailInput) {
   const theme = getMoverLeadTheme();
   const friendlyName = input.moverName?.trim() || input.moverCompanyName;
   const expiryLabel = formatEmailDateTime(input.expiresAt);
-  const subject = "New Match 'n Move lead available";
+  const subject = `New Match 'n Move quote request — open by ${expiryLabel}`;
   const bodyHtml = `
     ${renderNoteBox(
       `A new customer quote request is ready for <strong style="color:#071d3c;">${escapeHtml(input.moverCompanyName)}</strong>. Customer and move details stay locked until you open the lead from your dashboard.`,
@@ -1037,6 +1089,7 @@ export async function sendMoverNewLeadEmail(input: MoverLeadEmailInput) {
     kind: "mover_new_lead",
     from: config.from,
     to: input.email,
+    replyTo: config.replyTo,
     subject,
     text: [
       `Hi ${friendlyName},`,
@@ -1050,6 +1103,7 @@ export async function sendMoverNewLeadEmail(input: MoverLeadEmailInput) {
       input.dashboardUrl,
       "",
       "If you are already signed in, this link will take you straight to the lead in your dashboard.",
+      "You are receiving this service notification because your mover account is active and this request matched your configured service areas.",
     ].join("\n"),
     html: renderEmailShell({
       theme,
@@ -1062,7 +1116,7 @@ export async function sendMoverNewLeadEmail(input: MoverLeadEmailInput) {
         href: input.dashboardUrl,
         label: "Open lead board",
       },
-      footerNote: "If you are already signed in, the dashboard link will open your lead board automatically.",
+      footerNote: "You are receiving this service notification because your active mover account matched the request. Add this sender to your contacts so future lead alerts are easier to find.",
     }),
   };
 
@@ -1070,7 +1124,11 @@ export async function sendMoverNewLeadEmail(input: MoverLeadEmailInput) {
 }
 
 export async function sendAdminSpreadsheetLeadEmail(input: AdminSpreadsheetLeadEmailInput) {
-  const config = getLeadEmailConfig();
+  const leadConfig = getLeadEmailConfig();
+  const config = {
+    ...leadConfig,
+    from: getEffectiveFrom(leadConfig.from, "Match 'n Move Operations"),
+  };
   const theme = getMoverLeadTheme();
   const fromCity = input.fromCity?.trim() || "Origin not supplied";
   const toCity = input.toCity?.trim() || "Destination not supplied";
@@ -1150,7 +1208,7 @@ export async function sendMoverLeadExpiryWarningEmail(input: MoverLeadEmailInput
   };
   const friendlyName = input.moverName?.trim() || input.moverCompanyName;
   const expiryLabel = formatEmailDateTime(input.expiresAt);
-  const subject = "24 hours left to open your Match 'n Move lead";
+  const subject = `24 hours left — quote request expires ${expiryLabel}`;
   const bodyHtml = `
     ${renderNoteBox(
       `This lead is still unopened. If it is not opened before <strong style="color:#071d3c;">${escapeHtml(expiryLabel)}</strong>, it will be redistributed to another mover in the system.`,
@@ -1164,9 +1222,11 @@ export async function sendMoverLeadExpiryWarningEmail(input: MoverLeadEmailInput
   `;
 
   const message: EmailMessage = {
+    dedupeKey: input.leadId ? getMoverLeadExpiryWarningDedupeKey(input.leadId) : undefined,
     kind: "mover_lead_expiry_warning",
     from: config.from,
     to: input.email,
+    replyTo: config.replyTo,
     subject,
     text: [
       `Hi ${friendlyName},`,
@@ -1179,6 +1239,8 @@ export async function sendMoverLeadExpiryWarningEmail(input: MoverLeadEmailInput
       "",
       "Open the lead board:",
       input.dashboardUrl,
+      "",
+      "You are receiving this service notification because your mover account is active and this request matched your configured service areas.",
     ].join("\n"),
     html: renderEmailShell({
       theme,
@@ -1191,7 +1253,62 @@ export async function sendMoverLeadExpiryWarningEmail(input: MoverLeadEmailInput
         href: input.dashboardUrl,
         label: "Open lead now",
       },
-      footerNote: "Once the lead expires, it may be offered to another mover that has not received this customer request yet.",
+      footerNote: "Once the lead expires, it may be offered to another mover. Add this sender to your contacts so future lead alerts are easier to find.",
+    }),
+  };
+
+  return queueAndTrySend(message, config.configured);
+}
+
+export async function sendMoverLeadAlertTestEmail(input: MoverLeadAlertTestEmailInput) {
+  const config = getLeadEmailConfig();
+  const theme = getMoverLeadTheme();
+  const friendlyName = input.moverName?.trim() || input.moverCompanyName;
+  const subject = "Your Match 'n Move lead alerts are ready";
+  const bodyHtml = `
+    ${renderNoteBox(
+      "This is a delivery test for your mover lead alerts. No customer request is attached to this message.",
+      theme,
+    )}
+    ${renderDetailTable(`
+      ${renderDetailRow("Alert email", input.email)}
+      ${renderDetailRow("Company", input.moverCompanyName)}
+      ${renderDetailRow("Next step", "Add this sender to your contacts")}
+    `)}
+  `;
+
+  const message: EmailMessage = {
+    kind: "mover_lead_alert_test",
+    from: config.from,
+    to: input.email,
+    replyTo: config.replyTo,
+    subject,
+    text: [
+      `Hi ${friendlyName},`,
+      "",
+      "Your Match 'n Move lead-alert test was sent successfully.",
+      "No customer request is attached to this message.",
+      "",
+      "To make future time-sensitive alerts easier to find:",
+      "1. Add this sender to your contacts.",
+      "2. If this message reached Spam, mark it as Not spam.",
+      "3. Keep Match 'n Move lead notifications enabled for this inbox.",
+      "",
+      "Open your mover dashboard:",
+      input.dashboardUrl,
+    ].join("\n"),
+    html: renderEmailShell({
+      theme,
+      preheader: "Confirm that time-sensitive mover lead alerts can reach this inbox.",
+      eyebrow: "Alert delivery test",
+      title: "Your lead alerts are ready",
+      intro: `Hi ${friendlyName}, use this message to confirm that Match 'n Move can reach your chosen lead inbox.`,
+      bodyHtml,
+      cta: {
+        href: input.dashboardUrl,
+        label: "Open mover dashboard",
+      },
+      footerNote: "If this message reached Spam, mark it as Not spam, then add the sender to your contacts. This helps future lead alerts appear where you expect them.",
     }),
   };
 

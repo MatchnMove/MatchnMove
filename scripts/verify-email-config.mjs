@@ -26,6 +26,7 @@ loadDotEnv(path.join(process.cwd(), ".env"));
 const host = process.env.SMTP_HOST?.trim();
 const port = Number(process.env.SMTP_PORT ?? "0");
 const secure = process.env.SMTP_SECURE === "true" || port === 465;
+const requireTLS = !secure && process.env.SMTP_REQUIRE_TLS !== "false";
 const user = process.env.SMTP_USER?.trim();
 const pass = process.env.SMTP_PASS?.trim();
 const name = process.env.SMTP_NAME?.trim() || "matchnmove.co.nz";
@@ -42,6 +43,7 @@ const transporter = nodemailer.createTransport({
   host,
   port,
   secure,
+  requireTLS,
   name,
   auth: user && pass ? { user, pass } : undefined,
 });

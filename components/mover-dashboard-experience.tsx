@@ -339,6 +339,7 @@ export function MoverDashboardExperience({
   const [busyLeadId, setBusyLeadId] = useState<string | null>(null);
   const [logoutLoading, setLogoutLoading] = useState(false);
   const [nowMs, setNowMs] = useState(() => Date.now());
+  const attemptedLeadViews = useRef(new Set<string>());
 
   const filteredLeads = profile.status === "ACTIVE" ? profile.leads.filter((lead) => {
     if (laneFilter === "hot") return ["NEW", "NOTIFIED", "VIEWED"].includes(lead.status);
@@ -348,6 +349,8 @@ export function MoverDashboardExperience({
   }) : [];
 
   const selectedLead = filteredLeads.find((lead) => lead.id === selectedLeadId) ?? filteredLeads[0] ?? null;
+  const selectedLeadIdForView = selectedLead?.id ?? null;
+  const selectedLeadStatusForView = selectedLead?.status ?? null;
   const routeFitCount = profile.leads.filter((lead) => lead.routeMatch).length;
   const activeTabConfig = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
 
@@ -377,7 +380,7 @@ export function MoverDashboardExperience({
 
         if (!session?.authenticated) {
           const next = encodeURIComponent(window.location.pathname + window.location.search);
-          window.location.replace(`/mover/login?next=${next}`);
+          window.location.replace(`/mover/login?mode=login&next=${next}`);
           return;
         }
 
@@ -414,6 +417,55 @@ export function MoverDashboardExperience({
     const timer = window.setInterval(() => setNowMs(Date.now()), 60_000);
     return () => window.clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    const attemptedViews = attemptedLeadViews.current;
+    if (
+      activeTab !== "leads" ||
+      !selectedLeadIdForView ||
+      !["NEW", "NOTIFIED"].includes(selectedLeadStatusForView ?? "") ||
+      attemptedViews.has(selectedLeadIdForView)
+    ) {
+      return;
+    }
+
+    const leadId = selectedLeadIdForView;
+    let cancelled = false;
+    attemptedViews.add(leadId);
+
+    async function recordLeadView() {
+      try {
+        const response = await fetch(`/api/mover/leads/${leadId}/view`, {
+          method: "POST",
+          credentials: "same-origin",
+        });
+        const data = (await response.json().catch(() => null)) as { status?: string } | null;
+        if (!response.ok || cancelled) {
+          if (!cancelled) attemptedViews.delete(leadId);
+          return;
+        }
+
+        if (data?.status === "VIEWED") {
+          setProfile((current) => ({
+            ...current,
+            leads: current.leads.map((lead) =>
+              lead.id === leadId
+                ? { ...lead, status: "VIEWED", lastAction: "lead_viewed_in_dashboard" }
+                : lead,
+            ),
+          }));
+        }
+      } catch {
+        if (!cancelled) attemptedViews.delete(leadId);
+      }
+    }
+
+    void recordLeadView();
+    return () => {
+      cancelled = true;
+      attemptedViews.delete(leadId);
+    };
+  }, [activeTab, selectedLeadIdForView, selectedLeadStatusForView]);
 
   function openTab(tab: DashboardTab) {
     setActiveTab(tab);
@@ -1093,6 +1145,10 @@ function LeadsPanel({
 
   function focusSelectedLead(leadId: string) {
     onSelectLead(leadId);
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.set("tab", "leads");
+    currentUrl.searchParams.set("lead", leadId);
+    window.history.replaceState(window.history.state, "", currentUrl);
 
     window.requestAnimationFrame(() => {
       const panel = detailPanelRef.current;

@@ -8,6 +8,7 @@ import {
   Building2,
   CheckCircle2,
   Clock3,
+  Eye,
   Inbox,
   LoaderCircle,
   MailCheck,
@@ -15,7 +16,7 @@ import {
   Search,
   Send,
 } from "lucide-react";
-import type { QuoteFlowItem, QuoteFlowPage } from "@/lib/quote-flow-types";
+import type { QuoteFlowDelivery, QuoteFlowItem, QuoteFlowPage } from "@/lib/quote-flow-types";
 import { cx } from "@/lib/utils";
 
 export type AdminMoverQuoteSummary = {
@@ -130,28 +131,28 @@ function LeadStatusBadge({ status }: { status: string }) {
   );
 }
 
-function DeliveryStatus({ item }: { item: QuoteFlowItem }) {
-  const delivery = item.emailDelivery;
-
+function DeliveryAttempt({ label, delivery, emptyDetail }: { label: string; delivery?: QuoteFlowDelivery; emptyDetail: string }) {
   if (!delivery) {
     return (
       <div>
-        <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-700">No linked record</span>
-        <p className="mt-1 text-xs leading-5 text-slate-500">Assignment is confirmed; no per-lead email record is available. Older assignments predate tracking.</p>
+        <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400">{label}</p>
+        <span className="mt-1 inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-700">No linked record</span>
+        <p className="mt-1 text-xs leading-5 text-slate-500">{emptyDetail}</p>
       </div>
     );
   }
 
   const presentation = {
-    SENT: { label: "Email sent", tone: "bg-emerald-100 text-emerald-800" },
-    QUEUED: { label: "Email queued", tone: "bg-amber-100 text-amber-800" },
+    SENT: { label: "SMTP accepted", tone: "bg-emerald-100 text-emerald-800" },
+    QUEUED: { label: "Queued", tone: "bg-amber-100 text-amber-800" },
     SENDING: { label: "Sending", tone: "bg-sky-100 text-sky-800" },
-    FAILED: { label: "Email failed", tone: "bg-rose-100 text-rose-800" },
+    FAILED: { label: "Failed", tone: "bg-rose-100 text-rose-800" },
   }[delivery.status] ?? { label: delivery.status, tone: "bg-slate-100 text-slate-700" };
 
   return (
     <div>
-      <span className={cx("inline-flex rounded-full px-2.5 py-1 text-xs font-bold", presentation.tone)}>{presentation.label}</span>
+      <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400">{label}</p>
+      <span className={cx("mt-1 inline-flex rounded-full px-2.5 py-1 text-xs font-bold", presentation.tone)}>{presentation.label}</span>
       <p className="mt-1 text-xs leading-5 text-slate-500">
         {delivery.sentAt
           ? formatDateTime(delivery.sentAt)
@@ -163,6 +164,35 @@ function DeliveryStatus({ item }: { item: QuoteFlowItem }) {
           <p className="mt-1 break-words leading-5">{delivery.lastError}</p>
         </details>
       ) : null}
+      {delivery.providerMessageId ? (
+        <details className="mt-1 max-w-sm text-xs text-slate-500">
+          <summary className="cursor-pointer font-semibold">Message ID</summary>
+          <p className="mt-1 break-all font-mono leading-5">{delivery.providerMessageId}</p>
+        </details>
+      ) : null}
+    </div>
+  );
+}
+
+function DeliveryStatus({ item }: { item: QuoteFlowItem }) {
+  const initial = item.emailDeliveries.find((delivery) => delivery.kind === "mover_new_lead");
+  const reminder = item.emailDeliveries.find((delivery) => delivery.kind === "mover_lead_expiry_warning");
+  const reminderDetail = item.reminderSentAt
+    ? "The reminder was triggered before per-lead reminder tracking was added."
+    : "Not triggered yet.";
+
+  return (
+    <div className="space-y-3">
+      <DeliveryAttempt
+        label="Initial alert"
+        delivery={initial}
+        emptyDetail="Older assignment or no per-lead email record."
+      />
+      <DeliveryAttempt
+        label="24-hour reminder"
+        delivery={reminder}
+        emptyDetail={reminderDetail}
+      />
     </div>
   );
 }
@@ -286,8 +316,8 @@ export function AdminQuoteFlowPanel({ movers, summary, recentUnmatchedQuotes, in
         <MetricCard
           icon={<MailCheck className="h-5 w-5" />}
           label="Tracked notifications"
-          value={`${summary.sentEmailCount.toLocaleString("en-NZ")} sent`}
-          detail={`${summary.trackedEmailCount.toLocaleString("en-NZ")} tracked · ${summary.emailAttentionCount.toLocaleString("en-NZ")} need attention`}
+          value={`${summary.sentEmailCount.toLocaleString("en-NZ")} accepted`}
+          detail={`${summary.trackedEmailCount.toLocaleString("en-NZ")} tracked · ${summary.emailAttentionCount.toLocaleString("en-NZ")} queued or failed`}
         />
       </section>
 
@@ -485,13 +515,19 @@ export function AdminQuoteFlowPanel({ movers, summary, recentUnmatchedQuotes, in
                           <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Assigned to dashboard</p>
                           <p className="mt-1 text-sm font-bold text-slate-800">{formatDateTime(item.assignedAt)}</p>
                           <div className="mt-2"><LeadStatusBadge status={item.status} /></div>
+                          {item.viewedAt ? (
+                            <p className="mt-1 flex items-center gap-1 text-xs font-semibold text-amber-700"><Eye className="h-3.5 w-3.5" /> Viewed {formatDateTime(item.viewedAt)}</p>
+                          ) : ["NEW", "NOTIFIED", "VIEWED", "EXPIRED"].includes(item.status) ? (
+                            <p className="mt-1 text-xs text-slate-500">No authenticated dashboard view recorded</p>
+                          ) : null}
+                          {item.purchasedAt ? <p className="mt-1 text-xs font-semibold text-emerald-700">Opened {formatDateTime(item.purchasedAt)}</p> : null}
                           {item.expiresAt && ["NEW", "NOTIFIED", "VIEWED"].includes(item.status) ? (
                             <p className="mt-1 flex items-center gap-1 text-xs text-slate-500"><Clock3 className="h-3.5 w-3.5" /> Expires {formatDateTime(item.expiresAt)}</p>
                           ) : null}
                         </div>
 
                         <div>
-                          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Email delivery</p>
+                          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Notification attempts</p>
                           <div className="mt-1"><DeliveryStatus item={item} /></div>
                         </div>
                       </div>
@@ -531,7 +567,7 @@ export function AdminQuoteFlowPanel({ movers, summary, recentUnmatchedQuotes, in
       </section>
 
       <p className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-xs leading-5 text-sky-900">
-        Privacy safeguard: this operational view excludes customer names, contact details, and full street addresses. “Assigned to dashboard” confirms the mover received access to the lead; “Email sent” means the configured SMTP provider accepted the separate notification message, not that the mover opened it.
+        Privacy safeguard: this view excludes customer names, contact details, and full street addresses. “SMTP accepted” means the configured provider accepted the message; it does not prove Inbox placement. “Viewed” is recorded only after the authenticated mover displays that lead in the dashboard.
       </p>
     </div>
   );

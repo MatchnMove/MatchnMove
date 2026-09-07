@@ -11,7 +11,6 @@ import { getMoverQuoteFlowPage } from "@/lib/admin-quote-flow";
 import { isAdminUser } from "@/lib/admin-auth";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { MOVER_NEW_LEAD_DEDUPE_PREFIX } from "@/lib/lead-notification";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -71,8 +70,7 @@ export default async function AdminQuoteFlowPage() {
     prisma.emailDelivery.groupBy({
       by: ["status"],
       where: {
-        kind: "mover_new_lead",
-        dedupeKey: { startsWith: MOVER_NEW_LEAD_DEDUPE_PREFIX },
+        kind: { in: ["mover_new_lead", "mover_lead_expiry_warning"] },
       },
       _count: { _all: true },
     }),
@@ -171,7 +169,7 @@ export default async function AdminQuoteFlowPage() {
               <p className="text-xs font-bold uppercase tracking-[0.2em] text-teal-700">Admin operations</p>
               <h1 className="mt-2 text-3xl font-black tracking-[-0.045em] text-slate-950 sm:text-4xl">Quote flow</h1>
               <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
-                See which quote requests were assigned to each mover and whether the matching notification email was accepted for delivery—without accessing a mover account.
+                See which quote requests were assigned to each mover, whether each notification was accepted for delivery, and whether the mover viewed the lead—without accessing their account.
               </p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">

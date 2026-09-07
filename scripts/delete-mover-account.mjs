@@ -8,6 +8,7 @@ const MOVER_EMAIL_KINDS = [
   "mover_password_reset",
   "mover_sign_in_code",
   "mover_new_lead",
+  "mover_lead_alert_test",
   "mover_lead_expiry_warning",
   "verification_expiry_warning",
   "verification_decision",

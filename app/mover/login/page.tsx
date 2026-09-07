@@ -108,6 +108,9 @@ export default function MoverLoginPage() {
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
     setRedirectPath(getSafeRedirectPath(searchParams.get("next")));
+    if (searchParams.get("mode") === "login" || searchParams.has("next")) {
+      setMode("login");
+    }
     if (searchParams.get("account") === "deleted") {
       setMode("login");
       setSuccess("Your mover account and its Match 'n Move data were permanently deleted.");

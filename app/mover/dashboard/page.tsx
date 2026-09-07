@@ -26,17 +26,31 @@ function matchesServiceArea(
   return leadRegions.some((region) => coverage.has(region));
 }
 
+function getDashboardReturnPath(searchParams?: { tab?: string; billing?: string; lead?: string }) {
+  const nextSearchParams = new URLSearchParams();
+  for (const key of ["tab", "billing", "lead"] as const) {
+    const value = searchParams?.[key]?.trim();
+    if (value && value.length <= 120) nextSearchParams.set(key, value);
+  }
+
+  const query = nextSearchParams.toString();
+  return query ? `/mover/dashboard?${query}` : "/mover/dashboard";
+}
+
 export default async function MoverDashboardPage({
   searchParams,
 }: {
   searchParams?: Promise<{ tab?: string; billing?: string; lead?: string }>;
 }) {
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const session = await auth();
-  if (!session?.user?.id) redirect("/mover/login");
+  if (!session?.user?.id) {
+    const returnPath = getDashboardReturnPath(resolvedSearchParams);
+    redirect(`/mover/login?mode=login&next=${encodeURIComponent(returnPath)}`);
+  }
   if (session.user.role === "ADMIN" || isConfiguredAdminEmail(session.user.email)) {
     redirect(session.user.mfaVerified ? "/admin/verification" : "/admin/mfa?next=/admin/verification");
   }
-  const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
   const mover = await prisma.moverCompany.findUnique({
     where: { userId: session.user.id },

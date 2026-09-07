@@ -4,6 +4,7 @@ import { type ReactNode, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   ArrowRight,
+  BellRing,
   Check,
   CreditCard,
   FileWarning,
@@ -79,6 +80,7 @@ export function MoverSecurityPanel({ mover, onOpenDestination }: Props) {
   const [billingLoading, setBillingLoading] = useState(true);
   const [billingError, setBillingError] = useState<string | null>(null);
   const [verifyState, setVerifyState] = useState<AsyncActionState>(createAsyncState);
+  const [leadAlertTestState, setLeadAlertTestState] = useState<AsyncActionState>(createAsyncState);
   const [resetState, setResetState] = useState<AsyncActionState>(createAsyncState);
   const [navigationState, setNavigationState] = useState<"profile" | "documents" | "payments" | null>(null);
   const [logoutLoading, setLogoutLoading] = useState(false);
@@ -234,6 +236,32 @@ export function MoverSecurityPanel({ mover, onOpenDestination }: Props) {
       });
     } catch {
       setResetState({ status: "error", message: "Could not send a password reset email." });
+    }
+  }
+
+  async function sendLeadAlertTest() {
+    setLeadAlertTestState({ status: "loading", message: "" });
+
+    try {
+      const response = await fetch("/api/mover/notifications/test-email", {
+        method: "POST",
+      });
+      const data = (await response.json().catch(() => null)) as { error?: string; message?: string } | null;
+
+      if (!response.ok) {
+        setLeadAlertTestState({
+          status: "error",
+          message: data?.error ?? "Could not send the lead-alert test.",
+        });
+        return;
+      }
+
+      setLeadAlertTestState({
+        status: "success",
+        message: data?.message ?? "Test accepted for delivery. Check both Inbox and Spam.",
+      });
+    } catch {
+      setLeadAlertTestState({ status: "error", message: "Could not send the lead-alert test." });
     }
   }
 
@@ -466,6 +494,24 @@ export function MoverSecurityPanel({ mover, onOpenDestination }: Props) {
               </div>
 
               <div className="space-y-3">
+                <ActionCard
+                  title="Test lead notifications"
+                  description={`Send a safe test to ${mover.email}. Check Inbox and Spam, then add the sender to your contacts.`}
+                  action={
+                    <FeedbackButton
+                      kind="secondary"
+                      state={leadAlertTestState.status}
+                      defaultLabel="Send lead-alert test"
+                      loadingLabel="Sending..."
+                      successLabel="Accepted"
+                      onClick={sendLeadAlertTest}
+                      disabled={!mover.emailVerified}
+                      iconIdle={<BellRing className="h-4 w-4" />}
+                    />
+                  }
+                  icon={<BellRing className="h-4 w-4" />}
+                />
+                <StatusMessage state={leadAlertTestState} />
                 <ActionCard
                   title="Password reset"
                   description="If you ever lose access, we can send a secure reset link to your email."

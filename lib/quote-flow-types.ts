@@ -1,9 +1,12 @@
 export type QuoteFlowDelivery = {
+  kind: string;
   status: string;
   attempts: number;
   maxAttempts: number;
   sentAt: string | null;
   lastError: string | null;
+  providerMessageId: string | null;
+  createdAt: string;
   updatedAt: string;
 };
 
@@ -13,7 +16,9 @@ export type QuoteFlowItem = {
   status: string;
   price: number;
   assignedAt: string;
+  viewedAt: string | null;
   purchasedAt: string | null;
+  reminderSentAt: string | null;
   expiresAt: string | null;
   expiredAt: string | null;
   redistributedAt: string | null;
@@ -29,7 +34,7 @@ export type QuoteFlowItem = {
     moveDate: string | null;
     dateFlexible: boolean;
   };
-  emailDelivery: QuoteFlowDelivery | null;
+  emailDeliveries: QuoteFlowDelivery[];
 };
 
 export type QuoteFlowPage = {

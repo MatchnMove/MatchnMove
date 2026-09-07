@@ -66,6 +66,7 @@ See [Production operations](docs/PRODUCTION_OPERATIONS.md) for the launch-scale 
 - `SMTP_USER`
 - `SMTP_PASS`
 - `SMTP_SECURE`
+- `SMTP_REQUIRE_TLS`
 - `NEXT_PUBLIC_SUPPORT_EMAIL`
 - `NEXT_PUBLIC_INFO_EMAIL`
 - `NEXT_PUBLIC_CONTACT_EMAIL`
@@ -128,6 +129,24 @@ Run this before deploying email changes:
 npm run email:verify
 ```
 
+For mover lead alerts, keep a stable, recognisable sender identity:
+
+```bash
+LEAD_FROM_NAME=Match 'n Move Leads
+LEAD_FROM_EMAIL=leads@matchnmove.co.nz
+LEAD_REPLY_TO_EMAIL=support@matchnmove.co.nz
+SMTP_REQUIRE_TLS=true
+```
+
+When `EMAIL_FORCE_SMTP_USER_FROM=true`, the app preserves `LEAD_FROM_NAME` but uses the authenticated `SMTP_USER`
+address to avoid sender-alignment problems. Movers can send themselves a privacy-safe alert test from Dashboard →
+Security. An accepted test confirms the SMTP handoff only; the mover should check both Inbox and Spam, mark a valid
+message as not spam, and add the sender to contacts.
+
+Before relying on lead alerts in production, verify one received message with Gmail's **Show original** view. SPF,
+DKIM, and DMARC should all pass, and the DKIM signing domain should be `matchnmove.co.nz`. Also verify the domain in
+Google Postmaster Tools and use Google Workspace Email Log Search when tracing an individual message ID.
+
 To send a real test email as well:
 ```bash
 $env:SEND_TEST_EMAIL="true"; $env:TEST_EMAIL="you@example.com"; npm run email:verify
@@ -139,6 +158,10 @@ mover verification, password resets, and verified review surveys. Failed sends a
 In production, the app also starts a small background worker that processes queued email and lead lifecycle jobs,
 including the 24-hour unopened-lead warning and 48-hour redistribution checks.
 
+`EmailDelivery.status = SENT` means the SMTP provider accepted the message. It does not guarantee Inbox placement.
+The admin Quote Flow page labels this state as **SMTP accepted**, exposes the provider message ID for log searches,
+and separately records an authenticated dashboard view when a mover displays an assigned lead.
+
 Required production variables:
 ```bash
 EMAIL_QUEUE_SECRET=replace-with-a-long-random-secret
@@ -147,6 +170,7 @@ EMAIL_RETRY_BASE_MS=60000
 EMAIL_RETRY_MAX_MS=1800000
 EMAIL_SENDING_STALE_MS=600000
 EMAIL_FORCE_SMTP_USER_FROM=true
+SMTP_REQUIRE_TLS=true
 BACKGROUND_JOBS_ENABLED=true
 BACKGROUND_JOBS_INTERVAL_MS=60000
 BACKGROUND_JOBS_PROCESS_LIMIT=50
