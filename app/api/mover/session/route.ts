@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { isAdminUser } from "@/lib/admin-auth";
 import { prisma } from "@/lib/db";
+import { resolveLocale } from "@/lib/i18n/config";
 
 const privateNoStoreHeaders = {
   "Cache-Control": "private, no-store, max-age=0, must-revalidate",
@@ -57,7 +58,7 @@ export async function GET() {
       accountId: session.user.id,
       accountName,
       accountType,
-      locale: user.preferredLocale,
+      locale: resolveLocale(user.preferredLocale),
       ...(accountType === "cleaner" ? { accountStatus: user.cleanerCompany?.status ?? null } : {}),
     },
     { headers: privateNoStoreHeaders },

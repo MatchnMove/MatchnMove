@@ -2,11 +2,13 @@
 
 import { Globe2 } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
-import { AppLocale, SUPPORTED_LOCALES } from "@/lib/i18n/config";
+import { AppLocale, LANGUAGES_ENABLED, SUPPORTED_LOCALES } from "@/lib/i18n/config";
 import { cx } from "@/lib/utils";
 
 export function LanguageSelector({ compact = false, className }: { compact?: boolean; className?: string }) {
   const { locale, setLocale, t } = useLanguage();
+
+  if (!LANGUAGES_ENABLED) return null;
 
   return (
     <label className={cx("relative inline-flex min-h-10 items-center", className)}>

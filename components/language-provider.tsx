@@ -2,7 +2,7 @@
 
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { trackAnalyticsEvent } from "@/lib/analytics";
-import { AppLocale, DEFAULT_LOCALE, isSupportedLocale, LOCALE_COOKIE } from "@/lib/i18n/config";
+import { AppLocale, DEFAULT_LOCALE, isSupportedLocale, LANGUAGES_ENABLED, LOCALE_COOKIE, resolveLocale } from "@/lib/i18n/config";
 import { getMessage } from "@/lib/i18n/messages";
 
 type TranslateValues = Record<string, string | number>;
@@ -42,7 +42,7 @@ export function LanguageProvider({
   initialLocale?: AppLocale;
   localeWasExplicit?: boolean;
 }) {
-  const [locale, setLocaleState] = useState<AppLocale>(initialLocale);
+  const [locale, setLocaleState] = useState<AppLocale>(() => resolveLocale(initialLocale));
   const accountPreferenceLoadedRef = useRef(false);
   const manuallyChangedLocaleRef = useRef(false);
 
@@ -51,7 +51,7 @@ export function LanguageProvider({
   }, [locale]);
 
   useEffect(() => {
-    if (localeWasExplicit || accountPreferenceLoadedRef.current) return;
+    if (!LANGUAGES_ENABLED || localeWasExplicit || accountPreferenceLoadedRef.current) return;
     accountPreferenceLoadedRef.current = true;
     let active = true;
 
@@ -75,6 +75,7 @@ export function LanguageProvider({
   }, [locale, localeWasExplicit]);
 
   const setLocale = useCallback((nextLocale: AppLocale) => {
+    if (!LANGUAGES_ENABLED) return;
     manuallyChangedLocaleRef.current = true;
     setLocaleState(nextLocale);
     persistBrowserLocale(nextLocale);

@@ -6,6 +6,7 @@ import { distributeCleaningRequest } from "@/lib/cleaning-distribution";
 import { sendCleanerNewLeadEmail } from "@/lib/email";
 import { getLeadExpiryDate, getQuoteMatchedRegions, selectLeadRecipients, sendMoverNewLeadNotification } from "@/lib/lead-lifecycle";
 import { calculateLeadPrice } from "@/lib/lead-pricing";
+import { resolveLocale } from "@/lib/i18n/config";
 import { isMoverProfileLive } from "@/lib/mover-profile";
 import { quoteSchema } from "@/lib/validators";
 import { getClientIp, rateLimit } from "@/lib/rate-limit";
@@ -186,7 +187,7 @@ export async function POST(req: NextRequest) {
           moveDate,
           sharingConsentAt: consentAt,
           consentVersion: CONSENT_VERSION,
-          submittedLocale: locale,
+          submittedLocale: resolveLocale(locale),
           transcriptRaw:
             transcriptRaw === null
               ? Prisma.JsonNull

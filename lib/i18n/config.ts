@@ -1,5 +1,8 @@
 export const LOCALE_COOKIE = "mm_locale";
 export const DEFAULT_LOCALE = "en-NZ";
+// Keep the complete multilingual implementation available behind a deployment
+// flag while English remains the only active language.
+export const LANGUAGES_ENABLED = process.env.NEXT_PUBLIC_LANGUAGES_ENABLED === "true";
 
 export const SUPPORTED_LOCALES = [
   { code: "en-NZ", nativeName: "English (New Zealand)", englishName: "English" },
@@ -27,5 +30,6 @@ export function isSupportedLocale(value: string | null | undefined): value is Ap
 }
 
 export function resolveLocale(value: string | null | undefined): AppLocale {
+  if (!LANGUAGES_ENABLED) return DEFAULT_LOCALE;
   return isSupportedLocale(value) ? value : DEFAULT_LOCALE;
 }

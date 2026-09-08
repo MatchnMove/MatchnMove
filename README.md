@@ -96,6 +96,8 @@ See [Production operations](docs/PRODUCTION_OPERATIONS.md) for the launch-scale 
   Optional payment term for cleaner invoices; defaults to 14 days.
 - `CLEANER_STRIPE_TAX_RATE_ID`
   Optional active, inclusive Stripe Tax Rate. It is deliberately blank by default: confirm Match 'n Move's GST treatment first. Exclusive rates are rejected because the cleaner lead total must remain exactly $15 NZD.
+- `NEXT_PUBLIC_LANGUAGES_ENABLED=true`
+  Restores the preserved multilingual interface, language selector, saved locale preferences, and localized emails. It is disabled by default, so the application currently stays in New Zealand English.
 - `STORAGE_ACCESS_KEY`
 - `STORAGE_SECRET_KEY`
 - `STORAGE_BUCKET`

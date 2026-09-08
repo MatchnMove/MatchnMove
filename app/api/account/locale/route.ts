@@ -1,14 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { isSupportedLocale, LOCALE_COOKIE } from "@/lib/i18n/config";
+import { DEFAULT_LOCALE, isSupportedLocale, LANGUAGES_ENABLED, LOCALE_COOKIE } from "@/lib/i18n/config";
 
 const noStoreHeaders = { "Cache-Control": "private, no-store, max-age=0, must-revalidate" };
 
 export async function GET() {
   const session = await auth();
   if (!session?.user?.id) {
-    return NextResponse.json({ authenticated: false }, { headers: noStoreHeaders });
+    return NextResponse.json({ authenticated: false, languagesEnabled: LANGUAGES_ENABLED }, { headers: noStoreHeaders });
+  }
+
+  if (!LANGUAGES_ENABLED) {
+    return NextResponse.json({ authenticated: true, languagesEnabled: false, locale: DEFAULT_LOCALE }, { headers: noStoreHeaders });
   }
 
   const user = await prisma.user.findUnique({
@@ -18,11 +22,16 @@ export async function GET() {
 
   return NextResponse.json({
     authenticated: Boolean(user),
+    languagesEnabled: true,
     locale: isSupportedLocale(user?.preferredLocale) ? user.preferredLocale : "en-NZ",
   }, { headers: noStoreHeaders });
 }
 
 export async function POST(request: NextRequest) {
+  if (!LANGUAGES_ENABLED) {
+    return NextResponse.json({ error: "Language selection is currently unavailable." }, { status: 404, headers: noStoreHeaders });
+  }
+
   const body = (await request.json().catch(() => null)) as { locale?: string } | null;
   if (!isSupportedLocale(body?.locale)) {
     return NextResponse.json({ error: "Unsupported language." }, { status: 400, headers: noStoreHeaders });
