@@ -54,6 +54,7 @@ function summarizeMetricGroup(entries) {
   }, {});
 
   return {
+    clientRequestId: `${runId}-${index}`,
     requests: entries.length,
     okRate: Number(((okCount / entries.length) * 100).toFixed(2)),
     p50Ms: Number(percentile(durations, 50).toFixed(2)),
@@ -292,6 +293,9 @@ function buildQuotePayload(index) {
     moveDate: moveDate.toISOString().slice(0, 10),
     dateFlexible: false,
     movingWhat: "Household furniture and boxes",
+    cleaningSelected: false,
+    sharingConsent: true,
+    locale: "en-NZ",
   };
 }
 

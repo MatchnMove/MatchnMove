@@ -51,6 +51,31 @@ export async function consumeAuthTokenForUser(token: string, type: AuthTokenType
   return consumed.count === 1 ? existing : null;
 }
 
+export async function consumeAuthTokenForRole(token: string, type: AuthTokenType, role: string) {
+  const tokenHash = hashToken(token);
+  const now = new Date();
+  const existing = await prisma.authToken.findUnique({
+    where: { tokenHash },
+    include: { user: true },
+  });
+
+  if (!existing || existing.user.role !== role || existing.type !== type || existing.consumedAt || existing.expiresAt < now) {
+    return null;
+  }
+
+  const consumed = await prisma.authToken.updateMany({
+    where: {
+      id: existing.id,
+      type,
+      consumedAt: null,
+      expiresAt: { gte: now },
+    },
+    data: { consumedAt: new Date() },
+  });
+
+  return consumed.count === 1 ? existing : null;
+}
+
 export async function purgeAuthTokens(userId: string, type: AuthTokenType) {
   await prisma.authToken.deleteMany({
     where: {

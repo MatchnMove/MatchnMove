@@ -8,6 +8,15 @@ function privateNoStore(response: NextResponse) {
 
 export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
+  const cleanerPublicApi = new Set([
+    "/api/cleaner/login",
+    "/api/cleaner/login/verify-code",
+    "/api/cleaner/register",
+    "/api/cleaner/session",
+    "/api/cleaner/forgot-password",
+    "/api/cleaner/reset-password",
+    "/api/cleaner/verify-email",
+  ]);
   if (
     pathname === "/api/mover/login" ||
     pathname === "/api/mover/login/verify-code" ||
@@ -17,7 +26,8 @@ export function proxy(req: NextRequest) {
     pathname === "/api/mover/forgot-password" ||
     pathname === "/api/mover/reset-password" ||
     pathname === "/api/mover/verify-email" ||
-    pathname === "/api/mover/resend-verification"
+    pathname === "/api/mover/resend-verification" ||
+    cleanerPublicApi.has(pathname)
   ) {
     return privateNoStore(NextResponse.next());
   }
@@ -27,7 +37,7 @@ export function proxy(req: NextRequest) {
     if (pathname.startsWith("/api/")) {
       return privateNoStore(NextResponse.json({ error: "Unauthorized" }, { status: 401 }));
     }
-    const loginUrl = new URL("/mover/login", req.url);
+    const loginUrl = new URL(pathname.startsWith("/cleaner/") ? "/cleaner/login" : "/mover/login", req.url);
     loginUrl.searchParams.set("next", `${pathname}${req.nextUrl.search}`);
     return privateNoStore(NextResponse.redirect(loginUrl));
   }
@@ -35,4 +45,4 @@ export function proxy(req: NextRequest) {
   return privateNoStore(NextResponse.next());
 }
 
-export const config = { matcher: ["/mover/dashboard/:path*", "/api/mover/:path*"] };
+export const config = { matcher: ["/mover/dashboard/:path*", "/api/mover/:path*", "/cleaner/dashboard/:path*", "/api/cleaner/:path*"] };

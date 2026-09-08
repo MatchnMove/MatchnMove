@@ -1,12 +1,13 @@
 import type { MetadataRoute } from "next";
 import { NZ_SERVICE_AREAS } from "@/lib/nz-regions";
 import { getPublicMovers } from "@/lib/public-movers";
-import { movingResources } from "@/lib/moving-resources";
+import { articleResources } from "@/lib/moving-resources";
 import { SITE_URL, toRegionSlug } from "@/lib/seo";
 
 const publicRoutes = [
   "",
   "/quote",
+  "/cleaning-quotes",
   "/movers",
   "/about",
   "/faq",
@@ -27,8 +28,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: route === "" ? 1 : route === "/quote" ? 0.95 : 0.7,
   }));
 
-  const regionPages: MetadataRoute.Sitemap = NZ_SERVICE_AREAS.map((region) => ({
+  const movingRegionPages: MetadataRoute.Sitemap = NZ_SERVICE_AREAS.map((region) => ({
     url: `${SITE_URL}/moving-quotes/${toRegionSlug(region)}`,
+    changeFrequency: "monthly",
+    priority: 0.85,
+  }));
+
+  const cleaningRegionPages: MetadataRoute.Sitemap = NZ_SERVICE_AREAS.map((region) => ({
+    url: `${SITE_URL}/cleaning-quotes/${toRegionSlug(region)}`,
     changeFrequency: "monthly",
     priority: 0.85,
   }));
@@ -39,11 +46,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.75,
   }));
 
-  const resourcePages: MetadataRoute.Sitemap = movingResources.map((resource) => ({
+  const resourcePages: MetadataRoute.Sitemap = articleResources.map((resource) => ({
     url: `${SITE_URL}/resources/${resource.slug}`,
     changeFrequency: "monthly",
-    priority: resource.slug === "nz-moving-costs-2026" ? 0.9 : 0.8,
+    priority:
+      resource.slug === "nz-moving-costs-2026" || resource.slug === "end-of-tenancy-cleaning-nz-guide"
+        ? 0.9
+        : 0.8,
   }));
 
-  return [...staticPages, ...resourcePages, ...regionPages, ...moverPages];
+  return [...staticPages, ...resourcePages, ...movingRegionPages, ...cleaningRegionPages, ...moverPages];
 }

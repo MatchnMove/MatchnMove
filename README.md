@@ -8,6 +8,7 @@ Full-stack quote marketplace for moving companies built with **Next.js App Route
 - API endpoints for quote submission, contact form, mover leads, lead unlock, Stripe webhook.
 - Mover authentication (credentials or Google sign-in + JWT cookie session) and protected dashboard with profile progress + leads.
 - Lead distribution by service area and pay-per-lead model.
+- Optional move-out cleaning quotes, cleaner accounts, privacy-safe cleaner leads, and fixed-price monthly cleaner billing.
 - Prisma schema for users, movers, quotes, leads, payments, messages, logs.
 
 ## Local development
@@ -89,6 +90,12 @@ See [Production operations](docs/PRODUCTION_OPERATIONS.md) for the launch-scale 
 - `STRIPE_SECRET_KEY`
 - `STRIPE_WEBHOOK_SECRET`
   Required only if you want live Stripe billing flows.
+- `CLEANER_STRIPE_INVOICING_ENABLED=true`
+  Sends each closed cleaner calendar-month invoice through Stripe. Keep this `false` until Stripe Invoicing and the webhook are ready.
+- `CLEANER_STRIPE_INVOICE_DUE_DAYS`
+  Optional payment term for cleaner invoices; defaults to 14 days.
+- `CLEANER_STRIPE_TAX_RATE_ID`
+  Optional active, inclusive Stripe Tax Rate. It is deliberately blank by default: confirm Match 'n Move's GST treatment first. Exclusive rates are rejected because the cleaner lead total must remain exactly $15 NZD.
 - `STORAGE_ACCESS_KEY`
 - `STORAGE_SECRET_KEY`
 - `STORAGE_BUCKET`
@@ -98,7 +105,25 @@ See [Production operations](docs/PRODUCTION_OPERATIONS.md) for the launch-scale 
 
 ## Notes
 - No watermark references are included in the UI.
-- Stripe unlock endpoint gracefully simulates unlock if Stripe key is absent.
+- The legacy mover unlock endpoint keeps its existing no-Stripe development behaviour; cleaner unlocks always create a real internal monthly ledger charge.
+
+## Cleaner marketplace and billing
+
+Customers can opt into free move-out cleaning quotes on step 3 of the existing moving quote form. Cleaning is matched only against the pickup property's NZ service region. Cleaner previews omit the customer's name, email, phone, exact address, destination, and moving inventory until the cleaner explicitly confirms the fixed $15 NZD lead charge.
+
+Cleaner purchases are grouped by Auckland calendar month. The background worker closes prior months and either:
+
+- creates and emails an idempotent Stripe invoice when `CLEANER_STRIPE_INVOICING_ENABLED=true`; or
+- sends the existing internal invoice-available notification while retaining the ledger when Stripe invoicing is disabled.
+
+For live Stripe invoices, register `/api/webhooks/stripe` for `invoice.paid`, `invoice.payment_failed`, `invoice.voided`, and `invoice.marked_uncollectible`. Stripe test mode records the send event but does not deliver a real invoice email.
+
+Before activating cleaners in production:
+
+1. Deploy Prisma migrations with `npm run prisma:migrate:deploy`.
+2. Confirm the business's GST/tax treatment with its accountant. If applicable, create an inclusive Stripe Tax Rate and set `CLEANER_STRIPE_TAX_RATE_ID`.
+3. Configure the Stripe webhook and secrets, then enable cleaner Stripe invoicing.
+4. Verify the cleaner's email in their account and activate the company in `/admin/cleaners`.
 
 ## Google mover sign-in
 The mover login page uses Google Identity Services to collect a Google ID token, then `/api/mover/google` verifies it server-side and issues the existing `mm_session` cookie.

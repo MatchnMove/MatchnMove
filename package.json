@@ -10,6 +10,8 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/**/*.test.ts",
     "email:verify": "node scripts/verify-email-config.mjs",
     "sheets:verify-row": "tsx scripts/verify-lead-sheet.ts",
     "prisma:generate": "prisma generate",

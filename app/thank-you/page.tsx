@@ -11,35 +11,46 @@ export const metadata: Metadata = createPageMetadata({
   noIndex: true,
 });
 
-const nextSteps = [
-  {
-    title: "Request received",
-    copy: "Your move details are now in the Match 'n Move pipeline and ready to be reviewed.",
-    icon: CheckCircle2,
-    iconClassName: "bg-emerald-400/15 text-emerald-200"
-  },
-  {
-    title: "Quotes start moving",
-    copy: "Trusted movers are prompted to respond quickly, with many quotes arriving within 24 hours.",
-    icon: Clock3,
-    iconClassName: "bg-sky-400/15 text-sky-200"
-  },
-  {
-    title: "Your details stay focused",
-    copy: "We only pass your request to relevant moving companies in the Match 'n Move network.",
-    icon: ShieldCheck,
-    iconClassName: "bg-orange-400/15 text-orange-200"
-  }
-] as const;
+function getNextSteps(cleaningSelected: boolean) {
+  return [
+    {
+      title: cleaningSelected ? "Requests received" : "Request received",
+      copy: cleaningSelected
+        ? "Your moving request and optional move-out cleaning request are ready to be matched."
+        : "Your move details are now in the Match 'n Move pipeline and ready to be reviewed.",
+      icon: CheckCircle2,
+      iconClassName: "bg-emerald-400/15 text-emerald-200"
+    },
+    {
+      title: "Quotes start moving",
+      copy: cleaningSelected
+        ? "Relevant movers and any suitable cleaners can review the parts of your request they need and respond with their quotes."
+        : "Trusted movers are prompted to respond quickly, with many quotes arriving within 24 hours.",
+      icon: Clock3,
+      iconClassName: "bg-sky-400/15 text-sky-200"
+    },
+    {
+      title: "Your details stay focused",
+      copy: cleaningSelected
+        ? "Movers receive your moving details, while cleaners receive only the details relevant to cleaning the property you're leaving."
+        : "We only pass your request to relevant moving companies in the Match 'n Move network.",
+      icon: ShieldCheck,
+      iconClassName: "bg-orange-400/15 text-orange-200"
+    }
+  ] as const;
+}
 
 export default async function ThankYouPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ id?: string | string[] }>;
+  searchParams?: Promise<{ id?: string | string[]; cleaning?: string | string[] }>;
 }) {
   const params = searchParams ? await searchParams : {};
   const rawRequestId = Array.isArray(params.id) ? params.id[0] : params.id;
+  const rawCleaning = Array.isArray(params.cleaning) ? params.cleaning[0] : params.cleaning;
+  const cleaningSelected = rawCleaning === "1";
   const requestReference = rawRequestId ? `MN-${rawRequestId.slice(0, 8).toUpperCase()}` : null;
+  const nextSteps = getNextSteps(cleaningSelected);
 
   return (
     <SiteShell>
@@ -56,17 +67,29 @@ export default async function ThankYouPage({
               <div className="max-w-3xl">
                 <p className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.08] px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-sky-100 sm:text-sm">
                   <Sparkles className="h-4 w-4" />
-                  Quote submitted successfully
+                  {cleaningSelected ? "Moving and cleaning requests submitted" : "Quote submitted successfully"}
                 </p>
 
                 <h1 className="mt-5 max-w-[11ch] text-[clamp(2.6rem,6vw,5.4rem)] font-black leading-[1] tracking-[-0.045em] text-white sm:leading-[0.98]">
-                  Your move request is officially in motion.
+                  {cleaningSelected
+                    ? "Your move and move-out clean are officially in motion."
+                    : "Your move request is officially in motion."}
                 </h1>
 
                 <p className="mt-5 max-w-2xl text-base leading-8 text-slate-200 sm:text-lg">
-                  We&apos;ve received your details and will send free, no-obligation moving quotes from trusted local
-                  moving companies shortly. Match &apos;n Move keeps the process simple so you can compare options without
-                  the usual back-and-forth.
+                  {cleaningSelected ? (
+                    <>
+                      We&apos;ve received your details and will connect your moving request with relevant movers while we try
+                      to match your optional cleaning request with suitable cleaners. Both quote requests are free and
+                      there is no obligation to book.
+                    </>
+                  ) : (
+                    <>
+                      We&apos;ve received your details and will send free, no-obligation moving quotes from trusted local
+                      moving companies shortly. Match &apos;n Move keeps the process simple so you can compare options without
+                      the usual back-and-forth.
+                    </>
+                  )}
                 </p>
 
                 <div className="mt-6 grid gap-3 sm:grid-cols-3">
@@ -104,8 +127,9 @@ export default async function ThankYouPage({
               <aside className="rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.1),rgba(255,255,255,0.05))] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] sm:p-6">
                 <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-100">What happens next</p>
                 <p className="mt-2 text-sm leading-6 text-slate-300">
-                  Keep an eye on your phone and inbox. Movers may contact you directly if they need access details,
-                  photos, or inventory clarification before pricing.
+                  {cleaningSelected
+                    ? "Keep an eye on your phone and inbox. Relevant movers and cleaners may contact you directly if they need a little more detail before pricing."
+                    : "Keep an eye on your phone and inbox. Movers may contact you directly if they need access details, photos, or inventory clarification before pricing."}
                 </p>
                 <div className="mt-5 space-y-3">
                   {nextSteps.map((step) => {

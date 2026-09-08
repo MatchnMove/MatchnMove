@@ -4,6 +4,8 @@ import type { MovingResource, ResourceSection } from "@/lib/moving-resources";
 import { getResourceCard } from "@/lib/moving-resources";
 
 export function ResourceArticle({ resource }: { resource: MovingResource }) {
+  const isCleaningResource = resource.category === "cleaning";
+
   return (
     <>
       <section className="relative overflow-hidden bg-[radial-gradient(circle_at_15%_10%,rgba(56,189,248,0.2),transparent_28%),radial-gradient(circle_at_85%_15%,rgba(34,197,94,0.14),transparent_24%),linear-gradient(145deg,#071525,#12345d)] py-12 text-white sm:py-16 lg:py-20">
@@ -13,6 +15,12 @@ export function ResourceArticle({ resource }: { resource: MovingResource }) {
             <span aria-hidden="true" className="mx-2">/</span>
             <Link href="/resources" className="hover:text-white">Resources</Link>
             <span aria-hidden="true" className="mx-2">/</span>
+            {isCleaningResource ? (
+              <>
+                <Link href="/cleaning-quotes" className="hover:text-white">Cleaning quotes</Link>
+                <span aria-hidden="true" className="mx-2">/</span>
+              </>
+            ) : null}
             <span>{resource.shortTitle}</span>
           </nav>
 
@@ -53,14 +61,15 @@ export function ResourceArticle({ resource }: { resource: MovingResource }) {
               <div className="rounded-[26px] border border-slate-200 bg-white p-5 shadow-sm">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">Planning note</p>
                 <p className="mt-3 text-sm leading-7 text-slate-600">
-                  Prices in these guides are indicative NZD planning ranges. A mover must review your route, inventory,
-                  access, date, and requested services before giving you a usable quote.
+                  {isCleaningResource
+                    ? "Cleaning prices and inclusions vary. A cleaner should review the property, condition, access, date, and requested extras before providing a usable quote."
+                    : "Prices in these guides are indicative NZD planning ranges. A mover must review your route, inventory, access, date, and requested services before giving you a usable quote."}
                 </p>
                 <Link
                   href="/quote"
                   className="mt-5 inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white"
                 >
-                  Request free quotes
+                  {isCleaningResource ? "Get moving and cleaning quotes" : "Request free quotes"}
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </div>

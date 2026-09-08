@@ -4,6 +4,7 @@ import Link from "next/link";
 import { SiteShell } from "@/components/site-shell";
 import { Hero } from "@/src/components/hero/Hero";
 import { MoverReviewsShowcase } from "@/src/components/home/MoverReviewsShowcase";
+import { CleaningQuotesSeoSection } from "@/src/components/home/CleaningQuotesSeoSection";
 import { MobileQuoteCta } from "@/src/components/home/MobileQuoteCta";
 import { MovingQuotesSeoSection } from "@/src/components/home/MovingQuotesSeoSection";
 import { ResourceHighlights } from "@/src/components/home/ResourceHighlights";
@@ -24,6 +25,7 @@ export default function Home() {
       <ScrollJourneySection />
       <MoverReviewsShowcase />
       <MovingQuotesSeoSection />
+      <CleaningQuotesSeoSection />
       <ResourceHighlights />
       <section data-analytics-section="homepage_for_movers" className="relative overflow-hidden bg-white py-10 sm:py-16 lg:py-20">
         <div className="pointer-events-none absolute inset-0">

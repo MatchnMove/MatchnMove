@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import {
@@ -11,6 +11,7 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
+  Info,
   Lamp,
   Package,
   Plus,
@@ -25,6 +26,7 @@ import {
   AddressAutocomplete,
   AddressSuggestion
 } from "@/components/address-autocomplete";
+import { useLanguage } from "@/components/language-provider";
 import { addressSuggestionToValue } from "@/lib/address-search";
 import { trackAnalyticsEvent } from "@/lib/analytics";
 
@@ -77,18 +79,6 @@ type ExtraDetails = {
   toStorageSize: string;
 };
 
-const steps = [
-  { number: 1, label: "Pickup", summary: "Where the move starts" },
-  { number: 2, label: "Destination", summary: "Route, date, and items" },
-  { number: 3, label: "Contact", summary: "Where movers send quotes" }
-] as const;
-
-const trustNotes = [
-  "Free for customers",
-  "Shared only with relevant movers",
-  "No obligation to book"
-] as const;
-
 const init: Form = {
   name: "",
   email: "",
@@ -122,28 +112,6 @@ const initExtra: ExtraDetails = {
   toStorageSize: ""
 };
 
-const fieldMeta: Record<keyof Form, { label: string; placeholder: string; required?: boolean; type?: string }> = {
-  name: { label: "Full Name", placeholder: "Enter your full name", required: true },
-  email: { label: "Email Address", placeholder: "you@example.com", required: true, type: "email" },
-  phone: { label: "Phone Number", placeholder: "e.g. 021 123 4567", required: true, type: "tel" },
-  fromPropertyType: { label: "Current Property Type", placeholder: "Apartment", required: true },
-  toPropertyType: { label: "Destination Property Type", placeholder: "House", required: true },
-  bedrooms: { label: "Number of Bedrooms", placeholder: "1", required: true },
-  fromAddress: { label: "Pickup suburb or address", placeholder: "e.g. Mount Eden, Auckland", required: true },
-  fromCity: { label: "Current City", placeholder: "Auckland", required: true },
-  fromRegion: { label: "Current Region", placeholder: "Auckland Region", required: true },
-  fromPostcode: { label: "Current Postcode", placeholder: "1010", required: true },
-  fromCountry: { label: "Current Country", placeholder: "New Zealand", required: true },
-  toAddress: { label: "Destination suburb or address", placeholder: "e.g. Te Aro, Wellington", required: true },
-  toCity: { label: "Destination City", placeholder: "Wellington", required: true },
-  toRegion: { label: "Destination Region", placeholder: "Wellington Region", required: true },
-  toPostcode: { label: "Destination Postcode", placeholder: "6011", required: true },
-  toCountry: { label: "Destination Country", placeholder: "New Zealand", required: true },
-  moveDate: { label: "Preferred Move Date", placeholder: "YYYY-MM-DD", type: "date" },
-  dateFlexible: { label: "Date Flexible", placeholder: "" },
-  movingWhat: { label: "Items to Move", placeholder: "Describe what you're moving" }
-};
-
 const bedroomOptions = ["1", "2", "3", "4", "5+"] as const;
 const storageOptions = [
   "Small (4-9m2)",
@@ -152,6 +120,14 @@ const storageOptions = [
   "XL (22m2+)"
 ] as const;
 const MAX_ITEM_QTY = 200;
+const MAX_CLEANING_NOTES_LENGTH = 2000;
+function createClientRequestId() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+
+  return `quote-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
 
 const commonItems = [
   { id: "double-bed", label: "Double Bed", room: "Bedroom", icon: BedDouble },
@@ -204,11 +180,45 @@ const propertyOptions: Array<{ label: PropertyType; image: string }> = [
 ];
 
 export function QuoteForm() {
+  const { locale, t, formatNumber } = useLanguage();
+  const steps = [
+    { number: 1, label: t("quote.step.pickup"), summary: t("quote.step.pickupSummary") },
+    { number: 2, label: t("quote.step.destination"), summary: t("quote.step.destinationSummary") },
+    { number: 3, label: t("quote.step.contact"), summary: t("quote.step.contactSummary") }
+  ] as const;
+  const fieldMeta: Record<keyof Form, { label: string; placeholder: string; required?: boolean; type?: string }> = {
+    name: { label: t("quote.field.name"), placeholder: t("quote.placeholder.name"), required: true },
+    email: { label: t("quote.field.email"), placeholder: "you@example.com", required: true, type: "email" },
+    phone: { label: t("quote.field.phone"), placeholder: t("quote.placeholder.phone"), required: true, type: "tel" },
+    fromPropertyType: { label: t("quote.field.fromPropertyType"), placeholder: t("quote.property.apartment"), required: true },
+    toPropertyType: { label: t("quote.field.toPropertyType"), placeholder: t("quote.property.house"), required: true },
+    bedrooms: { label: t("quote.field.bedrooms"), placeholder: "1", required: true },
+    fromAddress: { label: t("quote.field.fromAddress"), placeholder: t("quote.placeholder.fromAddress"), required: true },
+    fromCity: { label: t("quote.field.fromCity"), placeholder: "Auckland", required: true },
+    fromRegion: { label: t("quote.field.fromRegion"), placeholder: t("quote.placeholder.fromRegion"), required: true },
+    fromPostcode: { label: t("quote.field.fromPostcode"), placeholder: "1010", required: true },
+    fromCountry: { label: t("quote.field.fromCountry"), placeholder: t("quote.placeholder.country"), required: true },
+    toAddress: { label: t("quote.field.toAddress"), placeholder: t("quote.placeholder.toAddress"), required: true },
+    toCity: { label: t("quote.field.toCity"), placeholder: "Wellington", required: true },
+    toRegion: { label: t("quote.field.toRegion"), placeholder: t("quote.placeholder.toRegion"), required: true },
+    toPostcode: { label: t("quote.field.toPostcode"), placeholder: "6011", required: true },
+    toCountry: { label: t("quote.field.toCountry"), placeholder: t("quote.placeholder.country"), required: true },
+    moveDate: { label: t("quote.field.moveDate"), placeholder: "YYYY-MM-DD", type: "date" },
+    dateFlexible: { label: t("quote.field.dateFlexible"), placeholder: "" },
+    movingWhat: { label: t("quote.field.items"), placeholder: t("quote.placeholder.items") }
+  };
   const [step, setStep] = useState(1);
   const [form, setForm] = useState<Form>(init);
   const [extra, setExtra] = useState<ExtraDetails>(initExtra);
   const [errors, setErrors] = useState<Errors>({});
   const [sharingConsent, setSharingConsent] = useState(false);
+  const [cleaningSelected, setCleaningSelected] = useState(false);
+  const [cleaningNotesExpanded, setCleaningNotesExpanded] = useState(false);
+  const [cleaningNotes, setCleaningNotes] = useState("");
+  const [cleaningInfoPinned, setCleaningInfoPinned] = useState(false);
+  const [cleaningInfoHovered, setCleaningInfoHovered] = useState(false);
+  const [cleaningInfoFocused, setCleaningInfoFocused] = useState(false);
+  const [cleaningInfoDismissed, setCleaningInfoDismissed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [locating, setLocating] = useState(false);
@@ -222,15 +232,24 @@ export function QuoteForm() {
   const [calendarMonth, setCalendarMonth] = useState(now.getMonth());
   const [calendarYear, setCalendarYear] = useState(now.getFullYear());
   const datePickerRef = useRef<HTMLDivElement | null>(null);
+  const cleaningInfoRef = useRef<HTMLDivElement | null>(null);
+  const cleaningInfoWasOpenRef = useRef(false);
+  const cleaningOptionViewedRef = useRef(false);
+  const clientRequestIdRef = useRef<string | null>(null);
   const formCardRef = useRef<HTMLDivElement | null>(null);
   const prefillAppliedRef = useRef(false);
   const attributionRef = useRef<Record<string, string>>({});
   const router = useRouter();
+  const cleaningInfoId = useId();
+  const cleaningNotesId = useId();
+  const cleaningInfoOpen =
+    !cleaningInfoDismissed && (cleaningInfoPinned || cleaningInfoHovered || cleaningInfoFocused);
 
   const trackQuoteFormEvent = (eventName: string, params: Record<string, string | number | boolean | undefined> = {}) => {
     trackAnalyticsEvent(eventName, {
       source: "quote_form",
       step,
+      language: locale,
       ...params,
     });
   };
@@ -352,7 +371,7 @@ export function QuoteForm() {
   const shareLocation = () => {
     trackQuoteFormEvent("quote_location_click");
     if (!navigator.geolocation) {
-      setSubmitError("Location sharing is not supported in this browser.");
+      setSubmitError(t("quote.error.locationUnsupported"));
       return;
     }
     setSubmitError("");
@@ -375,13 +394,13 @@ export function QuoteForm() {
 
           applyAddressSuggestion("from", suggestion as AddressSuggestion);
         } catch {
-          setSubmitError("Could not convert your location to an address.");
+          setSubmitError(t("quote.error.locationLookup"));
         } finally {
           setLocating(false);
         }
       },
       () => {
-        setSubmitError("Location permission was denied.");
+        setSubmitError(t("quote.error.locationDenied"));
         setLocating(false);
       }
     );
@@ -389,24 +408,21 @@ export function QuoteForm() {
 
   const validateField = (k: FieldKey, value: string | boolean) => {
     const v = String(value ?? "").trim();
-    if (k in fieldMeta && fieldMeta[k as keyof Form].required && !v) return `${fieldMeta[k as keyof Form].label} is required.`;
-    if (k === "email" && v && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return "Enter a valid email address.";
-    if (k === "phone" && v && v.replace(/[^\d]/g, "").length < 7) return "Enter a valid phone number.";
+    if (k in fieldMeta && fieldMeta[k as keyof Form].required && !v) return t("quote.error.required", { field: fieldMeta[k as keyof Form].label });
+    if (k === "email" && v && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return t("quote.error.email");
+    if (k === "phone" && v && v.replace(/[^\d]/g, "").length < 7) return t("quote.error.phone");
     if (k === "moveDate" && v) {
       const date = new Date(v);
-      if (Number.isNaN(date.getTime())) return "Enter a valid move date.";
+      if (Number.isNaN(date.getTime())) return t("quote.error.moveDate");
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      if (date < today) return "Move date cannot be in the past.";
+      if (date < today) return t("quote.error.moveDatePast");
     }
-    if (k === "toKnownPropertyType" && !v) return "Please choose Yes or No.";
-    if (k === "fromFloor" && !v) return "Floor is required for apartments.";
-    if (k === "fromHasLift" && !v) return "Please select if there is a lift.";
-    if (k === "fromStorageSize" && !v) return "Please select your storage unit size.";
-    if (k === "toFloor" && !v) return "Floor is required for apartments.";
-    if (k === "toHasLift" && !v) return "Please select if there is a lift.";
-    if (k === "toStorageSize" && !v) return "Please select your storage unit size.";
-    if (k === "toBedrooms" && !v) return "Please select number of bedrooms.";
+    if (k === "toKnownPropertyType" && !v) return t("quote.error.yesNo");
+    if ((k === "fromFloor" || k === "toFloor") && !v) return t("quote.error.floor");
+    if ((k === "fromHasLift" || k === "toHasLift") && !v) return t("quote.error.lift");
+    if ((k === "fromStorageSize" || k === "toStorageSize") && !v) return t("quote.error.storageSize");
+    if (k === "toBedrooms" && !v) return t("quote.error.bedrooms");
     return "";
   };
 
@@ -431,7 +447,7 @@ export function QuoteForm() {
         const err = validateField("fromStorageSize", extra.fromStorageSize);
         if (err) nextErrors.fromStorageSize = err;
       } else {
-        if (!form.bedrooms) nextErrors.bedrooms = "Please select number of bedrooms.";
+        if (!form.bedrooms) nextErrors.bedrooms = t("quote.error.bedrooms");
         if (form.fromPropertyType === "Apartment") {
           const floorErr = validateField("fromFloor", extra.fromFloor);
           if (floorErr) nextErrors.fromFloor = floorErr;
@@ -452,7 +468,7 @@ export function QuoteForm() {
       if (knowErr) nextErrors.toKnownPropertyType = knowErr;
 
       if (extra.toKnownPropertyType === "yes") {
-        if (!form.toPropertyType) nextErrors.toPropertyType = "Please select a destination property type.";
+        if (!form.toPropertyType) nextErrors.toPropertyType = t("quote.error.toPropertyType");
         if (form.toPropertyType === "Storage") {
           const storageErr = validateField("toStorageSize", extra.toStorageSize);
           if (storageErr) nextErrors.toStorageSize = storageErr;
@@ -489,19 +505,72 @@ export function QuoteForm() {
     transitionToStep(Math.min(3, currentStep + 1));
   };
 
+  useEffect(() => {
+    if (step !== 3 || cleaningOptionViewedRef.current) return;
+    cleaningOptionViewedRef.current = true;
+    trackAnalyticsEvent("cleaning_quote_option_viewed", {
+      source: "quote_form",
+      step: 3,
+      language: locale,
+      region: form.fromRegion || undefined,
+      property_type: form.fromPropertyType,
+    });
+  }, [form.fromPropertyType, form.fromRegion, locale, step]);
+
+  useEffect(() => {
+    if (cleaningInfoOpen && !cleaningInfoWasOpenRef.current) {
+      trackAnalyticsEvent("cleaning_quote_info_opened", {
+        source: "quote_form",
+        step: 3,
+        language: locale,
+      });
+    }
+
+    cleaningInfoWasOpenRef.current = cleaningInfoOpen;
+  }, [cleaningInfoOpen, locale]);
+
+  useEffect(() => {
+    if (!cleaningInfoOpen) return;
+
+    const closeInfo = () => {
+      setCleaningInfoPinned(false);
+      setCleaningInfoHovered(false);
+      setCleaningInfoDismissed(true);
+    };
+    const onPointerDown = (event: PointerEvent) => {
+      if (cleaningInfoRef.current?.contains(event.target as Node)) return;
+      closeInfo();
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeInfo();
+    };
+
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [cleaningInfoOpen]);
+
   const submit = async () => {
     trackQuoteFormEvent("quote_submit_attempt", {
       selected_items_count: Object.values(itemQuantities).filter((qty) => qty > 0).length,
       date_flexible: form.dateFlexible,
+      cleaning_selected: cleaningSelected,
     });
 
     if (!validateStep(1) || !validateStep(2) || !validateStep(3)) {
-      setSubmitError("Please fix the highlighted fields.");
+      setSubmitError(t("quote.error.fixFields"));
       trackQuoteFormEvent("quote_submit_validation_error");
       return;
     }
     if (!sharingConsent) {
-      setSubmitError("Please confirm that Match 'n Move may share this request with relevant moving companies.");
+      setSubmitError(
+        cleaningSelected
+          ? t("quote.error.consentBoth")
+          : t("quote.error.consentMovers"),
+      );
       trackQuoteFormEvent("quote_submit_consent_missing");
       return;
     }
@@ -533,10 +602,17 @@ export function QuoteForm() {
 
       const payload = {
         ...form,
-        fromCity: form.fromCity.trim() || form.fromAddress.trim(),
+        clientRequestId: clientRequestIdRef.current ?? (clientRequestIdRef.current = createClientRequestId()),
+        locale,
+        cleaningSelected,
+        cleaningNotes: cleaningSelected ? cleaningNotes.trim() || undefined : undefined,
+        sharingConsent,
+        // Keep locality separate from the free-form street address. Cleaner
+        // previews must never treat a manually entered address as a city.
+        fromCity: form.fromCity.trim() || "Not provided",
         fromRegion: form.fromRegion.trim() || "Not provided",
         fromPostcode: form.fromPostcode.trim() || "Not provided",
-        toCity: form.toCity.trim() || form.toAddress.trim(),
+        toCity: form.toCity.trim() || "Not provided",
         toRegion: form.toRegion.trim() || "Not provided",
         toPostcode: form.toPostcode.trim() || "Not provided",
         movingWhat: form.movingWhat.trim(),
@@ -551,13 +627,23 @@ export function QuoteForm() {
       });
       if (res.ok) {
         const data = (await res.json().catch(() => null)) as { id?: string } | null;
-        const requestId = data?.id ? `?id=${encodeURIComponent(data.id)}` : "";
+        const successParams = new URLSearchParams();
+        if (data?.id) successParams.set("id", data.id);
+        if (cleaningSelected) successParams.set("cleaning", "1");
+        const successQuery = successParams.toString();
         trackQuoteFormEvent("quote_submit_success", {
           request_created: Boolean(data?.id),
           from_region: form.fromRegion || undefined,
           to_region: form.toRegion || undefined,
+          cleaning_selected: cleaningSelected,
         });
-        router.push(`/thank-you${requestId}`);
+        if (cleaningSelected) {
+          trackQuoteFormEvent("cleaning_quote_submitted", {
+            region: form.fromRegion || undefined,
+            property_type: form.fromPropertyType,
+          });
+        }
+        router.push(`/thank-you${successQuery ? `?${successQuery}` : ""}`);
         return;
       }
 
@@ -571,17 +657,17 @@ export function QuoteForm() {
       }
 
       if (res.status === 400) {
-        setSubmitError(serverError || "Some fields failed validation on the server. Please review and try again.");
+        setSubmitError(serverError || t("quote.error.serverValidation"));
       } else if (res.status === 429) {
-        setSubmitError("Too many attempts. Please wait a moment and try again.");
+        setSubmitError(t("quote.error.rateLimit"));
       } else {
-        setSubmitError(serverError || "Submission failed. Please try again.");
+        setSubmitError(serverError || t("quote.error.submit"));
       }
       trackQuoteFormEvent("quote_submit_error", {
         status_code: res.status,
       });
     } catch {
-      setSubmitError("Network error while submitting the form. Please try again.");
+      setSubmitError(t("quote.error.network"));
       trackQuoteFormEvent("quote_submit_error", {
         status_code: "network",
       });
@@ -645,9 +731,9 @@ export function QuoteForm() {
   };
 
   const formatDateLabel = (isoDate: string) => {
-    if (!isoDate) return "Select your move date";
+    if (!isoDate) return t("quote.date.select");
     const d = new Date(`${isoDate}T00:00:00`);
-    return d.toLocaleDateString("en-NZ", { month: "long", day: "numeric", year: "numeric" });
+    return d.toLocaleDateString(locale, { month: "long", day: "numeric", year: "numeric" });
   };
 
   const toIso = (d: Date) => {
@@ -757,8 +843,8 @@ export function QuoteForm() {
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => onSelect(label)}
           >
-            <Image src={image} alt={label} width={96} height={96} className={imageClass} />
-            <span className="mt-1.5 block text-xs font-medium text-slate-700 sm:mt-2 sm:text-sm">{label}</span>
+            <Image src={image} alt={t(`quote.property.${label.toLowerCase()}`)} width={96} height={96} className={imageClass} />
+            <span className="mt-1.5 block text-xs font-medium text-slate-700 sm:mt-2 sm:text-sm">{t(`quote.property.${label.toLowerCase()}`)}</span>
           </button>
         );
       })}
@@ -775,7 +861,7 @@ export function QuoteForm() {
     error?: string;
   }) => (
     <div>
-      <p className="mb-2 text-sm font-medium">Number of bedrooms</p>
+      <p className="mb-2 text-sm font-medium">{t("quote.field.bedrooms")}</p>
       <div className="flex flex-wrap gap-2">
         {bedroomOptions.map((b) => (
           <button
@@ -797,16 +883,18 @@ export function QuoteForm() {
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-[#101b34] to-[#0f2747] py-8 sm:py-12">
       <div className="container-shell relative text-white">
         <div className="mb-5 max-w-3xl sm:mb-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-200">Free moving quote request</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-200">{t("quote.eyebrow")}</p>
           <h1 className="mt-2 max-w-2xl text-2xl font-black leading-tight text-white sm:text-4xl">
-            Tell us once, then compare quotes from movers who fit your route.
+            {t("quote.title")}
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-200 sm:text-base">
-            This request gives movers the detail they need to price the same job. You stay in control and choose only
-            when a quote feels right.
+            {t("quote.intro")}
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
-            {trustNotes.map((note) => (
+            {(cleaningSelected
+              ? [t("quote.trust.free"), t("quote.trust.providers"), t("quote.trust.noObligation")]
+              : [t("quote.trust.free"), t("quote.trust.movers"), t("quote.trust.noObligation")]
+            ).map((note) => (
               <span key={note} className="rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-xs font-semibold text-slate-100">
                 {note}
               </span>
@@ -816,7 +904,7 @@ export function QuoteForm() {
         <div ref={formCardRef} className="max-w-3xl rounded-[22px] border border-slate-200/80 bg-white p-4 text-slate-900 shadow-[0_20px_45px_-25px_rgba(2,6,23,0.65)] sm:rounded-2xl sm:p-7">
           <div className="mb-5 sm:mb-7">
             <div className="mb-2 flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-              <span>Progress</span>
+              <span>{t("quote.progress")}</span>
               <span>{steps[step - 1].label} · Step {step} of 3</span>
             </div>
             <div className="h-2 overflow-hidden rounded-full bg-slate-200">
@@ -846,9 +934,9 @@ export function QuoteForm() {
           {step === 3 && (
             <div className="space-y-4">
               <div>
-                <h2 className="text-xl font-semibold">Where should movers send your quotes?</h2>
+                <h2 className="text-xl font-semibold">{t("quote.contact.title")}</h2>
                 <p className="mt-1 text-sm leading-6 text-slate-500">
-                  Your details are shared only with relevant movers for this request. There is no obligation to book.
+                  {t("quote.contact.support")}
                 </p>
               </div>
               {(["name", "email", "phone"] as const).map((k) => (
@@ -864,6 +952,153 @@ export function QuoteForm() {
                   {errors[k] && <span className="mt-1 block text-sm text-red-600">{errors[k]}</span>}
                 </label>
               ))}
+              <section
+                className={`rounded-2xl border px-4 py-4 transition-colors sm:px-5 ${
+                  cleaningSelected ? "border-sky-200 bg-sky-50/80" : "border-slate-200 bg-white"
+                }`}
+                aria-labelledby={`${cleaningInfoId}-heading`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 id={`${cleaningInfoId}-heading`} className="text-base font-semibold text-slate-950">
+                        {t("quote.cleaning.heading")}
+                      </h3>
+                      <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-sky-700 shadow-sm">
+                        {t("quote.cleaning.optional")}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-sm leading-6 text-slate-600">
+                      {t("quote.cleaning.support")}
+                    </p>
+                  </div>
+
+                  <div
+                    ref={cleaningInfoRef}
+                    className="relative shrink-0"
+                    onMouseEnter={() => {
+                      setCleaningInfoDismissed(false);
+                      setCleaningInfoHovered(true);
+                    }}
+                    onMouseLeave={() => setCleaningInfoHovered(false)}
+                    onFocusCapture={() => {
+                      setCleaningInfoDismissed(false);
+                      setCleaningInfoFocused(true);
+                    }}
+                    onBlurCapture={(event) => {
+                      if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                        setCleaningInfoFocused(false);
+                      }
+                    }}
+                  >
+                    <button
+                      type="button"
+                      aria-label={t("quote.cleaning.infoLabel")}
+                      aria-expanded={cleaningInfoOpen}
+                      aria-controls={cleaningInfoId}
+                      aria-describedby={`${cleaningInfoId}-description`}
+                      onClick={() => {
+                        if (cleaningInfoPinned) {
+                          setCleaningInfoPinned(false);
+                          setCleaningInfoDismissed(true);
+                        } else {
+                          setCleaningInfoDismissed(false);
+                          setCleaningInfoPinned(true);
+                        }
+                      }}
+                      className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-sky-200 bg-white text-sky-700 shadow-sm transition hover:border-sky-300 hover:bg-sky-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brandBlue/15"
+                    >
+                      <Info className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                    <span id={`${cleaningInfoId}-description`} className="sr-only">
+                      {t("quote.cleaning.info")}
+                    </span>
+                    {cleaningInfoOpen ? (
+                      <div
+                        id={cleaningInfoId}
+                        role="tooltip"
+                        className="absolute right-0 top-full z-50 mt-2 max-h-[min(24rem,calc(100svh-6rem))] w-[min(22rem,calc(100vw-3rem))] overflow-y-auto rounded-2xl border border-slate-200 bg-slate-950 p-4 text-sm font-normal leading-6 text-slate-100 shadow-[0_20px_45px_-20px_rgba(2,6,23,0.75)]"
+                      >
+                        {t("quote.cleaning.info")}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+
+                <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+                  <input
+                    className="mt-1 h-4 w-4 rounded border-slate-300 text-brandBlue focus:ring-brandBlue"
+                    type="checkbox"
+                    checked={cleaningSelected}
+                    onChange={(event) => {
+                      const selected = event.target.checked;
+                      setCleaningSelected(selected);
+                      if (!selected) setCleaningNotesExpanded(false);
+                      if (selected && sharingConsent) setSharingConsent(false);
+                      trackQuoteFormEvent(selected ? "cleaning_quote_opt_in" : "cleaning_quote_opt_out", {
+                        region: form.fromRegion || undefined,
+                        property_type: form.fromPropertyType,
+                      });
+                      trackQuoteFormEvent("cleaning_quote_selected", {
+                        cleaning_selected: selected,
+                        region: form.fromRegion || undefined,
+                        property_type: form.fromPropertyType,
+                      });
+                    }}
+                  />
+                  <span>
+                    <span className="block text-sm font-semibold text-slate-900">{t("quote.cleaning.toggle")}</span>
+                    <span className="mt-1 block text-sm leading-6 text-slate-500">{t("quote.cleaning.freeSupport")}</span>
+                  </span>
+                </label>
+
+                {cleaningSelected ? (
+                  <div className="mt-3">
+                    <button
+                      type="button"
+                      aria-expanded={cleaningNotesExpanded}
+                      aria-controls={cleaningNotesId}
+                      onClick={() => {
+                        const nextExpanded = !cleaningNotesExpanded;
+                        setCleaningNotesExpanded(nextExpanded);
+                        if (nextExpanded) {
+                          trackQuoteFormEvent("cleaning_notes_expanded", {
+                            region: form.fromRegion || undefined,
+                            property_type: form.fromPropertyType,
+                          });
+                        }
+                      }}
+                      className="inline-flex min-h-10 items-center rounded-xl px-2 text-sm font-semibold text-sky-800 transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brandBlue/15"
+                    >
+                      {cleaningNotesExpanded ? t("quote.cleaning.hideNotes") : t("quote.cleaning.addNotes")}
+                    </button>
+                    <div
+                      aria-hidden={!cleaningNotesExpanded}
+                      className={`grid transition-[grid-template-rows,opacity,margin] duration-200 ${
+                        cleaningNotesExpanded ? "mt-2 grid-rows-[1fr] opacity-100" : "mt-0 grid-rows-[0fr] opacity-0"
+                      }`}
+                    >
+                      <div className="overflow-hidden">
+                        <label id={cleaningNotesId} className="block rounded-xl border border-sky-100 bg-white p-3">
+                          <span className="mb-2 block text-sm font-medium text-slate-800">{t("quote.cleaning.notesLabel")}</span>
+                          <textarea
+                            className={fieldClass}
+                            rows={4}
+                            maxLength={MAX_CLEANING_NOTES_LENGTH}
+                            disabled={!cleaningNotesExpanded}
+                            value={cleaningNotes}
+                            onChange={(event) => setCleaningNotes(event.target.value.slice(0, MAX_CLEANING_NOTES_LENGTH))}
+                            placeholder={t("quote.cleaning.notesPlaceholder")}
+                          />
+                          <span className="mt-1 block text-right text-xs text-slate-500">
+                            {formatNumber(cleaningNotes.length)}/{formatNumber(MAX_CLEANING_NOTES_LENGTH)}
+                          </span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+              </section>
               <label className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
                 <input
                   className="mt-1 h-4 w-4 rounded border-slate-300 text-brandBlue focus:ring-brandBlue"
@@ -875,17 +1110,21 @@ export function QuoteForm() {
                   }}
                 />
                 <span>
-                  <span className="block text-sm font-semibold text-slate-900">I agree to share this request with relevant movers</span>
+                  <span className="block text-sm font-semibold text-slate-900">
+                    {cleaningSelected
+                      ? t("quote.consent.both")
+                      : t("quote.consent.movers")}
+                  </span>
                   <span className="mt-1 block text-sm leading-6 text-slate-500">
-                    Match &apos;n Move uses these details only to match this job with suitable moving companies.
+                    {t("quote.consent.support")}
                   </span>
                 </span>
               </label>
               {submitError && <p className="text-sm text-red-600">{submitError}</p>}
               <div className="flex flex-col gap-3 sm:flex-row">
-                <button className={secondaryButtonClass} onClick={() => transitionToStep(2)}>Back</button>
+                <button className={secondaryButtonClass} onClick={() => transitionToStep(2)}>{t("quote.back")}</button>
                 <button onClick={submit} disabled={loading} className={`${primaryButtonClass} disabled:cursor-not-allowed disabled:opacity-70`}>
-                  {loading ? "Submitting..." : "Request my free quotes"}
+                  {loading ? t("quote.submitting") : t("quote.submit")}
                 </button>
               </div>
             </div>
@@ -893,9 +1132,9 @@ export function QuoteForm() {
           {step === 1 && (
             <div className="grid gap-4">
               <div>
-                <h2 className="text-xl font-semibold">Where are movers picking up from?</h2>
+                <h2 className="text-xl font-semibold">{t("quote.pickup.title")}</h2>
                 <p className="mt-1 text-sm leading-6 text-slate-500">
-                  Access details help prevent surprise charges and make the first quote more accurate.
+                  {t("quote.pickup.support")}
                 </p>
               </div>
               <PropertyCards
@@ -911,25 +1150,25 @@ export function QuoteForm() {
               {form.fromPropertyType === "Apartment" && (
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className="block">
-                    <span className="mb-1 block text-sm font-medium">Which floor is the apartment on?</span>
+                    <span className="mb-1 block text-sm font-medium">{t("quote.field.floor")}</span>
                     <input
                       className={`${fieldClass} ${errors.fromFloor ? "border-red-500 focus:border-red-400 focus:ring-red-100" : ""}`}
-                      placeholder="e.g. Floor 3"
+                      placeholder={t("quote.placeholder.floor", { floor: 3 })}
                       value={extra.fromFloor}
                       onChange={(e) => updateExtra("fromFloor", e.target.value)}
                     />
                     {errors.fromFloor && <span className="mt-1 block text-sm text-red-600">{errors.fromFloor}</span>}
                   </label>
                   <label className="block">
-                    <span className="mb-1 block text-sm font-medium">Is there a lift?</span>
+                    <span className="mb-1 block text-sm font-medium">{t("quote.field.lift")}</span>
                     <select
                       className={`${selectClass} ${errors.fromHasLift ? "border-red-500 focus:border-red-400 focus:ring-red-100" : ""}`}
                       value={extra.fromHasLift}
                       onChange={(e) => updateExtra("fromHasLift", e.target.value as "yes" | "no")}
                     >
-                      <option value="">Please select</option>
-                      <option value="yes">Yes</option>
-                      <option value="no">No</option>
+                      <option value="">{t("quote.select")}</option>
+                      <option value="yes">{t("quote.yes")}</option>
+                      <option value="no">{t("quote.no")}</option>
                     </select>
                     {errors.fromHasLift && <span className="mt-1 block text-sm text-red-600">{errors.fromHasLift}</span>}
                   </label>
@@ -937,13 +1176,13 @@ export function QuoteForm() {
               )}
               {form.fromPropertyType === "Storage" && (
                 <label className="block">
-                  <span className="mb-1 block text-sm font-medium">What size is your storage unit?</span>
+                  <span className="mb-1 block text-sm font-medium">{t("quote.field.storageSize")}</span>
                   <select
                     className={`${selectClass} ${errors.fromStorageSize ? "border-red-500 focus:border-red-400 focus:ring-red-100" : ""}`}
                     value={extra.fromStorageSize}
                     onChange={(e) => updateExtra("fromStorageSize", e.target.value)}
                   >
-                    <option value="">Please select</option>
+                    <option value="">{t("quote.select")}</option>
                     {storageOptions.map((size) => (
                       <option key={size} value={size}>{size}</option>
                     ))}
@@ -966,24 +1205,24 @@ export function QuoteForm() {
                 disabled={locating}
                 className="inline-flex min-h-[42px] w-full items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm text-slate-700 shadow-sm transition-colors duration-150 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 sm:w-fit"
               >
-                {locating ? "Detecting location..." : "Use my current location"}
+                {locating ? t("quote.location.detecting") : t("quote.location.use")}
               </button>
               <p className="text-xs leading-5 text-slate-500">
-                Choose a suggested address when available. We&apos;ll use it to identify the correct service area automatically.
+                {t("quote.pickup.addressSupport")}
               </p>
-              <button className={primaryButtonClass} onClick={goNext}>Continue to destination</button>
+              <button className={primaryButtonClass} onClick={goNext}>{t("quote.continue.destination")}</button>
             </div>
           )}
           {step === 2 && (
             <div className="grid gap-4">
               <div>
-                <h2 className="text-xl font-semibold">Where are you moving to?</h2>
+                <h2 className="text-xl font-semibold">{t("quote.destination.title")}</h2>
                 <p className="mt-1 text-sm leading-6 text-slate-500">
-                  Add your destination, preferred date, and item notes so each mover prices the same scope.
+                  {t("quote.destination.support")}
                 </p>
               </div>
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                <p className="text-sm font-medium">Do you know what type of property you&apos;re moving into?</p>
+                <p className="text-sm font-medium">{t("quote.destination.knownProperty")}</p>
                 <div className="mt-3 grid grid-cols-2 gap-2 sm:flex">
                   <button
                     type="button"
@@ -994,7 +1233,7 @@ export function QuoteForm() {
                       if (form.toPropertyType === "Unknown") update("toPropertyType", "House");
                     }}
                   >
-                    Yes
+                    {t("quote.yes")}
                   </button>
                   <button
                     type="button"
@@ -1005,7 +1244,7 @@ export function QuoteForm() {
                       update("toPropertyType", "Unknown");
                     }}
                   >
-                    No
+                    {t("quote.no")}
                   </button>
                 </div>
                 {errors.toKnownPropertyType && <p className="mt-1 text-sm text-red-600">{errors.toKnownPropertyType}</p>}
@@ -1019,25 +1258,25 @@ export function QuoteForm() {
                       <BedroomsSelector value={extra.toBedrooms} onSelect={(next) => updateExtra("toBedrooms", next)} error={errors.toBedrooms} />
                       <div className="grid gap-4 sm:grid-cols-2">
                         <label className="block">
-                          <span className="mb-1 block text-sm font-medium">Which floor is the apartment on?</span>
+                          <span className="mb-1 block text-sm font-medium">{t("quote.field.floor")}</span>
                           <input
                             className={`${fieldClass} ${errors.toFloor ? "border-red-500 focus:border-red-400 focus:ring-red-100" : ""}`}
-                            placeholder="e.g. Floor 2"
+                            placeholder={t("quote.placeholder.floor", { floor: 2 })}
                             value={extra.toFloor}
                             onChange={(e) => updateExtra("toFloor", e.target.value)}
                           />
                           {errors.toFloor && <span className="mt-1 block text-sm text-red-600">{errors.toFloor}</span>}
                         </label>
                         <label className="block">
-                          <span className="mb-1 block text-sm font-medium">Is there a lift?</span>
+                          <span className="mb-1 block text-sm font-medium">{t("quote.field.lift")}</span>
                           <select
                             className={`${selectClass} ${errors.toHasLift ? "border-red-500 focus:border-red-400 focus:ring-red-100" : ""}`}
                             value={extra.toHasLift}
                             onChange={(e) => updateExtra("toHasLift", e.target.value as "yes" | "no")}
                           >
-                            <option value="">Please select</option>
-                            <option value="yes">Yes</option>
-                            <option value="no">No</option>
+                            <option value="">{t("quote.select")}</option>
+                            <option value="yes">{t("quote.yes")}</option>
+                            <option value="no">{t("quote.no")}</option>
                           </select>
                           {errors.toHasLift && <span className="mt-1 block text-sm text-red-600">{errors.toHasLift}</span>}
                         </label>
@@ -1049,13 +1288,13 @@ export function QuoteForm() {
                   )}
                   {form.toPropertyType === "Storage" && (
                     <label className="block">
-                      <span className="mb-1 block text-sm font-medium">What size is your storage unit?</span>
+                      <span className="mb-1 block text-sm font-medium">{t("quote.field.storageSize")}</span>
                       <select
                         className={`${selectClass} ${errors.toStorageSize ? "border-red-500 focus:border-red-400 focus:ring-red-100" : ""}`}
                         value={extra.toStorageSize}
                         onChange={(e) => updateExtra("toStorageSize", e.target.value)}
                       >
-                        <option value="">Please select</option>
+                        <option value="">{t("quote.select")}</option>
                         {storageOptions.map((size) => (
                           <option key={size} value={size}>{size}</option>
                         ))}
@@ -1075,7 +1314,7 @@ export function QuoteForm() {
                 labelClassName="mb-1 block text-sm font-medium"
               />
               <p className="text-xs leading-5 text-slate-500">
-                A suburb or general destination is enough to begin. Choose a suggestion when available for the best match.
+                {t("quote.destination.addressSupport")}
               </p>
               <div className="block">
                 <span className="mb-1 block text-sm font-medium">{fieldMeta.moveDate.label}</span>
@@ -1090,7 +1329,7 @@ export function QuoteForm() {
                       <span className={form.moveDate ? "text-slate-800" : "text-slate-500"}>{formatDateLabel(form.moveDate)}</span>
                     </span>
                     <span className="rounded-full bg-brandBlue/10 px-2 py-0.5 text-xs font-semibold text-brandBlue">
-                      {form.moveDate ? "Change" : "Pick"}
+                      {form.moveDate ? t("quote.date.change") : t("quote.date.pick")}
                     </span>
                   </button>
                   {isDatePickerOpen && (
@@ -1172,7 +1411,7 @@ export function QuoteForm() {
                             closeDatePicker();
                           }}
                         >
-                          Clear
+                          {t("quote.clear")}
                         </button>
                         <div className="flex items-center gap-2">
                           <button
@@ -1183,7 +1422,7 @@ export function QuoteForm() {
                               closeDatePicker();
                             }}
                           >
-                            Cancel
+                            {t("quote.cancel")}
                           </button>
                           <button
                             type="button"
@@ -1193,37 +1432,37 @@ export function QuoteForm() {
                               update("moveDate", draftMoveDate);
                             }}
                           >
-                            Confirm
+                            {t("quote.confirm")}
                           </button>
                         </div>
                       </div>
                     </div>
                   )}
                 </div>
-                <span className="mt-1 block text-xs text-slate-500">Select a preferred move date. Leave blank if unsure.</span>
+                <span className="mt-1 block text-xs text-slate-500">{t("quote.date.support")}</span>
                 {errors.moveDate && <span className="mt-1 block text-sm text-red-600">{errors.moveDate}</span>}
               </div>
               <div className="rounded-lg border border-slate-200 p-4">
                 <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-                  <span className="text-sm font-medium">Items to Move</span>
+                  <span className="text-sm font-medium">{t("quote.field.items")}</span>
                   <button
                     type="button"
                     className="inline-flex min-h-[40px] w-full items-center justify-center gap-1 rounded-xl border border-slate-300 px-3 py-1.5 text-sm text-slate-700 sm:w-auto"
                     onClick={() => setShowItemsPicker((v) => !v)}
                   >
                     <Plus className="h-4 w-4" />
-                    Add items
+                    {t("quote.items.add")}
                   </button>
                 </div>
                 <textarea
                   className={`min-h-24 w-full rounded-xl border p-3 shadow-sm transition-colors duration-150 focus:ring-4 focus:outline-none ${errors.movingWhat ? "border-red-500 focus:border-red-400 focus:ring-red-100" : "border-slate-200 focus:border-brandBlue/60 focus:ring-brandBlue/15"}`}
-                  placeholder="Type items manually, one per line. Include anything important: piano, heavy appliances, fragile items, stairs, parking limits, long carry, packing help, or storage needs."
+                  placeholder={t("quote.placeholder.items")}
                   value={form.movingWhat}
                   onChange={(e) => update("movingWhat", e.target.value)}
                 />
                 {showItemsPicker && (
                   <div className="mt-3 rounded border border-slate-200 bg-slate-50 p-3">
-                    <p className="mb-3 text-xs text-slate-500">Click quantity to edit directly (1-{MAX_ITEM_QTY}).</p>
+                    <p className="mb-3 text-xs text-slate-500">{t("quote.items.quantityHelp", { max: MAX_ITEM_QTY })}</p>
                     {(["Bedroom", "Living Room", "Kitchen"] as const).map((room) => {
                       const RoomIcon = roomIcons[room];
                       return (
@@ -1294,7 +1533,7 @@ export function QuoteForm() {
                                           className="rounded bg-brandBlue px-3 py-1 text-xs text-white"
                                           onClick={() => updateItemQty(item.id, 1)}
                                         >
-                                          + Add
+                                          {t("quote.items.addShort")}
                                         </button>
                                       )}
                                     </div>
@@ -1311,13 +1550,13 @@ export function QuoteForm() {
               <label className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
                 <input className="mt-1 h-4 w-4 rounded border-slate-300 text-brandBlue focus:ring-brandBlue" type="checkbox" checked={form.dateFlexible} onChange={(e) => update("dateFlexible", e.target.checked)} />
                 <span>
-                  <span className="block text-sm font-semibold text-slate-900">My move date is flexible</span>
-                  <span className="mt-1 block text-sm leading-6 text-slate-500">Flexible dates can help movers offer more options or sharper pricing.</span>
+                  <span className="block text-sm font-semibold text-slate-900">{t("quote.flexible.title")}</span>
+                  <span className="mt-1 block text-sm leading-6 text-slate-500">{t("quote.flexible.support")}</span>
                 </span>
               </label>
               <div className="flex flex-col gap-3 sm:flex-row">
-                <button className={secondaryButtonClass} onClick={() => transitionToStep(1)}>Back</button>
-                <button className={primaryButtonClass} onClick={goNext}>Continue to contact details</button>
+                <button className={secondaryButtonClass} onClick={() => transitionToStep(1)}>{t("quote.back")}</button>
+                <button className={primaryButtonClass} onClick={goNext}>{t("quote.continue.contact")}</button>
               </div>
             </div>
           )}

@@ -23,6 +23,9 @@ export async function POST(req: NextRequest) {
     if (!user) return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     const ok = await verifyPassword(parsed.data.password, user.passwordHash);
     if (!ok) return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+    if (user.role === "CLEANER") {
+      return NextResponse.json({ error: "This is a cleaner account. Sign in through the cleaner portal." }, { status: 403 });
+    }
 
     if (needsPasswordRehash(user.passwordHash)) {
       const passwordHash = await hashPassword(parsed.data.password);

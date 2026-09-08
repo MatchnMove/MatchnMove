@@ -51,6 +51,7 @@ export default async function MoverDashboardPage({
   if (session.user.role === "ADMIN" || isConfiguredAdminEmail(session.user.email)) {
     redirect(session.user.mfaVerified ? "/admin/verification" : "/admin/mfa?next=/admin/verification");
   }
+  if (session.user.role === "CLEANER") redirect("/cleaner/dashboard");
 
   const mover = await prisma.moverCompany.findUnique({
     where: { userId: session.user.id },

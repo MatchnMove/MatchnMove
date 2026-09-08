@@ -12,7 +12,7 @@ const authenticatedMoverInclude = Prisma.validator<Prisma.MoverCompanyInclude>()
 
 export async function requireAuthenticatedMover() {
   const session = await auth();
-  if (!session?.user?.id) return null;
+  if (!session?.user?.id || session.user.role !== "MOVER") return null;
 
   return prisma.moverCompany.findFirst({
     where: {

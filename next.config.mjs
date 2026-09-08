@@ -26,6 +26,12 @@ const nextConfig = {
       { source: "/mover/forgot-password", headers: noIndexHeaders },
       { source: "/mover/reset-password", headers: noIndexHeaders },
       { source: "/mover/verify-email", headers: noIndexHeaders },
+      { source: "/cleaner/dashboard/:path*", headers: noIndexHeaders },
+      { source: "/cleaner/login", headers: noIndexHeaders },
+      { source: "/cleaner/register", headers: noIndexHeaders },
+      { source: "/cleaner/forgot-password", headers: noIndexHeaders },
+      { source: "/cleaner/reset-password", headers: noIndexHeaders },
+      { source: "/cleaner/verify-email", headers: noIndexHeaders },
       {
         source: "/:path*",
         headers: [
@@ -35,7 +41,7 @@ const nextConfig = {
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           {
             key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=(), browsing-topics=()"
+            value: "camera=(), microphone=(), geolocation=(self), browsing-topics=()"
           }
         ]
       }

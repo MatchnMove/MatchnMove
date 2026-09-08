@@ -19,9 +19,17 @@ export async function GET() {
     select: {
       email: true,
       name: true,
+      role: true,
+      preferredLocale: true,
       moverCompany: {
         select: {
           companyName: true,
+        },
+      },
+      cleanerCompany: {
+        select: {
+          companyName: true,
+          status: true,
         },
       },
     },
@@ -32,13 +40,25 @@ export async function GET() {
   }
 
   const isAdmin = isAdminUser({ ...session.user, email: user.email });
+  const accountType = isAdmin
+    ? "admin"
+    : user.role === "CLEANER"
+      ? "cleaner"
+      : "mover";
+  const accountName = isAdmin
+    ? user.name || user.email
+    : accountType === "cleaner"
+      ? user.cleanerCompany?.companyName || user.name || user.email
+      : user.moverCompany?.companyName || user.name || user.email;
 
   return NextResponse.json(
     {
       authenticated: true,
       accountId: session.user.id,
-      accountName: isAdmin ? user.name || user.email : user.moverCompany?.companyName || user.name || user.email,
-      accountType: isAdmin ? "admin" : "mover",
+      accountName,
+      accountType,
+      locale: user.preferredLocale,
+      ...(accountType === "cleaner" ? { accountStatus: user.cleanerCompany?.status ?? null } : {}),
     },
     { headers: privateNoStoreHeaders },
   );

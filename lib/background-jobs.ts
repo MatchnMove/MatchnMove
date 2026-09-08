@@ -2,6 +2,7 @@ import { processEmailQueue } from "@/lib/email";
 import { processLeadLifecycle } from "@/lib/lead-lifecycle";
 import { processDocumentExpiry } from "@/lib/document-expiry";
 import { processLeadSpreadsheetQueue } from "@/lib/lead-spreadsheet";
+import { processCleanerBillingJobs } from "@/lib/cleaner-billing-jobs";
 
 type BackgroundJobState = {
   started: boolean;
@@ -44,14 +45,24 @@ async function runBackgroundJobTick(state: BackgroundJobState) {
 
   try {
     const limit = getNumberEnv("BACKGROUND_JOBS_PROCESS_LIMIT", DEFAULT_PROCESS_LIMIT, 1);
-    const [email, leads, documents, spreadsheet] = await Promise.all([
+    const [email, leads, documents, spreadsheet, cleanerBilling] = await Promise.all([
       processEmailQueue(limit),
       processLeadLifecycle(limit),
       processDocumentExpiry(limit),
       processLeadSpreadsheetQueue(limit),
+      processCleanerBillingJobs({ limit }),
     ]);
 
-    if (email.processed || leads.warnings.claimed || leads.expirations.checked || documents.checked || spreadsheet.processed) {
+    if (
+      email.processed
+      || leads.warnings.claimed
+      || leads.expirations.checked
+      || documents.checked
+      || spreadsheet.processed
+      || cleanerBilling.monthClose.checked
+      || cleanerBilling.overdue.checked
+      || cleanerBilling.notifications.checked
+    ) {
       console.log("background jobs processed", {
         email: {
           processed: email.processed,
@@ -69,6 +80,16 @@ async function runBackgroundJobTick(state: BackgroundJobState) {
           processed: spreadsheet.processed,
           synced: spreadsheet.synced,
           failed: spreadsheet.failed,
+        },
+        cleanerBilling: {
+          invoicesChecked: cleanerBilling.monthClose.checked,
+          invoicesClosed: cleanerBilling.monthClose.closed,
+          closeFailures: cleanerBilling.monthClose.failed,
+          overdueChecked: cleanerBilling.overdue.checked,
+          markedOverdue: cleanerBilling.overdue.marked,
+          notificationsChecked: cleanerBilling.notifications.checked,
+          notificationsSent: cleanerBilling.notifications.sent,
+          notificationFailures: cleanerBilling.notifications.failed,
         },
       });
     }

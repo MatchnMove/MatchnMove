@@ -6,7 +6,7 @@ import { SITE_EMAILS, toMailto } from "@/lib/site-emails";
 
 export const metadata: Metadata = createPageMetadata({
   title: "Privacy Policy",
-  description: "How Match 'n Move collects, uses, protects, and shares information submitted with moving quote requests.",
+  description: "How Match 'n Move collects, uses, protects, and shares information submitted with moving and optional cleaning quote requests.",
   path: "/privacy",
 });
 
@@ -21,9 +21,9 @@ export default function PrivacyPage() {
               Data consent & privacy
             </h1>
             <p className="mt-5 max-w-3xl text-base leading-8 text-slate-600">
-              Match &apos;n Move uses the information you submit to connect you with relevant moving companies, support quote
-              comparisons, and improve the quality of our marketplace. We keep collection focused on what is necessary
-              to help customers move and to help movers respond with accurate pricing.
+              Match &apos;n Move uses the information you submit to connect you with relevant moving companies and, only when
+              you deliberately request it, suitable cleaning companies. We minimise what each provider can see and keep
+              cleaning requests separate from mover-only information.
             </p>
 
             <div className="mt-10 grid gap-4 sm:grid-cols-2">
@@ -31,14 +31,16 @@ export default function PrivacyPage() {
                 <h2 className="text-lg font-semibold text-slate-900">What we collect</h2>
                 <p className="mt-2 text-sm leading-7 text-slate-600">
                   Contact details, move dates, origin and destination information, home size, and notes that help
-                  movers prepare an accurate quote.
+                  providers prepare an accurate quote. We also remember a chosen interface language for convenience.
                 </p>
               </div>
               <div className="rounded-2xl border border-slate-200 bg-white p-5">
                 <h2 className="text-lg font-semibold text-slate-900">How it is used</h2>
                 <p className="mt-2 text-sm leading-7 text-slate-600">
-                  Your information is shared only with relevant moving partners and used internally to maintain site
-                  functionality, reduce spam, and improve marketplace quality.
+                  Moving information is shared with relevant moving partners. If you opt in to cleaning quotes, a cleaning
+                  request is matched from the pickup region and contains only the pickup property details needed for that
+                  service, not your destination or detailed moving inventory. Free-form cleaning notes are released only
+                  after the assigned cleaner unlocks the lead.
                 </p>
               </div>
               <div className="rounded-2xl border border-slate-200 bg-white p-5">
@@ -56,6 +58,25 @@ export default function PrivacyPage() {
                     {SITE_EMAILS.privacy}
                   </Link>
                   .
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 rounded-2xl border border-sky-200 bg-sky-50 p-5 sm:p-6">
+              <h2 className="text-lg font-semibold text-slate-900">How cleaning lead privacy works</h2>
+              <div className="mt-3 space-y-3 text-sm leading-7 text-slate-600">
+                <p>
+                  Before a cleaning company opens a matched lead, it sees only a general location, region, property type,
+                  bedroom count, preferred date, flexibility, and when the request arrived. Free-form notes stay locked
+                  because they can include contact details.
+                </p>
+                <p>
+                  Your name, email, phone number, full pickup street address, and postcode stay locked until that assigned
+                  cleaning company actively opens the lead. Cleaning companies cannot access leads assigned to another company.
+                </p>
+                <p>
+                  Cleaner lead purchase and invoice records are retained as business transaction and audit records. Customers
+                  request cleaning quotes for free; any lead fee is charged to the cleaning company, not the customer.
                 </p>
               </div>
             </div>

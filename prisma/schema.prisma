@@ -9,7 +9,41 @@ datasource db {
 
 enum UserRole {
   MOVER
+  CLEANER
   ADMIN
+}
+
+enum CleaningLocation {
+  MOVE_OUT
+  MOVE_IN
+}
+
+enum CleaningLeadStatus {
+  NEW
+  NOTIFIED
+  VIEWED
+  PURCHASED
+  CONTACTED
+  WON
+  LOST
+  ARCHIVED
+}
+
+enum CleanerChargeStatus {
+  PENDING
+  INVOICED
+  PAID
+  FAILED
+  VOID
+}
+
+enum CleanerInvoiceStatus {
+  UPCOMING
+  OPEN
+  SENT
+  PAID
+  OVERDUE
+  VOID
 }
 
 enum LeadStatus {
@@ -64,13 +98,38 @@ model User {
   passwordHash           String
   emailVerifiedAt        DateTime?
   role                   UserRole                @default(MOVER)
+  preferredLocale        String                  @default("en-NZ")
   adminMfaSecret         String?
   adminMfaEnabledAt      DateTime?
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
   moverCompany           MoverCompany?
+  cleanerCompany         CleanerCompany?
   authTokens             AuthToken[]
   phoneVerificationCodes PhoneVerificationCode[]
+}
+
+model CleanerCompany {
+  id                  String                 @id @default(cuid())
+  userId              String                 @unique
+  stripeCustomerId    String?                @unique
+  companyName         String
+  businessDescription String?                @db.Text
+  contactPerson       String
+  phone               String
+  nzbn                String?
+  yearsOperating      Int?
+  logoUrl             String?
+  serviceAreas        String[]
+  status              String                 @default("PENDING")
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+  user                User                   @relation(fields: [userId], references: [id])
+  leads               CleaningLead[]
+  purchases           CleaningLeadPurchase[]
+  invoices            CleanerInvoice[]
+
+  @@index([status, updatedAt])
 }
 
 model MoverCompany {
@@ -189,6 +248,7 @@ model VerificationAudit {
 
 model QuoteRequest {
   id                  String                   @id @default(cuid())
+  submissionKey       String?                  @unique
   name                String
   email               String
   phone               String
@@ -211,11 +271,114 @@ model QuoteRequest {
   transcriptRaw       Json?
   transcriptFields    Json?
   transcriptionState  String?
+  sharingConsentAt    DateTime?
+  consentVersion      String?
+  submittedLocale     String                   @default("en-NZ")
   createdAt           DateTime                 @default(now())
   leads               Lead[]
+  cleaningRequest     CleaningRequest?
   spreadsheetDelivery LeadSpreadsheetDelivery?
 
   @@index([createdAt])
+}
+
+model CleaningRequest {
+  id             String           @id @default(cuid())
+  quoteRequestId String           @unique
+  location       CleaningLocation @default(MOVE_OUT)
+  notes          String?          @db.Text
+  consentAt      DateTime
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  quoteRequest   QuoteRequest     @relation(fields: [quoteRequestId], references: [id], onDelete: Cascade)
+  leads          CleaningLead[]
+
+  @@index([createdAt])
+}
+
+model CleaningLead {
+  id                String                 @id @default(cuid())
+  cleaningRequestId String
+  cleanerCompanyId  String
+  status            CleaningLeadStatus     @default(NEW)
+  price             Int                    @default(1500)
+  viewedAt          DateTime?
+  purchasedAt       DateTime?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  cleaningRequest   CleaningRequest        @relation(fields: [cleaningRequestId], references: [id], onDelete: Cascade)
+  cleanerCompany    CleanerCompany         @relation(fields: [cleanerCompanyId], references: [id])
+  purchase          CleaningLeadPurchase?
+  auditLogs         CleaningLeadAuditLog[]
+
+  @@unique([cleaningRequestId, cleanerCompanyId])
+  @@index([cleanerCompanyId, createdAt])
+  @@index([cleanerCompanyId, status])
+}
+
+model CleaningLeadPurchase {
+  id                 String              @id @default(cuid())
+  cleaningLeadId     String              @unique
+  cleanerCompanyId   String
+  invoiceId          String
+  amount             Int
+  currency           String              @default("NZD")
+  billingPeriodKey   String
+  billingPeriodStart DateTime
+  billingPeriodEnd   DateTime
+  status             CleanerChargeStatus @default(PENDING)
+  purchasedAt        DateTime            @default(now())
+  createdAt          DateTime            @default(now())
+  cleaningLead       CleaningLead        @relation(fields: [cleaningLeadId], references: [id], onDelete: Restrict)
+  cleanerCompany     CleanerCompany      @relation(fields: [cleanerCompanyId], references: [id], onDelete: Restrict)
+  invoice            CleanerInvoice      @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+
+  @@unique([cleanerCompanyId, cleaningLeadId])
+  @@index([cleanerCompanyId, billingPeriodKey])
+  @@index([invoiceId, purchasedAt])
+  @@index([status, billingPeriodEnd])
+}
+
+model CleanerInvoice {
+  id               String                 @id @default(cuid())
+  cleanerCompanyId String
+  periodKey        String
+  periodStart      DateTime
+  periodEnd        DateTime
+  leadCount        Int                    @default(0)
+  subtotal         Int                    @default(0)
+  gstAmount        Int?
+  total            Int                    @default(0)
+  currency         String                 @default("NZD")
+  status           CleanerInvoiceStatus   @default(UPCOMING)
+  stripeInvoiceId  String?                @unique
+  invoiceNumber    String?                @unique
+  hostedInvoiceUrl String?
+  invoicePdfUrl    String?
+  issuedAt         DateTime?
+  sentAt           DateTime?
+  dueAt            DateTime?
+  paidAt           DateTime?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  cleanerCompany   CleanerCompany         @relation(fields: [cleanerCompanyId], references: [id], onDelete: Restrict)
+  purchases        CleaningLeadPurchase[]
+
+  @@unique([cleanerCompanyId, periodKey])
+  @@index([status, periodEnd])
+  @@index([cleanerCompanyId, createdAt])
+}
+
+model CleaningLeadAuditLog {
+  id             String       @id @default(cuid())
+  cleaningLeadId String
+  action         String
+  meta           Json?
+  createdAt      DateTime     @default(now())
+  cleaningLead   CleaningLead @relation(fields: [cleaningLeadId], references: [id], onDelete: Cascade)
+
+  @@index([cleaningLeadId, createdAt])
+  @@index([action, createdAt])
 }
 
 model LeadSpreadsheetDelivery {

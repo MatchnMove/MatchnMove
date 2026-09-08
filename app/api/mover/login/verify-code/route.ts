@@ -26,6 +26,9 @@ export async function POST(req: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: "That sign-in code is invalid or has expired." }, { status: 400 });
     }
+    if (user.role === "CLEANER") {
+      return NextResponse.json({ error: "Use the cleaner portal to finish signing in." }, { status: 403 });
+    }
 
     const tokenRecord = await consumeAuthTokenForUser(parsed.data.code, AuthTokenType.SIGN_IN_CODE, user.id);
     if (!tokenRecord) {

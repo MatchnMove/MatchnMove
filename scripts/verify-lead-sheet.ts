@@ -3,6 +3,7 @@ import { buildLeadSpreadsheetRow, LEAD_SPREADSHEET_HEADERS } from "../lib/lead-s
 
 const row = buildLeadSpreadsheetRow({
   id: "quote-test",
+  submissionKey: "test-submission-key",
   name: '=HYPERLINK("bad")',
   email: "test@example.com",
   phone: "+64 21 123 456",
@@ -25,6 +26,9 @@ const row = buildLeadSpreadsheetRow({
   transcriptRaw: null,
   transcriptFields: null,
   transcriptionState: "manual",
+  sharingConsentAt: new Date("2026-06-09T00:00:00.000Z"),
+  consentVersion: "2026-09-cleaning-v1",
+  submittedLocale: "en-NZ",
   createdAt: new Date("2026-06-09T00:00:00.000Z"),
 });
 

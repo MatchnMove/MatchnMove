@@ -68,6 +68,10 @@ export async function POST(req: NextRequest) {
       include: { moverCompany: true },
     });
 
+    if (existingUser?.role === "CLEANER") {
+      return NextResponse.json({ error: "This Google email belongs to a cleaner account. Use the cleaner portal." }, { status: 403 });
+    }
+
     if (!existingUser) {
       if (isConfiguredAdminEmail(googleAccount.email)) {
         const adminUser = await createAdminAccount({

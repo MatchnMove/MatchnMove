@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { prisma } from "@/lib/db";
+import { syncCleanerStripeInvoice } from "@/lib/cleaner-stripe-invoicing";
 import { stripe } from "@/lib/stripe";
 
 async function updateCustomerDefaultPaymentMethod(customerId: string, paymentMethodId: string) {
@@ -141,6 +142,15 @@ export async function POST(req: NextRequest) {
         },
       });
     }
+  }
+
+  if (
+    event.type === "invoice.paid"
+    || event.type === "invoice.payment_failed"
+    || event.type === "invoice.voided"
+    || event.type === "invoice.marked_uncollectible"
+  ) {
+    await syncCleanerStripeInvoice(event.data.object as Stripe.Invoice, event.type);
   }
 
   return NextResponse.json({ received: true });

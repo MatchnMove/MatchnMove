@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { SUPPORTED_LOCALE_CODES } from "@/lib/i18n/config";
 import { NZ_SERVICE_AREAS, sanitiseNzServiceAreas } from "@/lib/nz-regions";
 
 export const contactSchema = z.object({
@@ -18,6 +19,7 @@ const limitedTranscriptSchema = z
   }, "Voice transcript data is too large.");
 
 export const quoteSchema = z.object({
+  clientRequestId: z.string().trim().min(8).max(100).regex(/^[a-zA-Z0-9_-]+$/, "Invalid request identifier").optional(),
   name: z.string().trim().min(2).max(100),
   email: z.string().trim().toLowerCase().email().max(254),
   phone: z.string().trim().min(7).max(30),
@@ -37,6 +39,12 @@ export const quoteSchema = z.object({
   moveDate: z.string().max(40).optional().nullable(),
   dateFlexible: z.boolean().default(false),
   movingWhat: z.string().trim().max(2000).optional().nullable(),
+  cleaningSelected: z.boolean().default(false),
+  cleaningNotes: z.string().trim().max(2000).optional().nullable(),
+  sharingConsent: z.literal(true, {
+    errorMap: () => ({ message: "Consent is required before this request can be shared" }),
+  }),
+  locale: z.enum(SUPPORTED_LOCALE_CODES).optional().default("en-NZ"),
   transcriptRaw: limitedTranscriptSchema.optional(),
   transcriptFields: limitedTranscriptSchema.optional(),
 });
@@ -55,10 +63,59 @@ export const moverLoginSchema = z.object({
   password: z.string().min(1, "Enter your password"),
 });
 
+export const cleanerLoginSchema = moverLoginSchema;
+
+export const cleanerRegisterSchema = z
+  .object({
+    name: z.string().trim().min(2, "Enter your full name").max(100, "Name is too long"),
+    companyName: z.string().trim().min(2, "Enter your company name").max(160, "Company name is too long"),
+    email: z.string().trim().toLowerCase().email("Enter a valid email address").max(254),
+    phone: z.string().trim().regex(phonePattern, "Enter a valid phone number"),
+    serviceAreas: z
+      .array(z.enum(NZ_SERVICE_AREAS))
+      .min(1, "Choose at least one coverage region")
+      .max(NZ_SERVICE_AREAS.length),
+    password: passwordSchema,
+    confirmPassword: z.string(),
+    acceptedTerms: z.literal(true, {
+      errorMap: () => ({ message: "You must accept the terms and privacy policy" }),
+    }),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
+export const cleanerProfileSchema = z.object({
+  companyName: z.string().trim().min(2, "Enter your company name").max(160, "Company name is too long"),
+  contactPerson: z.string().trim().min(2, "Enter a contact name").max(100, "Contact name is too long"),
+  phone: z.string().trim().regex(phonePattern, "Enter a valid phone number"),
+  nzbn: z.string().trim().regex(nzbnPattern, "NZBN must be 13 digits").optional().or(z.literal("")).transform((value) => value || null),
+  yearsOperating: z
+    .union([z.number(), z.string()])
+    .transform((value) => (typeof value === "number" ? value : value.trim() === "" ? null : Number(value)))
+    .refine((value) => value === null || (Number.isInteger(value) && value >= 0 && value <= 200), "Years operating must be between 0 and 200"),
+  serviceAreas: z
+    .array(z.enum(NZ_SERVICE_AREAS))
+    .min(1, "Choose at least one coverage region")
+    .max(NZ_SERVICE_AREAS.length),
+  businessDescription: z.string().trim().max(1000, "Business description must be 1,000 characters or less").optional().or(z.literal("")).transform((value) => value || null),
+});
+
+export const cleanerLeadStatusUpdateSchema = z.object({
+  status: z.enum(["CONTACTED", "WON", "LOST", "ARCHIVED"]),
+});
+
+export const localePreferenceSchema = z.object({
+  locale: z.enum(SUPPORTED_LOCALE_CODES),
+});
+
 export const moverSignInCodeSchema = z.object({
   email: z.string().trim().toLowerCase().email("Enter a valid email address"),
   code: z.string().trim().regex(/^\d{6}$/, "Enter the 6-digit sign-in code"),
 });
+
+export const cleanerSignInCodeSchema = moverSignInCodeSchema;
 
 export const moverRegisterSchema = z
   .object({

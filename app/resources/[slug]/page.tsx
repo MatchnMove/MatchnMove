@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ResourceArticle } from "@/components/resource-article";
 import { SiteShell } from "@/components/site-shell";
-import { getMovingResource, movingResources } from "@/lib/moving-resources";
+import { articleResources, getResource } from "@/lib/moving-resources";
 import { absoluteUrl, createPageMetadata, SITE_NAME, SITE_URL } from "@/lib/seo";
 
 export function generateStaticParams() {
-  return movingResources.map((resource) => ({ slug: resource.slug }));
+  return articleResources.map((resource) => ({ slug: resource.slug }));
 }
 
 export async function generateMetadata({
@@ -15,12 +15,12 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const resource = getMovingResource(slug);
+  const resource = getResource(slug);
 
   if (!resource) {
     return createPageMetadata({
-      title: "Moving Resource",
-      description: "New Zealand moving advice and quote guidance.",
+      title: "Moving and Cleaning Resource",
+      description: "Practical New Zealand moving and move-out cleaning guidance.",
       path: `/resources/${slug}`,
       noIndex: true,
     });
@@ -39,27 +39,44 @@ export default async function MovingResourcePage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const resource = getMovingResource(slug);
+  const resource = getResource(slug);
   if (!resource) notFound();
 
   const pageUrl = absoluteUrl(`/resources/${resource.slug}`);
+  const breadcrumbItems = [
+    { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
+    { "@type": "ListItem", position: 2, name: "Resources", item: absoluteUrl("/resources") },
+    ...(resource.category === "cleaning"
+      ? [
+          {
+            "@type": "ListItem",
+            position: 3,
+            name: "Cleaning quotes",
+            item: absoluteUrl("/cleaning-quotes"),
+          },
+        ]
+      : []),
+    {
+      "@type": "ListItem",
+      position: resource.category === "cleaning" ? 4 : 3,
+      name: resource.shortTitle,
+      item: pageUrl,
+    },
+  ];
   const structuredData = {
     "@context": "https://schema.org",
     "@graph": [
       {
         "@type": "BreadcrumbList",
-        itemListElement: [
-          { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
-          { "@type": "ListItem", position: 2, name: "Resources", item: absoluteUrl("/resources") },
-          { "@type": "ListItem", position: 3, name: resource.shortTitle, item: pageUrl },
-        ],
+        itemListElement: breadcrumbItems,
       },
       {
         "@type": "Article",
         headline: resource.title,
         description: resource.description,
-        dateModified: "2026-06-15",
-        datePublished: "2026-06-15",
+        dateModified: resource.category === "cleaning" ? "2026-09-08" : "2026-06-15",
+        datePublished: resource.category === "cleaning" ? "2026-09-08" : "2026-06-15",
+        articleSection: resource.category === "cleaning" ? "Move-out cleaning" : "Moving",
         inLanguage: "en-NZ",
         mainEntityOfPage: pageUrl,
         author: {
@@ -86,4 +103,3 @@ export default async function MovingResourcePage({
     </SiteShell>
   );
 }
-

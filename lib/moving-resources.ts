@@ -1,3 +1,5 @@
+import { cleaningResources } from "@/lib/cleaning-resources";
+
 export type ResourceSection =
   | {
       type: "copy";
@@ -31,6 +33,7 @@ export type ResourceSection =
     };
 
 export type MovingResource = {
+  category?: "moving" | "cleaning";
   slug: string;
   title: string;
   shortTitle: string;
@@ -578,8 +581,13 @@ export const movingResources: MovingResource[] = [
   },
 ];
 
-export const resourceCards = [
+export const articleResources: MovingResource[] = [
   ...movingResources,
+  ...cleaningResources,
+];
+
+export const resourceCards = [
+  ...articleResources,
   {
     slug: "moving-cost-calculator",
     title: "Moving Cost Calculator",
@@ -612,7 +620,10 @@ export function getMovingResource(slug: string) {
   return movingResources.find((resource) => resource.slug === slug) ?? null;
 }
 
+export function getResource(slug: string) {
+  return articleResources.find((resource) => resource.slug === slug) ?? null;
+}
+
 export function getResourceCard(slug: string) {
   return resourceCards.find((resource) => resource.slug === slug) ?? null;
 }
-

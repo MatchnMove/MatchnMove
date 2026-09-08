@@ -4,6 +4,9 @@ import SMTPTransport from "nodemailer/lib/smtp-transport";
 import { EmailDeliveryStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { getMoverLeadExpiryWarningDedupeKey, getMoverNewLeadDedupeKey } from "@/lib/lead-notification";
+import { getCleanerInvoiceAvailableDedupeKey, getCleanerLeadUnlockedDedupeKey, getCleanerNewLeadDedupeKey } from "@/lib/cleaner-notification";
+import { CLEANING_LEAD_PRICING } from "@/lib/cleaner-lead-pricing";
+import { resolveLocale } from "@/lib/i18n/config";
 import { SITE_EMAILS } from "@/lib/site-emails";
 
 type ContactEmailInput = {
@@ -45,6 +48,41 @@ type MoverLeadAlertTestEmailInput = {
   dashboardUrl: string;
 };
 
+export type CleanerLeadEmailInput = {
+  leadId: string;
+  email: string;
+  cleanerName?: string | null;
+  cleanerCompanyName: string;
+  dashboardUrl: string;
+  city: string;
+  region: string;
+  propertyType: string;
+  bedrooms: string;
+  preferredDate?: Date | null;
+  price: number;
+  preferredLocale?: string;
+};
+
+export type CleanerLeadUnlockedEmailInput = {
+  leadId: string;
+  email: string;
+  cleanerName?: string | null;
+  dashboardUrl: string;
+  price: number;
+  billingPeriodLabel: string;
+};
+
+export type CleanerInvoiceEmailInput = {
+  invoiceId: string;
+  email: string;
+  cleanerName?: string | null;
+  cleanerCompanyName: string;
+  billingUrl: string;
+  periodLabel: string;
+  leadCount: number;
+  total: number;
+};
+
 type AdminSpreadsheetLeadEmailInput = {
   email: string;
   quoteId: string;
@@ -78,6 +116,12 @@ type EmailKind =
   | "mover_verification"
   | "mover_password_reset"
   | "mover_sign_in_code"
+  | "cleaner_verification"
+  | "cleaner_password_reset"
+  | "cleaner_sign_in_code"
+  | "cleaner_new_lead"
+  | "cleaner_lead_unlocked"
+  | "cleaner_invoice_available"
   | "review_survey"
   | "mover_new_lead"
   | "mover_lead_alert_test"
@@ -803,8 +847,8 @@ export async function getEmailDiagnostics(limit = 10) {
   };
 }
 
-function formatEmailDateTime(value: Date) {
-  return new Intl.DateTimeFormat("en-NZ", {
+function formatEmailDateTime(value: Date, locale = "en-NZ") {
+  return new Intl.DateTimeFormat(resolveLocale(locale), {
     dateStyle: "medium",
     timeStyle: "short",
     timeZone: "Pacific/Auckland",
@@ -824,6 +868,22 @@ function getMoverLeadTheme(): EmailTheme {
     buttonShadow: "rgba(15,118,110,0.28)",
     iconBackground: "#ccfbf1",
     iconText: "#0f766e",
+  };
+}
+
+function getCleanerTheme(): EmailTheme {
+  return {
+    accent: "#5f6ee8",
+    accentDark: "#4655c7",
+    accentSoft: "#c7d2fe",
+    accentTint: "#eef2ff",
+    background: "#f8fafc",
+    eyebrowBackground: "#eef2ff",
+    eyebrowText: "#4655c7",
+    button: "#de7a3a",
+    buttonShadow: "rgba(222,122,58,0.30)",
+    iconBackground: "#e0e7ff",
+    iconText: "#4655c7",
   };
 }
 
@@ -1448,6 +1508,180 @@ export async function sendVerificationDecision(input: VerificationDecisionInput)
     }),
   };
 
+  return queueAndTrySend(message, config.configured);
+}
+
+async function sendCleanerAuthMessage(
+  input: MoverAuthEmailInput,
+  mode: "verification" | "password_reset" | "sign_in_code",
+) {
+  const config = getAuthEmailConfig();
+  const theme = getCleanerTheme();
+  const friendlyName = input.name?.trim() || "there";
+  const settings = mode === "verification"
+    ? {
+        kind: "cleaner_verification" as const,
+        url: input.verificationUrl,
+        subject: "Verify your Match 'n Move cleaner account",
+        eyebrow: "Cleaner verification",
+        title: "Confirm your cleaner account",
+        intro: `Hi ${friendlyName}, verify your email to secure your cleaner dashboard.`,
+        cta: "Verify email",
+        detail: "Link expires in 48 hours",
+      }
+    : mode === "password_reset"
+      ? {
+          kind: "cleaner_password_reset" as const,
+          url: input.resetUrl,
+          subject: "Reset your Match 'n Move cleaner password",
+          eyebrow: "Account recovery",
+          title: "Reset your cleaner password",
+          intro: `Hi ${friendlyName}, use this secure link to choose a new password.`,
+          cta: "Reset password",
+          detail: "Link expires in 2 hours",
+        }
+      : {
+          kind: "cleaner_sign_in_code" as const,
+          url: undefined,
+          subject: "Your Match 'n Move cleaner sign-in code",
+          eyebrow: "Secure sign-in",
+          title: "Finish signing in",
+          intro: `Hi ${friendlyName}, use this one-time code to open your cleaner dashboard.`,
+          cta: undefined,
+          detail: "Code expires in 15 minutes",
+        };
+
+  if (mode !== "sign_in_code" && !settings.url) return { sent: false, skipped: true as const, queued: false };
+  if (mode === "sign_in_code" && !input.signInCode) return { sent: false, skipped: true as const, queued: false };
+
+  const primaryValue = mode === "sign_in_code" ? input.signInCode! : settings.url!;
+  const message: EmailMessage = {
+    kind: settings.kind,
+    from: config.from,
+    to: input.email,
+    subject: settings.subject,
+    text: [settings.intro, "", primaryValue, "", settings.detail, "", "If you did not request this, no action is needed."].join("\n"),
+    html: renderEmailShell({
+      theme,
+      preheader: settings.intro,
+      eyebrow: settings.eyebrow,
+      title: settings.title,
+      intro: settings.intro,
+      bodyHtml: renderDetailTable(`
+        ${renderDetailRow("Account", input.email)}
+        ${mode === "sign_in_code" ? renderDetailRow("Sign-in code", input.signInCode!) : ""}
+        ${renderDetailRow(mode === "sign_in_code" ? "Code validity" : "Link validity", settings.detail.replace(/^.* in /, ""))}
+      `),
+      cta: settings.url && settings.cta ? { href: settings.url, label: settings.cta } : undefined,
+      footerNote: "If you did not request this cleaner-account message, no action is needed.",
+    }),
+  };
+  return queueAndTrySend(message, config.configured);
+}
+
+export function sendCleanerVerificationEmail(input: MoverAuthEmailInput) {
+  return sendCleanerAuthMessage(input, "verification");
+}
+
+export function sendCleanerPasswordResetEmail(input: MoverAuthEmailInput) {
+  return sendCleanerAuthMessage(input, "password_reset");
+}
+
+export function sendCleanerSignInCodeEmail(input: MoverAuthEmailInput) {
+  return sendCleanerAuthMessage(input, "sign_in_code");
+}
+
+export async function sendCleanerNewLeadEmail(input: CleanerLeadEmailInput) {
+  const config = getLeadEmailConfig();
+  const theme = getCleanerTheme();
+  const friendlyName = input.cleanerName?.trim() || input.cleanerCompanyName;
+  const locale = resolveLocale(input.preferredLocale);
+  const dateLabel = input.preferredDate ? formatEmailDateTime(input.preferredDate, locale) : "Flexible date";
+  const priceLabel = new Intl.NumberFormat(locale, { style: "currency", currency: CLEANING_LEAD_PRICING.currency, maximumFractionDigits: 0 }).format(input.price / 100);
+  const generalLocation = input.city.trim().localeCompare(input.region.trim(), undefined, { sensitivity: "base" }) === 0
+    ? input.region.trim()
+    : `${input.city.trim()}, ${input.region.trim()}`;
+  const message: EmailMessage = {
+    dedupeKey: getCleanerNewLeadDedupeKey(input.leadId),
+    kind: "cleaner_new_lead",
+    from: config.from,
+    to: input.email,
+    replyTo: config.replyTo,
+    subject: `New cleaning request in ${input.region}`,
+    text: [
+      `Hi ${friendlyName},`, "", `A new move-out cleaning request in ${generalLocation} matches your service area.`,
+      `${input.bedrooms} bedroom ${input.propertyType.toLowerCase()}. Preferred date: ${dateLabel}.`,
+      `Preview it free, then unlock the customer's cleaning contact details for ${priceLabel}.`, "", input.dashboardUrl,
+      "", "No customer name, phone, email, exact address, destination, or moving inventory is included in this email.",
+    ].join("\n"),
+    html: renderEmailShell({
+      theme,
+      preheader: `A privacy-safe cleaning lead preview is ready in ${input.region}.`,
+      eyebrow: "New cleaning lead",
+      title: `New cleaning request in ${escapeHtml(input.region)}`,
+      intro: `Hi ${escapeHtml(friendlyName)}, this move-out cleaning request matches your active service area.`,
+      bodyHtml: renderDetailTable(`
+        ${renderDetailRow("General location", generalLocation)}
+        ${renderDetailRow("Property", `${input.bedrooms} bedroom ${input.propertyType}`)}
+        ${renderDetailRow("Preferred date", dateLabel)}
+        ${renderDetailRow("Flat lead price", priceLabel)}
+        ${renderDetailRow("Customer contact", "Locked until you choose to open the lead")}
+      `),
+      cta: { href: input.dashboardUrl, label: `Preview lead - ${priceLabel}` },
+      footerNote: "You are receiving this service notification because your active cleaner account matched the pickup region. Customer contact details remain protected until you unlock the lead.",
+    }),
+  };
+  return queueAndTrySend(message, config.configured);
+}
+
+export async function sendCleanerLeadUnlockedEmail(input: CleanerLeadUnlockedEmailInput) {
+  const config = getLeadEmailConfig();
+  const theme = getCleanerTheme();
+  const priceLabel = new Intl.NumberFormat("en-NZ", { style: "currency", currency: CLEANING_LEAD_PRICING.currency, maximumFractionDigits: 0 }).format(input.price / 100);
+  const message: EmailMessage = {
+    dedupeKey: getCleanerLeadUnlockedDedupeKey(input.leadId),
+    kind: "cleaner_lead_unlocked",
+    from: config.from,
+    to: input.email,
+    replyTo: config.replyTo,
+    subject: `Cleaning lead unlocked - ${priceLabel} added to your monthly invoice`,
+    text: [`Hi ${input.cleanerName?.trim() || "there"},`, "", `The lead is unlocked. ${priceLabel} has been added to your ${input.billingPeriodLabel} Match 'n Move invoice.`, "", input.dashboardUrl].join("\n"),
+    html: renderEmailShell({
+      theme,
+      preheader: `${priceLabel} was added to your current monthly invoice.`,
+      eyebrow: "Lead unlocked",
+      title: "Customer details are ready",
+      intro: `The lead is now open and ${priceLabel} has been added exactly once to your ${escapeHtml(input.billingPeriodLabel)} invoice.`,
+      bodyHtml: renderNoteBox("Return to the secure dashboard to view the cleaning address and customer contact details.", theme),
+      cta: { href: input.dashboardUrl, label: "Open unlocked lead" },
+      footerNote: "A lost or archived lead remains billable after it has been unlocked.",
+    }),
+  };
+  return queueAndTrySend(message, config.configured);
+}
+
+export async function sendCleanerInvoiceAvailableEmail(input: CleanerInvoiceEmailInput) {
+  const config = getAuthEmailConfig();
+  const theme = getCleanerTheme();
+  const totalLabel = new Intl.NumberFormat("en-NZ", { style: "currency", currency: CLEANING_LEAD_PRICING.currency, minimumFractionDigits: 2 }).format(input.total / 100);
+  const message: EmailMessage = {
+    dedupeKey: getCleanerInvoiceAvailableDedupeKey(input.invoiceId),
+    kind: "cleaner_invoice_available",
+    from: config.from,
+    to: input.email,
+    subject: `Your ${input.periodLabel} cleaner lead invoice is available`,
+    text: [`Hi ${input.cleanerName?.trim() || input.cleanerCompanyName},`, "", `${input.leadCount} unlocked cleaning leads. Total: ${totalLabel} NZD.`, "", input.billingUrl].join("\n"),
+    html: renderEmailShell({
+      theme,
+      preheader: `${input.periodLabel} invoice: ${totalLabel} for ${input.leadCount} leads.`,
+      eyebrow: "Monthly invoice",
+      title: `${escapeHtml(input.periodLabel)} invoice available`,
+      intro: `Your monthly cleaner lead summary for ${escapeHtml(input.cleanerCompanyName)} is ready.`,
+      bodyHtml: renderDetailTable(`${renderDetailRow("Unlocked leads", String(input.leadCount))}${renderDetailRow("Invoice total", `${totalLabel} NZD`)}`),
+      cta: { href: input.billingUrl, label: "View billing" },
+      footerNote: "GST is shown only when configured on the issued invoice; Match 'n Move does not infer tax treatment.",
+    }),
+  };
   return queueAndTrySend(message, config.configured);
 }
 

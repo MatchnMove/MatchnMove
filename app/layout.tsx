@@ -1,6 +1,9 @@
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
+import { cookies } from "next/headers";
 import { ReactNode } from "react";
+import { LanguageProvider } from "@/components/language-provider";
+import { LOCALE_COOKIE, resolveLocale } from "@/lib/i18n/config";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_PHONE, SITE_URL, absoluteUrl } from "@/lib/seo";
 import { SITE_EMAILS } from "@/lib/site-emails";
 import { GoogleAnalytics } from "./google-analytics";
@@ -68,7 +71,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0f766e"
+  themeColor: "#5f6ee8"
 };
 
 const structuredData = {
@@ -135,17 +138,22 @@ const structuredData = {
   ],
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const localeCookie = (await cookies()).get(LOCALE_COOKIE)?.value;
+  const initialLocale = resolveLocale(localeCookie);
+
   return (
-    <html lang="en">
+    <html lang={initialLocale} suppressHydrationWarning>
       <body>
-        <GoogleAnalytics measurementId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID} />
-        <MicrosoftClarity />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
-        />
-        {children}
+        <LanguageProvider initialLocale={initialLocale} localeWasExplicit={Boolean(localeCookie)}>
+          <GoogleAnalytics measurementId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID} />
+          <MicrosoftClarity />
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+          />
+          {children}
+        </LanguageProvider>
       </body>
     </html>
   );

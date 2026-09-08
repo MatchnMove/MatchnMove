@@ -1,10 +1,11 @@
 import Link from "next/link";
 
-type AdminArea = "quote-flow" | "verification" | "leads";
+type AdminArea = "quote-flow" | "verification" | "cleaners" | "leads";
 
 const links: Array<{ id: AdminArea; href: string; label: string }> = [
   { id: "quote-flow", href: "/admin/quote-flow", label: "Quote flow" },
   { id: "verification", href: "/admin/verification", label: "Mover verification" },
+  { id: "cleaners", href: "/admin/cleaners", label: "Cleaners" },
   { id: "leads", href: "/admin/leads", label: "Google Sheets" },
 ];
 

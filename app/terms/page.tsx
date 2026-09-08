@@ -5,11 +5,15 @@ import { MobileSectionJump } from "@/components/mobile-section-jump";
 import { SiteShell } from "@/components/site-shell";
 import { createPageMetadata } from "@/lib/seo";
 import { SITE_EMAILS, toMailto } from "@/lib/site-emails";
+import {
+  CLEANING_LEAD_PRICING,
+  formatCleaningLeadPrice,
+} from "@/lib/cleaner-lead-pricing";
 
 export const metadata: Metadata = createPageMetadata({
   title: "Terms and Conditions",
   description:
-    "Read the Match 'n Move terms covering quote requests, moving company introductions, information handling, and marketplace responsibilities.",
+    "Read the Match 'n Move terms covering moving and cleaning quote requests, provider introductions, lead billing, and marketplace responsibilities.",
   path: "/terms",
 });
 
@@ -18,19 +22,19 @@ const principles = [
     icon: ShieldCheck,
     title: "Controlled information sharing",
     copy:
-      "Information submitted through Match 'n Move is shared only with selected moving companies and requested relocation partners relevant to the enquiry."
+      "Information submitted through Match 'n Move is shared only with selected service providers relevant to the services the customer requested."
   },
   {
     icon: Scale,
     title: "Clear marketplace boundaries",
     copy:
-      "Match 'n Move acts as an introduction and lead-distribution platform. Responsibility for services delivered remains with the moving company engaged by the customer."
+      "Match 'n Move acts as an introduction and lead-distribution platform. Responsibility for services delivered remains with the moving or cleaning company engaged by the customer."
   },
   {
     icon: FileCheck2,
     title: "Lead protection standards",
     copy:
-      "Listed moving businesses must not redistribute, resell, or otherwise misuse leads received through the platform."
+      "Listed moving and cleaning businesses must not redistribute, resell, or otherwise misuse leads received through the platform."
   },
   {
     icon: Users,
@@ -45,15 +49,16 @@ const sections = [
     id: "service",
     title: "1. Service scope",
     body: [
-      "Match 'n Move aims to introduce furniture removal companies to individuals and businesses seeking relocation services.",
-      "We distribute leads created through the website by prospective clients to relocation companies for the removal of domestic, commercial, or office goods and furniture."
+      "Match 'n Move introduces furniture removal companies to people and businesses seeking relocation services and, where a customer opts in, cleaning companies to people seeking move-out cleaning.",
+      "A customer can request moving quotes without requesting cleaning. Cleaning quote requests are free for customers and carry no obligation to book."
     ]
   },
   {
     id: "sharing",
     title: "2. Information handling",
     body: [
-      "Information supplied through the website will be forwarded to all selected furniture movers and requested partners relevant to the enquiry.",
+      "Information supplied through the website will be forwarded only to selected providers relevant to the services the customer requested.",
+      "A cleaning company receives a privacy-limited preview. Customer contact details and the full pickup address are released only when that assigned company opens the cleaning lead. Destination details, detailed moving inventory, and mover-specific information are not included in the cleaning lead.",
       "Under no circumstances will that information be distributed to any unrelated third party outside the Match 'n Move service network.",
       "Match 'n Move will take reasonable steps to protect the information supplied by users."
     ]
@@ -62,23 +67,23 @@ const sections = [
     id: "lead-use",
     title: "3. Lead use restrictions",
     body: [
-      "No moving company or moving business listed on Match 'n Move may redistribute, resell, transfer, or otherwise disclose any lead received through the website to a third party not associated with Match 'n Move.",
-      "If a moving company or moving business is suspected of redistributing or reselling leads and is subsequently found to have done so, Match 'n Move may remove that business from the platform immediately and may recover associated losses, costs, or charges as applicable."
+      "No moving or cleaning business listed on Match 'n Move may redistribute, resell, transfer, or otherwise disclose any lead received through the website to an unauthorised third party.",
+      "If a provider is found to have misused lead information, Match 'n Move may suspend or remove that business from the platform and may recover associated losses, costs, or charges as applicable."
     ]
   },
   {
     id: "liability",
     title: "4. Liability and third-party services",
     body: [
-      "Match 'n Move is an introduction platform and will not be held responsible for services, labour, advice, pricing, or materials provided by moving companies as a result of an introduction made through the website.",
-      "Match 'n Move will not be responsible for any loss of, or damage to, goods or furniture arising from the use of any moving company introduced through the platform."
+      "Match 'n Move is an introduction platform and is not the moving or cleaning contractor. The selected provider is responsible for its quote, labour, advice, pricing, materials, and service delivery.",
+      "Match 'n Move will not be responsible for loss of or damage to goods, furniture, or property arising from a service provider introduced through the platform, to the extent permitted by law."
     ]
   },
   {
     id: "partners",
     title: "5. Partner selection and removal",
     body: [
-      "Match 'n Move reserves the right to screen, appoint, suspend, or remove any relocation partner or listed moving company at its sole discretion.",
+      "Match 'n Move reserves the right to screen, activate, suspend, or remove any relocation partner, moving company, or cleaning company at its discretion.",
       "We may terminate the services of any listed business if its conduct, service quality, or business practices bring the name or reputation of Match 'n Move into disrepute."
     ]
   },
@@ -96,6 +101,15 @@ const sections = [
     body: [
       "Clients who experience delays or receive no response are encouraged to inform Match 'n Move so the matter can be reviewed.",
       `Positive feedback is also welcomed and appreciated. Feedback may be sent to ${SITE_EMAILS.feedback}.`
+    ]
+  },
+  {
+    id: "cleaner-billing",
+    title: "8. Cleaning lead fees and monthly invoices",
+    body: [
+      "A cleaning company may inspect an assigned lead preview at no charge. The interface displays the applicable fee before the company confirms that it wants to open the lead.",
+      `Opening a cleaning lead creates one fixed ${formatCleaningLeadPrice()} ${CLEANING_LEAD_PRICING.currency} charge for that cleaning company and reveals the protected contact details. The charge applies once per assigned lead even if the page is refreshed or the request is retried, and remains payable whether the resulting job is won or lost.`,
+      "Cleaning lead charges are collected into a calendar-month invoice. Invoice totals and any separately itemised tax treatment will follow the invoice issued by Match 'n Move; no additional success fee applies when a cleaning job is won."
     ]
   }
 ] as const;
@@ -124,8 +138,8 @@ export default function TermsPage() {
                   Disclaimer and conditions of service.
                 </h1>
                 <p className="mt-5 max-w-2xl text-sm leading-7 text-slate-200 sm:text-base">
-                  These terms explain how Match &apos;n Move handles introductions between customers and moving companies,
-                  how submitted information is shared, and where responsibility sits once a customer engages a mover.
+                  These terms explain how Match &apos;n Move handles introductions between customers and moving or cleaning
+                  companies, how submitted information is shared, and where responsibility sits once a provider is engaged.
                 </p>
               </div>
 
@@ -133,7 +147,7 @@ export default function TermsPage() {
                 <p className="text-xs uppercase tracking-[0.18em] text-sky-100/75">Document status</p>
                 <p className="mt-3 text-3xl font-black tracking-[-0.05em] text-white">Current</p>
                 <p className="mt-2 text-sm leading-6 text-slate-300">
-                  Last updated: March 30, 2026.
+                  Last updated: September 8, 2026.
                 </p>
                 <p className="mt-4 text-sm leading-6 text-slate-300">
                   This page applies to users submitting quote requests or interacting with Match &apos;n Move through the
