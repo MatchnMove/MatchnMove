@@ -65,7 +65,16 @@ export function HeroTruckScene() {
       data-motion={isMoving ? "playing" : "paused"}
       data-hydrated={hydrated}
     >
-      <svg className={styles.landscape} viewBox="0 0 1280 260" preserveAspectRatio="none" aria-hidden="true">
+      {/* Keep a fixed intrinsic ratio: wider screens reveal additional tiles,
+          while the mobile scene scales the entire illustration uniformly. */}
+      <svg
+        className={styles.landscape}
+        width="6400"
+        height="260"
+        viewBox="-2560 0 6400 260"
+        preserveAspectRatio="xMidYMax meet"
+        aria-hidden="true"
+      >
         <defs>
           <linearGradient id={`${id}-hill-fade`} x1="0" y1="0" x2="0" y2="1">
             <stop stopColor="#839bb8" stopOpacity=".22" />
@@ -108,25 +117,28 @@ export function HeroTruckScene() {
         </defs>
         <circle cx="1026" cy="54" r="28" fill="#dae5f1" fillOpacity=".045" />
         <g className={`${styles.hillsDrift} ${styles.animated}`}>
-          <use href={`#${id}-hills`} />
-          <use href={`#${id}-hills`} x="1280" />
+          {[-2560, -1280, 0, 1280, 2560, 3840].map((offset) => (
+            <use key={offset} href={`#${id}-hills`} x={offset} />
+          ))}
         </g>
         <g className={`${styles.skylineDrift} ${styles.animated}`}>
-          <use href={`#${id}-skyline`} />
-          <use href={`#${id}-skyline`} x="1280" />
+          {[-2560, -1280, 0, 1280, 2560, 3840].map((offset) => (
+            <use key={offset} href={`#${id}-skyline`} x={offset} />
+          ))}
         </g>
         <g className={`${styles.neighbourhoodDrift} ${styles.animated}`}>
-          <use href={`#${id}-neighbourhood`} />
-          <use href={`#${id}-neighbourhood`} x="1280" />
+          {[-2560, -1280, 0, 1280, 2560, 3840].map((offset) => (
+            <use key={offset} href={`#${id}-neighbourhood`} x={offset} />
+          ))}
         </g>
-        <path d="M0 220H1280V260H0Z" fill={`url(#${id}-road-fade)`} />
+        <path d="M-2560 220H3840V260H-2560Z" fill={`url(#${id}-road-fade)`} />
         <g className={`${styles.roadDrift} ${styles.animated}`}>
-          <path d="M0 238H1640V243H0Z" fill={`url(#${id}-road-dashes)`} />
+          <path d="M-2560 238H4020V243H-2560Z" fill={`url(#${id}-road-dashes)`} />
         </g>
       </svg>
 
       <div className={styles.vehicle} aria-hidden="true">
-        <svg viewBox="0 0 540 270" className={styles.truck}>
+        <svg viewBox="0 0 540 270" className={styles.truck} fontFamily="Arial, Helvetica, sans-serif">
           <defs>
             <linearGradient id={`${id}-cargo`} x1="0" y1="0" x2=".7" y2="1">
               <stop stopColor="#fffdf7" />
@@ -183,8 +195,8 @@ export function HeroTruckScene() {
               <path d="m74 86 14-8 15 8v17l-15 8-14-8Z" fill="#344f72" />
               <path d="m76 87 12 6 13-6-13-7Z" fill="#9ab0ca" />
               <path d="M79 98H95 M92 95 95 98 92 101" fill="none" stroke="#f6f7f9" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-              <text x="114" y="101" fontFamily="inherit" fontSize="24" fontWeight="750" letterSpacing="-.8">Match ’n Move</text>
-              <text x="75" y="123" fontFamily="inherit" fontSize="9.5" fontWeight="500" letterSpacing=".55" fill="#627387">A LITTLE LESS MOVING STRESS.</text>
+              <text x="114" y="101" fontFamily="Arial, Helvetica, sans-serif" fontSize="24" fontWeight="750" letterSpacing="-.8">Match ’n Move</text>
+              <text x="75" y="123" fontFamily="Arial, Helvetica, sans-serif" fontSize="9.5" fontWeight="500" letterSpacing=".55" fill="#627387">A LITTLE LESS MOVING STRESS.</text>
             </g>
             <path d="M75 160H120C137 160 134 146 152 146H209C224 146 222 160 238 160H284" fill="none" stroke="#a2b4c6" strokeWidth="2" strokeLinecap="round" strokeDasharray="3 5" />
             <circle cx="75" cy="160" r="5" fill="#344f72" />
@@ -223,7 +235,6 @@ export function HeroTruckScene() {
         </svg>
       </div>
 
-      <span className={styles.journeyNote} aria-hidden="true"><span /> GOOD MOVES START HERE.</span>
       <button
         type="button"
         className={styles.motionControl}

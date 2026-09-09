@@ -1,7 +1,9 @@
 .scene {
+  --scene-height: clamp(180px, calc(100svh - 680px), 260px);
+  --truck-width: min(400px, calc(var(--scene-height) * 1.667));
   position: relative;
   width: 100%;
-  height: 230px;
+  height: var(--scene-height);
   overflow: hidden;
   isolation: isolate;
   contain: layout paint;
@@ -11,17 +13,19 @@
   position: absolute;
   bottom: 0;
   left: 50%;
-  width: max(100%, 820px);
+  width: auto;
   height: 100%;
+  max-width: none;
+  aspect-ratio: 6400 / 260;
   transform: translateX(-50%);
   pointer-events: none;
 }
 
 .vehicle {
   position: absolute;
-  left: calc(50% - 188px);
-  bottom: 22px;
-  width: 400px;
+  left: calc(50% - var(--truck-width) * 0.47);
+  bottom: calc(var(--scene-height) * 0.1);
+  width: var(--truck-width);
   pointer-events: none;
 }
 
@@ -30,6 +34,7 @@
   width: 100%;
   height: auto;
   overflow: visible;
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 .suspension {
@@ -74,31 +79,10 @@
   }
 }
 
-.journeyNote {
-  position: absolute;
-  bottom: 7px;
-  left: 20px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #a5bad1;
-  font-size: 8px;
-  font-weight: 600;
-  line-height: 1.5;
-  letter-spacing: 1.8px;
-}
-
-.journeyNote > span {
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: #b5cbe4;
-}
-
 .motionControl {
   position: absolute;
-  right: 8px;
-  bottom: 2px;
+  right: clamp(16px, 3vw, 48px);
+  bottom: 12px;
   display: grid;
   place-items: center;
   width: 44px;
@@ -110,14 +94,6 @@
   color: #bbcee2;
   cursor: pointer;
   transition: background-color 160ms ease, color 160ms ease;
-}
-
-.motionControl::before {
-  position: absolute;
-  inset: 7px;
-  content: "";
-  border: 1px solid rgb(181 203 228 / 22%);
-  border-radius: 50%;
 }
 
 .motionControl:hover {
@@ -154,27 +130,15 @@
   to { transform: translateX(-180px); }
 }
 
-@media (max-width: 760px) {
+@media (max-width: 820px) {
   .scene {
-    height: 186px;
+    --scene-height: 200px;
   }
 
   .vehicle {
     width: 285px;
     left: calc(50% - 151px);
     bottom: 21px;
-  }
-
-  .journeyNote {
-    bottom: 5px;
-    left: 4px;
-    font-size: 6.5px;
-    letter-spacing: 1.25px;
-  }
-
-  .motionControl {
-    right: -2px;
-    bottom: -1px;
   }
 
   @keyframes arrive {
