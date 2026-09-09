@@ -1,6 +1,7 @@
 "use client";
 
 import { Nav } from "@/components/site-shell";
+import { PartnerAccountSwitcher } from "@/components/partner-account-switcher";
 import Link from "next/link";
 import Script from "next/script";
 import { FormEvent, useEffect, useEffectEvent, useRef, useState } from "react";
@@ -376,7 +377,21 @@ export default function MoverLoginPage() {
 
               <div className="relative mx-auto w-full max-w-[38rem] rounded-[30px] border border-white/80 bg-white/82 p-2 shadow-[0_34px_80px_-38px_rgba(44,62,88,0.45)] backdrop-blur min-[360px]:p-3 sm:rounded-[34px] sm:p-4 xl:p-5">
                 <div className="min-w-0 rounded-[26px] border border-slate-200/80 bg-[linear-gradient(180deg,#ffffff_0%,#f6f8fc_100%)] p-4 sm:rounded-[30px] sm:p-8">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
+                  {!loginCodeEmail ? (
+                    <PartnerAccountSwitcher
+                      active="mover"
+                      mode={mode}
+                      className="mb-6"
+                      onModeChange={(nextMode) => {
+                        setMode(nextMode);
+                        setLoginCodeEmail("");
+                        setLoginCode("");
+                        setError("");
+                        setSuccess("");
+                      }}
+                    />
+                  ) : null}
+                  <div>
                     <div className="text-center sm:text-left">
                       <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">
                         {loginCodeEmail ? "Email verification" : "Partner portal"}
@@ -392,36 +407,6 @@ export default function MoverLoginPage() {
                           : "Sign in to review leads, update your company profile, and keep your Match 'n Move presence current."}
                       </p>
                     </div>
-                    {!loginCodeEmail ? (
-                      <div className="mx-auto inline-flex w-full max-w-[16rem] rounded-full border border-slate-200 bg-slate-100 p-1 text-sm font-semibold sm:mx-0 sm:w-auto sm:max-w-none">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setMode("signup");
-                            setLoginCodeEmail("");
-                            setLoginCode("");
-                            setError("");
-                            setSuccess("");
-                          }}
-                          className={`flex-1 rounded-full px-4 py-2 transition sm:flex-none ${mode === "signup" ? "bg-white text-slate-950 shadow-sm" : "text-slate-500"}`}
-                        >
-                          Sign up
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setMode("login");
-                            setLoginCodeEmail("");
-                            setLoginCode("");
-                            setError("");
-                            setSuccess("");
-                          }}
-                          className={`flex-1 rounded-full px-4 py-2 transition sm:flex-none ${mode === "login" ? "bg-white text-slate-950 shadow-sm" : "text-slate-500"}`}
-                        >
-                          Log in
-                        </button>
-                      </div>
-                    ) : null}
                   </div>
 
                   {!loginCodeEmail ? <div className="mt-6 rounded-[22px] border border-slate-200 bg-white px-4 py-4 shadow-[0_15px_30px_-24px_rgba(15,23,42,0.35)] sm:rounded-[26px]">

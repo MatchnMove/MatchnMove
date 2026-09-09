@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { BadgeCheck, MailCheck, ReceiptText, ShieldCheck, Sparkles } from "lucide-react";
 import { LanguageSelector } from "@/components/language-selector";
+import { PartnerAccountSwitcher, type PartnerAccessMode } from "@/components/partner-account-switcher";
 import { useLanguage } from "@/components/language-provider";
 import { Nav } from "@/components/site-shell";
 import { formatCleaningLeadPrice } from "@/lib/cleaner-lead-pricing";
@@ -30,11 +31,13 @@ export function CleanerAuthShell({
   eyebrow,
   title,
   description,
+  accessMode = "login",
   children,
 }: {
   eyebrow: string;
   title: string;
   description: string;
+  accessMode?: PartnerAccessMode;
   children: ReactNode;
 }) {
   const { locale, t } = useLanguage();
@@ -86,6 +89,7 @@ export function CleanerAuthShell({
 
           <section className="min-w-0 rounded-[30px] border border-white/80 bg-white/80 p-2 shadow-[0_35px_90px_-42px_rgba(15,23,42,0.5)] backdrop-blur sm:p-4">
             <div className="rounded-[26px] border border-slate-200/80 bg-white p-5 sm:p-8 lg:p-10">
+              <PartnerAccountSwitcher active="cleaner" mode={accessMode} className="mb-7" />
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-[0.2em] text-sky-700">{eyebrow}</p>

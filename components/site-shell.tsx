@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowRight, ChevronDown, Mail, Menu, ShieldCheck, Sparkles, X } from "lucide-react";
+import { ArrowRight, ChevronDown, Mail, Menu, ShieldCheck, Sparkles, UserRound, X } from "lucide-react";
 import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { LanguageSelector } from "@/components/language-selector";
 import { useLanguage } from "@/components/language-provider";
@@ -54,7 +54,8 @@ const navGroups = [
       { href: "/about", label: "About Match 'n Move", copy: "Why we built a simpler way to move." },
       { href: "/contact", label: "Contact us", copy: "Talk with the Match 'n Move team." },
       { href: "/mover/pricing", label: "Mover pricing", copy: "Information for moving companies." },
-      { href: "/cleaner/login", label: "Cleaner login", copy: "View cleaning requests and monthly billing." },
+      { href: "/mover/login?mode=signup", label: "Partner signup", copy: "Moving and cleaning companies choose their account type here." },
+      { href: "/mover/login?mode=login", label: "Partner login", copy: "Access your mover or cleaner dashboard." },
     ],
   },
 ] as const;
@@ -88,8 +89,8 @@ const footerGroups = [
   {
     title: "Moving Companies",
     links: [
-      { href: "/mover/login", label: "Join as a Mover" },
-      { href: "/mover/login", label: "Mover Login" },
+      { href: "/mover/login?mode=signup", label: "Join as a Mover" },
+      { href: "/mover/login?mode=login", label: "Mover Login" },
       { href: "/mover/pricing", label: "Mover Pricing" },
     ],
   },
@@ -173,7 +174,7 @@ export function Nav() {
       ? moverSession.accountType === "admin"
         ? `Admin: ${moverSession.accountName}`
         : moverSession.accountName
-      : t("nav.account");
+      : "Partner portal";
   const getNavLinkLabel = (href: string, fallback: string) => {
     if (href === "/quote") return t("nav.getQuotes");
     if (href === "/cleaning-quotes") return t("nav.cleaningQuotes");
@@ -250,8 +251,8 @@ export function Nav() {
   }, [loadMoverSession]);
 
   return (
-    <header className="relative z-30 border-b border-slate-200/80 bg-white">
-      <div className="container-shell flex items-center justify-between gap-3 py-2 sm:gap-4 sm:py-3">
+    <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/95 shadow-[0_10px_30px_-28px_rgba(15,23,42,0.5)] backdrop-blur-xl">
+      <div className="container-shell flex items-center justify-between gap-3 py-2.5 sm:gap-4 sm:py-3">
         <Link
           href="/"
           className="relative flex h-9 w-[158px] items-center sm:h-12 sm:w-[220px] lg:h-14 lg:w-[265px]"
@@ -266,12 +267,12 @@ export function Nav() {
             className="object-contain object-left"
           />
         </Link>
-        <nav className="hidden items-center gap-1 font-semibold md:flex" aria-label={t("publicShell.mainNavigation")}>
+        <nav className="hidden items-center gap-0.5 rounded-full border border-slate-200/80 bg-slate-50/80 p-1 font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] lg:flex" aria-label={t("publicShell.mainNavigation")}>
           {navGroups.map((group) => (
             <div key={group.label} className="group relative">
               <button
                 type="button"
-                className="inline-flex min-h-[42px] items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-50 hover:text-slate-950 focus-visible:bg-slate-50 focus-visible:outline-none lg:px-4 lg:text-base"
+                className="inline-flex min-h-[40px] items-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-white hover:text-slate-950 hover:shadow-sm focus-visible:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brandBlue/30 lg:px-4 lg:text-[0.95rem]"
               >
                 {translatePublicShellLabel(t, group.label)}
                 <ChevronDown className="h-4 w-4 text-slate-400 transition duration-200 group-hover:rotate-180 group-focus-within:rotate-180" />
@@ -297,10 +298,10 @@ export function Nav() {
           ))}
         </nav>
         <div className="flex items-center gap-2 sm:gap-3">
-          <LanguageSelector compact className="hidden md:inline-flex" />
+          <LanguageSelector compact className="hidden lg:inline-flex" />
           <Link
             href="/quote"
-            className="hidden min-h-[40px] items-center justify-center gap-2 rounded-xl bg-brandBlue px-4 py-2 text-[0.92rem] font-semibold leading-none text-white shadow-[0_14px_28px_-18px_rgba(47,115,255,0.8)] transition hover:translate-y-[-1px] hover:bg-brandBlue/90 sm:inline-flex md:hidden lg:inline-flex lg:px-5"
+            className="hidden min-h-[44px] items-center justify-center gap-2 rounded-full bg-brandBlue px-5 py-2.5 text-[0.92rem] font-bold leading-none text-white shadow-[0_14px_28px_-18px_rgba(47,115,255,0.8)] transition hover:-translate-y-0.5 hover:bg-indigo-600 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-100 sm:inline-flex lg:hidden xl:inline-flex"
           >
             {t("nav.getQuotes")}
             <ArrowRight className="h-4 w-4" />
@@ -308,8 +309,9 @@ export function Nav() {
           <Link
             href={moverAccountHref}
             title={moverAccountLabel}
-            className="hidden max-w-[13rem] whitespace-nowrap rounded-lg bg-accentOrange px-2.5 py-2 text-[0.82rem] font-semibold leading-none text-white shadow-sm sm:inline-flex sm:rounded sm:px-4 sm:py-2 sm:text-base lg:max-w-[16rem]"
+            className="hidden min-h-[44px] max-w-[13rem] items-center gap-2 whitespace-nowrap rounded-full border border-orange-600/15 bg-accentOrange px-4 py-2.5 text-[0.88rem] font-bold leading-none text-white shadow-[0_14px_28px_-20px_rgba(222,122,58,0.8)] transition hover:-translate-y-0.5 hover:bg-[#d96f31] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-orange-100 md:inline-flex lg:max-w-[16rem] lg:px-5"
           >
+            <UserRound className="h-4 w-4 shrink-0" aria-hidden="true" />
             <span className="truncate">{moverAccountLabel}</span>
           </Link>
           <button
@@ -318,7 +320,7 @@ export function Nav() {
             aria-controls="mobile-nav"
             aria-label={mobileMenuOpen ? t("publicShell.closeMenu") : t("publicShell.openMenu")}
             onClick={() => setMobileMenuOpen((open) => !open)}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#07162b] text-white shadow-[0_8px_18px_-10px_rgba(7,22,43,0.8)] transition hover:bg-slate-800 md:h-10 md:w-10 md:hidden"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#07162b] text-white shadow-[0_8px_18px_-10px_rgba(7,22,43,0.8)] transition hover:bg-slate-800 md:h-10 md:w-10 lg:hidden"
           >
             {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
@@ -336,7 +338,7 @@ export function Nav() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
               onClick={() => setMobileMenuOpen(false)}
-              className="fixed inset-0 z-40 bg-slate-950/30 backdrop-blur-[2px] md:hidden"
+              className="fixed inset-0 z-40 bg-slate-950/30 backdrop-blur-[2px] lg:hidden"
             />
             <motion.div
               id="mobile-nav"
@@ -344,7 +346,7 @@ export function Nav() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 28 }}
               transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-              className="absolute right-4 top-[calc(100%+0.75rem)] z-50 max-h-[calc(100svh-6rem)] w-[min(24rem,calc(100vw-2rem))] overflow-y-auto rounded-[28px] border border-slate-200 bg-white/95 p-3 shadow-[0_24px_70px_-32px_rgba(15,23,42,0.35)] backdrop-blur-xl md:hidden"
+              className="absolute right-4 top-[calc(100%+0.75rem)] z-50 max-h-[calc(100svh-6rem)] w-[min(24rem,calc(100vw-2rem))] overflow-y-auto rounded-[28px] border border-slate-200 bg-white/95 p-3 shadow-[0_24px_70px_-32px_rgba(15,23,42,0.35)] backdrop-blur-xl lg:hidden"
             >
               <nav className="flex flex-col">
                 <LanguageSelector className="mb-3 w-full" />

@@ -84,6 +84,7 @@ export default function CleanerRegisterPage() {
       eyebrow={t("cleanerAuth.register.eyebrow")}
       title={t("cleanerAuth.register.title")}
       description={t("cleanerAuth.register.description")}
+      accessMode="signup"
     >
       <div className="mt-6 flex gap-3 rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm leading-6 text-sky-900">
         <Info className="mt-0.5 h-5 w-5 shrink-0" />

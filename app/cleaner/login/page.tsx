@@ -89,6 +89,7 @@ export default function CleanerLoginPage() {
     <CleanerAuthShell
       eyebrow={codeEmail ? t("cleanerAuth.login.secureEyebrow") : t("cleanerAuth.login.welcomeEyebrow")}
       title={codeEmail ? t("cleanerAuth.login.checkEmailTitle") : t("cleanerAuth.login.title")}
+      accessMode="login"
       description={
         codeEmail
           ? t("cleanerAuth.login.codeDescription", { email: codeEmail })
