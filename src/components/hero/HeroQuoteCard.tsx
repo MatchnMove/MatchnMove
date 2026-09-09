@@ -1,13 +1,14 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { ArrowRight, ShieldCheck, Star } from "lucide-react";
+import { ArrowRight, ShieldCheck } from "lucide-react";
 import {
   AddressAutocomplete,
   AddressSuggestion
 } from "@/components/address-autocomplete";
 import { addressSuggestionToValue } from "@/lib/address-search";
 import { trackAnalyticsEvent } from "@/lib/analytics";
+import styles from "./HeroQuoteCard.module.css";
 
 type AddressState = {
   address: string;
@@ -109,19 +110,13 @@ export function HeroQuoteCard() {
   return (
     <form
       onSubmit={submit}
-      className="relative z-20 w-full overflow-visible rounded-[22px] border border-white/70 bg-white/95 p-3 text-left text-slate-950 shadow-[0_24px_70px_-30px_rgba(0,0,0,0.8)] backdrop-blur-xl sm:rounded-[26px] sm:p-4"
+      className={styles.card}
     >
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-[0.98rem] font-extrabold leading-tight tracking-[-0.02em] text-slate-950 sm:text-[1.2rem]">
-          Where are you moving?
-        </h2>
-        <div className="hidden items-center gap-1 text-xs font-bold text-slate-500 min-[380px]:flex">
-          <ShieldCheck className="h-4 w-4 text-emerald-500" />
-          Details kept private
-        </div>
-      </div>
+      <p className={styles.eyebrow}>Let’s get you moving</p>
+      <h2 className={styles.title}>Where are you moving?</h2>
+      <p className={styles.description}>A fresh start begins with a few details.</p>
 
-      <div className="mt-2.5 grid gap-2 sm:gap-2.5 sm:grid-cols-2">
+      <div className={styles.addressFields}>
         <AddressAutocomplete
           label="Moving from"
           placeholder="Pickup address"
@@ -141,10 +136,8 @@ export function HeroQuoteCard() {
             setErrors((current) => ({ ...current, from: undefined }));
           }}
           error={errors.from}
-          labelClassName="sr-only"
-          inputClassName={`w-full rounded-xl border bg-slate-50 py-2.5 pr-12 pl-10 text-[0.9rem] font-medium text-slate-900 placeholder:text-slate-400 transition duration-150 focus:bg-white focus:outline-none sm:rounded-2xl sm:pr-24 ${
-            errors.from ? "border-red-400 focus:border-red-400 focus:ring-4 focus:ring-red-100" : "border-slate-200 focus:border-brandBlue/70 focus:ring-4 focus:ring-brandBlue/15"
-          }`}
+          labelClassName={styles.label}
+          inputClassName={`${styles.input} ${errors.from ? styles.inputError : ""}`}
         />
         <AddressAutocomplete
           label="Moving to"
@@ -165,29 +158,19 @@ export function HeroQuoteCard() {
             setErrors((current) => ({ ...current, to: undefined }));
           }}
           error={errors.to}
-          labelClassName="sr-only"
-          inputClassName={`w-full rounded-xl border bg-slate-50 py-2.5 pr-12 pl-10 text-[0.9rem] font-medium text-slate-900 placeholder:text-slate-400 transition duration-150 focus:bg-white focus:outline-none sm:rounded-2xl sm:pr-24 ${
-            errors.to ? "border-red-400 focus:border-red-400 focus:ring-4 focus:ring-red-100" : "border-slate-200 focus:border-brandBlue/70 focus:ring-4 focus:ring-brandBlue/15"
-          }`}
+          labelClassName={styles.label}
+          inputClassName={`${styles.input} ${errors.to ? styles.inputError : ""}`}
         />
       </div>
 
-      <div className="mt-2.5 flex">
-        <button
-          type="submit"
-          className="inline-flex min-h-[46px] w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(110deg,#f7931e,#ffad38)] px-5 py-2.5 text-[0.95rem] font-extrabold text-[#07162b] shadow-[0_16px_30px_-16px_rgba(247,147,30,0.9)] transition duration-200 hover:translate-y-[-1px] hover:shadow-[0_20px_36px_-16px_rgba(247,147,30,0.9)] focus:outline-none focus:ring-4 focus:ring-orange-200 active:translate-y-0 sm:min-h-[48px] sm:w-auto sm:min-w-[210px] sm:rounded-2xl sm:text-base"
-        >
-          Start my free quote request
-          <ArrowRight className="h-4 w-4" />
-        </button>
-      </div>
-      <div className="mt-2.5 flex items-center justify-between gap-3 text-[0.7rem] font-semibold text-slate-500 sm:text-xs">
-        <span className="inline-flex items-center gap-1">
-          <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-          One request, relevant NZ movers
-        </span>
-        <span>100% free</span>
-      </div>
+      <button type="submit" className={styles.submit}>
+        Get my free quotes
+        <ArrowRight aria-hidden="true" size={18} strokeWidth={1.8} />
+      </button>
+      <p className={styles.reassurance}>
+        <ShieldCheck aria-hidden="true" size={16} strokeWidth={1.6} />
+        Free to compare. No obligation.
+      </p>
     </form>
   );
 }
