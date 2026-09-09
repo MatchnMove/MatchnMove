@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { requireAdminRequest } from "@/lib/admin-auth";
 import { getCleanerBillingPeriod } from "@/lib/cleaner-billing";
+import { getCleanerActivationError } from "@/lib/cleaner-readiness";
 import { prisma } from "@/lib/db";
+import { NZ_SERVICE_AREAS } from "@/lib/nz-regions";
 
 const statusUpdateSchema = z.object({
   cleanerId: z.string().trim().min(1),
@@ -114,34 +117,51 @@ export async function PATCH(request: NextRequest) {
 
   const existing = await prisma.cleanerCompany.findUnique({
     where: { id: parsed.data.cleanerId },
-    select: { id: true, companyName: true, status: true, user: { select: { emailVerifiedAt: true } } },
+    select: { id: true, companyName: true, status: true, serviceAreas: true, user: { select: { emailVerifiedAt: true } } },
   });
   if (!existing) return NextResponse.json({ error: "Cleaner company not found." }, { status: 404 });
-  if (parsed.data.status === "ACTIVE" && !existing.user.emailVerifiedAt) {
-    return NextResponse.json({ error: "Verify the cleaner email address before activation." }, { status: 400 });
+  if (parsed.data.status === "ACTIVE") {
+    const activationError = getCleanerActivationError({
+      emailVerified: Boolean(existing.user.emailVerifiedAt),
+      serviceAreas: existing.serviceAreas,
+    });
+    if (activationError) return NextResponse.json({ error: activationError }, { status: 400 });
   }
 
-  const cleaner = await prisma.$transaction(async (tx) => {
-    const updated = await tx.cleanerCompany.update({
-      where: { id: existing.id },
-      data: { status: parsed.data.status },
-      select: { id: true, status: true },
-    });
-    await tx.adminAuditLog.create({
-      data: {
-        actorId: admin.reviewerId,
-        action: "cleaner_status_updated",
-        meta: {
-          cleanerCompanyId: existing.id,
-          companyName: existing.companyName,
-          previousStatus: existing.status,
-          nextStatus: parsed.data.status,
-          reviewerId: admin.reviewerId,
+  try {
+    const cleaner = await prisma.$transaction(async (tx) => {
+      const updated = await tx.cleanerCompany.update({
+        where: {
+          id: existing.id,
+          // Activation must use the saved coverage even if a profile edit races it.
+          ...(parsed.data.status === "ACTIVE" ? {
+            serviceAreas: { hasSome: [...NZ_SERVICE_AREAS] },
+            user: { emailVerifiedAt: { not: null } },
+          } : {}),
         },
-      },
+        data: { status: parsed.data.status },
+        select: { id: true, status: true },
+      });
+      await tx.adminAuditLog.create({
+        data: {
+          actorId: admin.reviewerId,
+          action: "cleaner_status_updated",
+          meta: {
+            cleanerCompanyId: existing.id,
+            companyName: existing.companyName,
+            previousStatus: existing.status,
+            nextStatus: parsed.data.status,
+            reviewerId: admin.reviewerId,
+          },
+        },
+      });
+      return updated;
     });
-    return updated;
-  });
-
-  return NextResponse.json({ ok: true, cleaner });
+    return NextResponse.json({ ok: true, cleaner });
+  } catch (error) {
+    if (parsed.data.status === "ACTIVE" && error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+      return NextResponse.json({ error: "The cleaner must verify their email and save at least one service region before activation." }, { status: 400 });
+    }
+    throw error;
+  }
 }

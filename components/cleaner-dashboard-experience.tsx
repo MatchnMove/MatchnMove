@@ -41,6 +41,7 @@ import { useLanguage } from "@/components/language-provider";
 import { CleanerLeadTrendsCard } from "@/components/cleaner-lead-trends-card";
 import { trackAnalyticsEvent } from "@/lib/analytics";
 import { CLEANING_LEAD_PRICING } from "@/lib/cleaner-lead-pricing";
+import { canCleanerAccessLeads, hasCleanerServiceRegions } from "@/lib/cleaner-readiness";
 import { NZ_SERVICE_AREA_GROUPS } from "@/lib/nz-regions";
 
 type DashboardSection = "overview" | "leads" | "billing" | "account";
@@ -218,7 +219,11 @@ export function CleanerDashboardExperience({
 }) {
   const { t, formatCurrency, formatDate, formatNumber } = useLanguage();
   const [profile, setProfile] = useState(initialProfile);
-  const [section, setSectionState] = useState<DashboardSection>(isDashboardSection(initialSection) ? initialSection : "overview");
+  const [section, setSectionState] = useState<DashboardSection>(
+    isDashboardSection(initialSection) ? initialSection : hasCleanerServiceRegions(initialProfile.serviceAreas) ? "overview" : "account",
+  );
+  const hasServiceRegions = hasCleanerServiceRegions(profile.serviceAreas);
+  const canAccessLeads = canCleanerAccessLeads(profile);
   const [leads, setLeads] = useState<CleaningLead[]>([]);
   const [billing, setBilling] = useState<BillingSummary>({ currentInvoice: null, invoiceHistory: [] });
   const [loading, setLoading] = useState(true);
@@ -326,7 +331,7 @@ export function CleanerDashboardExperience({
 
   async function openLeadDetails(lead: CleaningLead) {
     setSelectedLead(lead);
-    if (lead.viewedAt || lead.unlocked || profile.status !== "ACTIVE") return;
+    if (lead.viewedAt || lead.unlocked || !canAccessLeads) return;
     setBusyLeadId(lead.id);
     try {
       const response = await fetch(`/api/cleaner/leads/${encodeURIComponent(lead.id)}/view`, { method: "POST" });
@@ -477,6 +482,20 @@ export function CleanerDashboardExperience({
 
         <main className="min-w-0 flex-1 px-4 py-5 sm:px-6 sm:py-7 lg:px-8 lg:py-8">
           <div className="mx-auto max-w-7xl">
+            {!hasServiceRegions ? (
+              <div className="mb-5 flex items-start gap-3 rounded-[22px] border border-sky-200 bg-sky-50 p-4 text-sm leading-6 text-sky-900">
+                <MapPin className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+                <div>
+                  <p className="font-bold">{t("cleanerDashboard.regionsRequiredTitle")}</p>
+                  <p className="mt-0.5">{t("cleanerDashboard.regionsRequiredCopy")}</p>
+                  {section !== "account" ? (
+                    <button type="button" onClick={() => changeSection("account")} className="mt-2 inline-flex min-h-11 items-center gap-2 rounded-xl bg-brandBlue px-4 py-2 font-bold text-white">
+                      {t("cleanerDashboard.chooseRegions")} <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
             {statusMessage ? (
               <div className="mb-5 flex items-start gap-3 rounded-[22px] border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
                 <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" /><div><p className="font-bold">{t("cleanerDashboard.accountStatus", { status: t(`status.${profile.status}`) })}</p><p className="mt-0.5">{statusMessage}</p></div>
@@ -501,7 +520,7 @@ export function CleanerDashboardExperience({
       {selectedLead ? (
           <LeadDetailsModal
           lead={selectedLead}
-          accountActive={profile.status === "ACTIVE"}
+          accountActive={canAccessLeads}
           busy={busyLeadId === selectedLead.id}
           active={!unlockLead}
           onClose={() => setSelectedLead(null)}
@@ -707,8 +726,34 @@ function AccountSection({ profile, onProfileChange, setNotice }: { profile: Clea
             <label className="text-sm font-semibold text-slate-700">Years operating <span className="font-normal text-slate-400">(optional)</span><input type="number" min="0" max="200" value={form.yearsOperating} onChange={(event) => setForm((current) => ({ ...current, yearsOperating: event.target.value }))} className={accountInputClass} /></label>
           </div>
           <label className="mt-4 block text-sm font-semibold text-slate-700">Business description <span className="font-normal text-slate-400">(optional)</span><textarea rows={4} maxLength={1000} value={form.businessDescription} onChange={(event) => setForm((current) => ({ ...current, businessDescription: event.target.value }))} className={`${accountInputClass} resize-y`} placeholder="Describe your cleaning team, services and what customers can expect." /><span className="mt-1 block text-right text-xs font-normal text-slate-400">{form.businessDescription.length}/1000</span></label>
-          <fieldset className="mt-5"><legend className="text-sm font-bold text-slate-800">Service regions</legend><p className="mt-1 text-xs leading-5 text-slate-500">Leads are matched to the property being cleaned, not its destination.</p><div className="mt-3 space-y-4 rounded-2xl bg-slate-50 p-4">{NZ_SERVICE_AREA_GROUPS.map((group) => <div key={group.id}><p className="mb-2 text-[0.65rem] font-bold uppercase tracking-[0.14em] text-slate-400">{group.label}</p><div className="flex flex-wrap gap-2">{group.regions.map((area) => { const selected = form.serviceAreas.includes(area); return <label key={area} className={`cursor-pointer rounded-full border px-3 py-1.5 text-xs font-bold transition ${selected ? "border-brandBlue bg-brandBlue text-white" : "border-slate-300 bg-white text-slate-600 hover:border-sky-300"}`}><input type="checkbox" className="sr-only" checked={selected} onChange={() => toggleArea(area)} />{area}</label>; })}</div></div>)}</div></fieldset>
-           <button disabled={saving || form.serviceAreas.length === 0} className="mt-6 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brandBlue px-5 py-2.5 text-sm font-bold text-white transition hover:bg-blue-700 disabled:opacity-60">{saving ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}{saving ? t("cleanerDashboard.saving") : t("cleanerDashboard.saveCompanyProfile")}</button>
+          <fieldset className="mt-5" aria-describedby="cleaner-service-regions-hint">
+            <legend className="text-sm font-bold text-slate-800">
+              {t("cleanerDashboard.regionsLegend")}
+              <span className="ml-2 inline-block rounded-full bg-sky-100 px-2 py-1 text-[0.65rem] font-bold text-sky-800">{t("cleanerDashboard.regionsRequired")}</span>
+            </legend>
+            <p className="mt-1 text-xs leading-5 text-slate-500">{t("cleanerDashboard.regionsCopy")}</p>
+            <div className="mt-3 space-y-4 rounded-2xl bg-slate-50 p-4">
+              {NZ_SERVICE_AREA_GROUPS.map((group) => (
+                <div key={group.id}>
+                  <p className="mb-2 text-[0.65rem] font-bold uppercase tracking-[0.14em] text-slate-400">{group.label}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {group.regions.map((area) => {
+                      const selected = form.serviceAreas.includes(area);
+                      return (
+                        <label key={area} className={`cursor-pointer rounded-full border px-3 py-1.5 text-xs font-bold transition focus-within:ring-2 focus-within:ring-brandBlue focus-within:ring-offset-2 ${selected ? "border-brandBlue bg-brandBlue text-white" : "border-slate-300 bg-white text-slate-600 hover:border-sky-300"}`}>
+                          <input type="checkbox" className="sr-only" checked={selected} onChange={() => toggleArea(area)} />{area}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p id="cleaner-service-regions-hint" className="mt-2 text-xs leading-5 text-slate-500">
+              {t(profile.status === "ACTIVE" ? "cleanerDashboard.regionsActiveHint" : "cleanerDashboard.regionsDraftHint")}
+            </p>
+          </fieldset>
+          <button disabled={saving || (profile.status === "ACTIVE" && !hasCleanerServiceRegions(form.serviceAreas))} className="mt-6 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brandBlue px-5 py-2.5 text-sm font-bold text-white transition hover:bg-blue-700 disabled:opacity-60">{saving ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}{saving ? t("cleanerDashboard.saving") : t("cleanerDashboard.saveCompanyProfile")}</button>
         </form>
         <div className="space-y-5">
           <form onSubmit={changePassword} className="rounded-[26px] border border-slate-200 bg-white p-5 sm:p-6"><div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-100 text-sky-700"><KeyRound className="h-5 w-5" /></span><div><h2 className="text-xl font-black tracking-[-0.03em]">Password</h2><p className="text-sm text-slate-500">Update your account security.</p></div></div><div className="mt-5 space-y-4"><label className="block text-sm font-semibold text-slate-700">Current password<input required type="password" autoComplete="current-password" value={passwordForm.currentPassword} onChange={(event) => setPasswordForm((current) => ({ ...current, currentPassword: event.target.value }))} className={accountInputClass} /></label><label className="block text-sm font-semibold text-slate-700">New password<input required type="password" autoComplete="new-password" value={passwordForm.password} onChange={(event) => setPasswordForm((current) => ({ ...current, password: event.target.value }))} className={accountInputClass} /></label><label className="block text-sm font-semibold text-slate-700">Confirm new password<input required type="password" autoComplete="new-password" value={passwordForm.confirmPassword} onChange={(event) => setPasswordForm((current) => ({ ...current, confirmPassword: event.target.value }))} className={accountInputClass} /></label></div><button disabled={changingPassword} className="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-slate-800 disabled:opacity-60">{changingPassword ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}{changingPassword ? "Updating..." : "Change password"}</button></form>

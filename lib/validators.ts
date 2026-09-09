@@ -73,8 +73,8 @@ export const cleanerRegisterSchema = z
     phone: z.string().trim().regex(phonePattern, "Enter a valid phone number"),
     serviceAreas: z
       .array(z.enum(NZ_SERVICE_AREAS))
-      .min(1, "Choose at least one coverage region")
-      .max(NZ_SERVICE_AREAS.length),
+      .max(NZ_SERVICE_AREAS.length)
+      .default([]),
     password: passwordSchema,
     confirmPassword: z.string(),
     acceptedTerms: z.literal(true, {
@@ -97,7 +97,6 @@ export const cleanerProfileSchema = z.object({
     .refine((value) => value === null || (Number.isInteger(value) && value >= 0 && value <= 200), "Years operating must be between 0 and 200"),
   serviceAreas: z
     .array(z.enum(NZ_SERVICE_AREAS))
-    .min(1, "Choose at least one coverage region")
     .max(NZ_SERVICE_AREAS.length),
   businessDescription: z.string().trim().max(1000, "Business description must be 1,000 characters or less").optional().or(z.literal("")).transform((value) => value || null),
 });

@@ -11,7 +11,6 @@ import {
 } from "@/components/cleaner-auth-shell";
 import { useLanguage } from "@/components/language-provider";
 import { formatCleaningLeadPrice } from "@/lib/cleaner-lead-pricing";
-import { NZ_SERVICE_AREA_GROUPS } from "@/lib/nz-regions";
 
 const initialForm = {
   name: "",
@@ -20,7 +19,6 @@ const initialForm = {
   phone: "",
   password: "",
   confirmPassword: "",
-  serviceAreas: [] as string[],
   acceptedTerms: false,
 };
 
@@ -38,15 +36,6 @@ export default function CleanerRegisterPage() {
     [t("cleanerAuth.register.lowercase"), /[a-z]/.test(form.password)],
     [t("cleanerAuth.register.number"), /[0-9]/.test(form.password)],
   ] as const;
-
-  function toggleArea(area: string) {
-    setForm((current) => ({
-      ...current,
-      serviceAreas: current.serviceAreas.includes(area)
-        ? current.serviceAreas.filter((item) => item !== area)
-        : [...current.serviceAreas, area],
-    }));
-  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -111,31 +100,6 @@ export default function CleanerRegisterPage() {
           </label>
         </div>
 
-        <fieldset>
-          <legend className="text-sm font-bold text-slate-900">{t("cleanerAuth.register.regionsLegend")}</legend>
-          <p className="mt-1 text-sm leading-6 text-slate-500">{t("cleanerAuth.register.regionsCopy")}</p>
-          <div className="mt-4 space-y-4 rounded-[22px] border border-slate-200 bg-slate-50/70 p-4">
-            {NZ_SERVICE_AREA_GROUPS.map((group) => (
-              <div key={group.id}>
-                <p className="mb-2 text-xs font-bold uppercase tracking-[0.16em] text-slate-500">{group.label}</p>
-                <div className="flex flex-wrap gap-2">
-                  {group.regions.map((area) => {
-                    const selected = form.serviceAreas.includes(area);
-                    return (
-                      <label key={area} className={`inline-flex cursor-pointer items-center gap-2 rounded-full border px-3 py-2 text-sm font-semibold transition ${selected ? "border-brandBlue bg-brandBlue text-white" : "border-slate-300 bg-white text-slate-700 hover:border-sky-300"}`}>
-                        <input type="checkbox" className="sr-only" checked={selected} onChange={() => toggleArea(area)} />
-                        {selected ? <Check className="h-3.5 w-3.5" /> : null}
-                        {area}
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-          <p aria-live="polite" className="mt-2 text-xs font-medium text-slate-500">{form.serviceAreas.length} {form.serviceAreas.length === 1 ? t("cleanerAuth.register.regionSelected") : t("cleanerAuth.register.regionsSelected")}</p>
-        </fieldset>
-
         <div className="grid gap-5 sm:grid-cols-2">
           <label className="block text-sm font-semibold text-slate-800">
             {t("cleanerAuth.register.password")}
@@ -166,7 +130,7 @@ export default function CleanerRegisterPage() {
           </span>
         </label>
 
-        <button disabled={submitting || form.serviceAreas.length === 0} className={cleanerPrimaryButtonClass}>
+        <button disabled={submitting} className={cleanerPrimaryButtonClass}>
           {submitting ? t("cleanerAuth.register.creating") : t("cleanerAuth.register.create")}
           {!submitting ? <ArrowRight className="h-4 w-4" /> : null}
         </button>

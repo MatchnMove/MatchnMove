@@ -1,6 +1,7 @@
 import { CleaningLeadStatus } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuthenticatedCleaner } from "@/lib/cleaner-auth";
+import { canCleanerAccessLeads } from "@/lib/cleaner-readiness";
 import {
   cleaningLeadForCleanerSelect,
   serializeCleaningLeadForCleaner,
@@ -44,9 +45,9 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json(
     leads.map((lead) => serializeCleaningLeadForCleaner(lead, {
-      // Admin deactivation immediately revokes dashboard access to stored PII,
+      // Incomplete or deactivated accounts cannot access stored PII,
       // while keeping privacy-safe lead and billing history visible.
-      revealCustomerDetails: cleaner.status === "ACTIVE",
+      revealCustomerDetails: canCleanerAccessLeads(cleaner),
     })),
     { headers: privateNoStoreHeaders },
   );

@@ -7,6 +7,7 @@ import {
 import { prisma } from "@/lib/db";
 import { CLEANING_LEAD_PRICING } from "@/lib/cleaner-lead-pricing";
 import { getCleaningGeneralLocation } from "@/lib/cleaner-lead-visibility";
+import { canCleanerAccessLeads } from "@/lib/cleaner-readiness";
 
 export const CLEANER_BILLING_TIME_ZONE = "Pacific/Auckland";
 
@@ -149,6 +150,7 @@ const purchasedLeadInclude = Prisma.validator<Prisma.CleaningLeadInclude>()({
   cleanerCompany: {
     select: {
       status: true,
+      serviceAreas: true,
     },
   },
   purchase: {
@@ -177,6 +179,9 @@ async function readPurchasedLead(cleaningLeadId: string, cleanerCompanyId: strin
   });
 
   if (!lead?.purchase) return null;
+  if (!canCleanerAccessLeads(lead.cleanerCompany)) {
+    throw new CleanerBillingError("CLEANER_INACTIVE", "An active cleaner account with saved service regions is required to open leads.");
+  }
   return {
     lead,
     purchase: lead.purchase,
@@ -216,8 +221,8 @@ export async function purchaseCleaningLead(input: {
           if (!lead) {
             throw new CleanerBillingError("LEAD_NOT_FOUND", "Cleaning lead not found.");
           }
-          if (lead.cleanerCompany.status !== "ACTIVE") {
-            throw new CleanerBillingError("CLEANER_INACTIVE", "This cleaner account cannot open leads.");
+          if (!canCleanerAccessLeads(lead.cleanerCompany)) {
+            throw new CleanerBillingError("CLEANER_INACTIVE", "An active cleaner account with saved service regions is required to open leads.");
           }
           if (lead.purchase) {
             return {

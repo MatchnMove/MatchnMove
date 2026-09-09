@@ -62,7 +62,7 @@
 .feature { display: flex; align-items: center; gap: 9px; color: #64748b; font-size: 11px; line-height: 1.45; }
 .feature svg { flex-shrink: 0; width: 17px; height: 17px; color: var(--accent); stroke-width: 1.9; }
 
-.arrow { position: absolute; top: calc(50% - 22px); z-index: 3; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 1px solid #edf0f7; border-radius: 50%; color: #64748b; background: rgb(255 255 255 / 97%); box-shadow: 0 7px 16px -8px rgb(67 87 102 / 35%); transition: color 180ms ease, box-shadow 180ms ease; }
+.arrow { position: absolute; top: calc(50% - 22px); z-index: 3; display: none; align-items: center; justify-content: center; width: 44px; height: 44px; border: 1px solid #edf0f7; border-radius: 50%; color: #64748b; background: rgb(255 255 255 / 97%); box-shadow: 0 7px 16px -8px rgb(67 87 102 / 35%); transition: color 180ms ease, box-shadow 180ms ease; }
 .arrow:hover { color: #5f6ee8; box-shadow: 0 7px 18px -7px rgb(95 110 232 / 40%); }
 .arrow svg { width: 22px; height: 22px; stroke-width: 2.3; }
 .previous { left: -20px; }
@@ -104,7 +104,7 @@
   .features { right: 9px; bottom: 23px; left: 16px; gap: 11px; }
   .feature { font-size: 10px; gap: 7px; }
   .feature svg { width: 16px; height: 16px; }
-  .arrow { top: calc(50% - 22px); }
+  .arrow { display: flex; top: calc(50% - 22px); }
   .previous { left: -25px; }
   .next { right: -25px; }
   .indicators { margin-top: 1px; }
@@ -138,6 +138,10 @@
   .actions { width: 100%; }
   .action { padding-inline: 12px; font-size: 11px; white-space: nowrap; }
   .illustration { width: 85px; height: 85px; top: 88px; right: -7px; }
+}
+
+@media (max-width: 767px) {
+  .arrow { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

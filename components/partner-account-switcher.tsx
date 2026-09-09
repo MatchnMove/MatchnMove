@@ -1,8 +1,9 @@
 "use client";
 
-import { useId, useRef, useState, type KeyboardEvent } from "react";
+import { useId, type KeyboardEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowRight, Building2, Check, ChevronLeft, ChevronRight, FileText, MapPin, Sparkles, Truck } from "lucide-react";
 import { cx } from "@/lib/utils";
 import styles from "./partner-account-switcher.module.css";
@@ -43,13 +44,18 @@ export function PartnerAccountSwitcher({ active, mode, onModeChange, className }
   onModeChange?: (mode: PartnerAccessMode) => void;
   className?: string;
 }) {
-  const [selectedBusiness, setSelectedBusiness] = useState<BusinessType>(active);
+  const router = useRouter();
   const headingId = useId();
   const descriptionId = useId();
-  const cardRefs = useRef<Partial<Record<BusinessType, HTMLButtonElement | null>>>({});
+
+  function selectBusiness(business: BusinessType) {
+    if (business !== active) {
+      router.push(accountHref(business, mode), { scroll: false });
+    }
+  }
 
   function switchBusiness() {
-    setSelectedBusiness((current) => current === "mover" ? "cleaner" : "mover");
+    selectBusiness(active === "mover" ? "cleaner" : "mover");
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
@@ -57,9 +63,8 @@ export function PartnerAccountSwitcher({ active, mode, onModeChange, className }
     event.preventDefault();
     const nextBusiness = event.key === "Home" ? "mover"
       : event.key === "End" ? "cleaner"
-      : selectedBusiness === "mover" ? "cleaner" : "mover";
-    setSelectedBusiness(nextBusiness);
-    cardRefs.current[nextBusiness]?.focus({ preventScroll: true });
+      : active === "mover" ? "cleaner" : "mover";
+    selectBusiness(nextBusiness);
   }
 
   return (
@@ -83,11 +88,10 @@ export function PartnerAccountSwitcher({ active, mode, onModeChange, className }
         </button>
         <div role="radiogroup" aria-labelledby={headingId} aria-describedby={descriptionId} className={styles.cards} onKeyDown={handleKeyDown}>
           {businessTypes.map(({ id, icon: Icon, name, copy, image, features }) => {
-            const selected = selectedBusiness === id;
+            const selected = active === id;
             return (
               <button
                 key={id}
-                ref={(element) => { cardRefs.current[id] = element; }}
                 type="button"
                 role="radio"
                 aria-checked={selected}
@@ -95,7 +99,7 @@ export function PartnerAccountSwitcher({ active, mode, onModeChange, className }
                 tabIndex={selected ? 0 : -1}
                 className={cx(styles.businessCard, id === "mover" ? styles.mover : styles.cleaner)}
                 data-selected={selected}
-                onClick={() => setSelectedBusiness(id)}
+                onClick={() => selectBusiness(id)}
               >
                 <span className={styles.cardWash} aria-hidden="true" />
                 <span className={styles.iconTile}><Icon aria-hidden="true" /></span>
@@ -119,7 +123,7 @@ export function PartnerAccountSwitcher({ active, mode, onModeChange, className }
 
       <div className={styles.indicators} aria-label="Business type carousel controls">
         {businessTypes.map(({ id, name }) => (
-          <button key={id} type="button" className={styles.indicator} aria-label={`Select ${name.toLowerCase()} company`} aria-pressed={selectedBusiness === id} onClick={() => setSelectedBusiness(id)}>
+          <button key={id} type="button" className={styles.indicator} aria-label={`Select ${name.toLowerCase()} company`} aria-pressed={active === id} onClick={() => selectBusiness(id)}>
             <span />
           </button>
         ))}
@@ -131,12 +135,12 @@ export function PartnerAccountSwitcher({ active, mode, onModeChange, className }
           {(["signup", "login"] as const).map((nextMode) => {
             const label = nextMode === "signup" ? "Create an account" : "Log in";
             const actionClass = cx(styles.action, nextMode === "signup" ? styles.createAccount : styles.logIn);
-            return onModeChange && selectedBusiness === active ? (
+            return onModeChange ? (
               <button key={nextMode} type="button" onClick={() => onModeChange(nextMode)} className={actionClass} aria-pressed={mode === nextMode}>
                 {label}
               </button>
             ) : (
-              <Link key={nextMode} href={accountHref(selectedBusiness, nextMode)} className={actionClass} aria-current={selectedBusiness === active && mode === nextMode ? "page" : undefined}>
+              <Link key={nextMode} href={accountHref(active, nextMode)} className={actionClass} aria-current={mode === nextMode ? "page" : undefined}>
                 {label}
               </Link>
             );

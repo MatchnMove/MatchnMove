@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuthenticatedCleaner } from "@/lib/cleaner-auth";
+import { canCleanerAccessLeads } from "@/lib/cleaner-readiness";
 import {
   cleaningLeadForCleanerSelect,
   serializeCleaningLeadForCleaner,
@@ -20,9 +21,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       { status: 401, headers: privateNoStoreHeaders },
     );
   }
-  if (cleaner.status !== "ACTIVE") {
+  if (!canCleanerAccessLeads(cleaner)) {
     return NextResponse.json(
-      { error: "This cleaner account is not active and cannot update leads." },
+      { error: "An active cleaner account with saved service regions is required to update leads." },
       { status: 403, headers: privateNoStoreHeaders },
     );
   }

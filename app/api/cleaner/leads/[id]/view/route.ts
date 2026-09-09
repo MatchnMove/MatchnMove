@@ -1,6 +1,7 @@
 import { CleaningLeadStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { requireAuthenticatedCleaner } from "@/lib/cleaner-auth";
+import { canCleanerAccessLeads } from "@/lib/cleaner-readiness";
 import {
   cleaningLeadForCleanerSelect,
   serializeCleaningLeadForCleaner,
@@ -21,9 +22,9 @@ export async function POST(_: Request, { params }: { params: Promise<{ id: strin
       { status: 401, headers: privateNoStoreHeaders },
     );
   }
-  if (cleaner.status !== "ACTIVE") {
+  if (!canCleanerAccessLeads(cleaner)) {
     return NextResponse.json(
-      { error: "This cleaner account is not active and cannot view new leads." },
+      { error: "An active cleaner account with saved service regions is required to view new leads." },
       { status: 403, headers: privateNoStoreHeaders },
     );
   }
