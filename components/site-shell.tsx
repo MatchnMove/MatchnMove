@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, ChevronDown, Mail, Menu, ShieldCheck, Sparkles, UserRound, X } from "lucide-react";
-import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { ReactNode, useCallback, useEffect, useId, useRef, useState } from "react";
 import { LanguageSelector } from "@/components/language-selector";
 import { useLanguage } from "@/components/language-provider";
 import { SITE_EMAILS, toMailto } from "@/lib/site-emails";
@@ -157,6 +157,7 @@ function translatePublicShellLabel(t: (key: string) => string, label: string) {
 
 export function Nav() {
   const pathname = usePathname();
+  const logoFilterId = useId();
   const { t } = useLanguage();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [moverSession, setMoverSession] = useState<MoverSessionState | null>(null);
@@ -252,6 +253,15 @@ export function Nav() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/95 shadow-[0_10px_30px_-28px_rgba(15,23,42,0.5)] backdrop-blur-xl">
+      <svg aria-hidden="true" focusable="false" className="pointer-events-none absolute h-0 w-0">
+        <defs>
+          <filter id={logoFilterId} colorInterpolationFilters="sRGB">
+            {/* Remove the white image background while retaining the saturated brand colours. */}
+            <feColorMatrix in="SourceGraphic" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  -1 -1 -1 0 3" result="withoutWhite" />
+            <feComposite in="withoutWhite" in2="SourceGraphic" operator="in" />
+          </filter>
+        </defs>
+      </svg>
       <div className="container-shell flex items-center justify-between gap-3 py-2.5 sm:gap-4 sm:py-3">
         <Link
           href="/"
@@ -265,6 +275,7 @@ export function Nav() {
             fill
             sizes="(min-width: 1024px) 265px, (min-width: 640px) 220px, 168px"
             className="object-contain object-left"
+            style={{ filter: `url(#${logoFilterId})` }}
           />
         </Link>
         <nav className="hidden items-center gap-0.5 rounded-full border border-slate-200/80 bg-slate-50/80 p-1 font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] lg:flex" aria-label={t("publicShell.mainNavigation")}>
