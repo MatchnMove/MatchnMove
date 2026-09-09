@@ -1,114 +1,142 @@
+"use client";
+
+import { useId, useRef, useState, type KeyboardEvent } from "react";
+import Image from "next/image";
 import Link from "next/link";
-import { Building2, Check, Sparkles } from "lucide-react";
+import { ArrowRight, Building2, Check, ChevronLeft, ChevronRight, FileText, MapPin, Sparkles, Truck } from "lucide-react";
 import { cx } from "@/lib/utils";
+import styles from "./partner-account-switcher.module.css";
 
 export type PartnerAccessMode = "login" | "signup";
+type BusinessType = "mover" | "cleaner";
 
-export function PartnerAccountSwitcher({
-  active,
-  mode,
-  onModeChange,
-  className,
-}: {
-  active: "mover" | "cleaner";
+const businessTypes = [
+  {
+    id: "mover", icon: Building2, name: "Moving", copy: "Create a mover account",
+    image: "/images/partner-access/moving-truck.png",
+    features: [
+      { icon: Truck, label: "Manage your movers" },
+      { icon: MapPin, label: "Showcase service areas" },
+      { icon: FileText, label: "Receive and manage leads" },
+    ],
+  },
+  {
+    id: "cleaner", icon: Sparkles, name: "Cleaning", copy: "Create a cleaner account",
+    image: "/images/partner-access/cleaning-spray.png",
+    features: [
+      { icon: Sparkles, label: "Manage your cleaners" },
+      { icon: MapPin, label: "Showcase service areas" },
+      { icon: FileText, label: "Receive and manage leads" },
+    ],
+  },
+] as const;
+
+function accountHref(business: BusinessType, mode: PartnerAccessMode) {
+  return business === "mover"
+    ? `/mover/login?mode=${mode}`
+    : mode === "signup" ? "/cleaner/register" : "/cleaner/login";
+}
+
+export function PartnerAccountSwitcher({ active, mode, onModeChange, className }: {
+  active: BusinessType;
   mode: PartnerAccessMode;
   onModeChange?: (mode: PartnerAccessMode) => void;
   className?: string;
 }) {
-  const options = [
-    {
-      id: "mover" as const,
-      href: `/mover/login?mode=${mode}`,
-      icon: Building2,
-      title: "Moving company",
-      copy: mode === "signup" ? "Create a mover account" : "Access your mover dashboard",
-    },
-    {
-      id: "cleaner" as const,
-      href: mode === "signup" ? "/cleaner/register" : "/cleaner/login",
-      icon: Sparkles,
-      title: "Cleaning company",
-      copy: mode === "signup" ? "Create a cleaner account" : "Access your cleaner dashboard",
-    },
-  ];
+  const [selectedBusiness, setSelectedBusiness] = useState<BusinessType>(active);
+  const headingId = useId();
+  const descriptionId = useId();
+  const cardRefs = useRef<Partial<Record<BusinessType, HTMLButtonElement | null>>>({});
+
+  function switchBusiness() {
+    setSelectedBusiness((current) => current === "mover" ? "cleaner" : "mover");
+  }
+
+  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    const nextBusiness = event.key === "Home" ? "mover"
+      : event.key === "End" ? "cleaner"
+      : selectedBusiness === "mover" ? "cleaner" : "mover";
+    setSelectedBusiness(nextBusiness);
+    cardRefs.current[nextBusiness]?.focus({ preventScroll: true });
+  }
 
   return (
-    <section className={cx("rounded-[24px] border border-slate-200 bg-slate-50/80 p-3 sm:p-4", className)} aria-labelledby="partner-type-heading">
-      <div className="mb-3 sm:flex sm:items-end sm:justify-between sm:gap-4">
-        <div>
-          <p id="partner-type-heading" className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">
-            Choose your business type
+    <section className={cx(styles.selector, className)} aria-labelledby={headingId}>
+      <div className={styles.header}>
+        <div className={styles.intro}>
+          <p id={headingId} className={styles.eyebrow}>Choose your business type</p>
+          <p id={descriptionId} className={styles.description}>
+            Movers and cleaners have separate accounts and dashboards.
           </p>
-          <p className="mt-1 text-sm leading-5 text-slate-600">Movers and cleaners have separate accounts and dashboards.</p>
         </div>
-        <p className="mt-2 text-xs font-semibold text-brandBlue sm:mt-0">Match &apos;n Move partner access</p>
+        <p className={styles.partnerAccess}>
+          Match &apos;n Move<br />
+          <span>partner access <ArrowRight aria-hidden="true" /></span>
+        </p>
       </div>
 
-      <nav aria-label="Choose partner account type" className="grid gap-2 sm:grid-cols-2">
-        {options.map(({ id, href, icon: Icon, title, copy }) => {
-          const selected = active === id;
-          return (
-            <Link
-              key={id}
-              href={href}
-              aria-current={selected ? "page" : undefined}
-              className={cx(
-                "group flex min-h-[76px] items-center gap-3 rounded-[18px] border px-3.5 py-3 text-left transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-100",
-                selected
-                  ? id === "mover"
-                    ? "border-brandBlue/50 bg-white text-slate-950 shadow-[0_12px_26px_-20px_rgba(47,115,255,0.75)]"
-                    : "border-orange-300 bg-white text-slate-950 shadow-[0_12px_26px_-20px_rgba(222,122,58,0.75)]"
-                  : "border-transparent bg-transparent text-slate-600 hover:border-slate-200 hover:bg-white",
-              )}
-            >
-              <span
-                className={cx(
-                  "flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl transition",
-                  id === "mover"
-                    ? selected ? "bg-brandBlue text-white" : "bg-indigo-100 text-brandBlue"
-                    : selected ? "bg-accentOrange text-white" : "bg-orange-100 text-orange-700",
-                )}
+      <div className={styles.carousel}>
+        <button type="button" className={cx(styles.arrow, styles.previous)} onClick={switchBusiness} aria-label="Previous business type">
+          <ChevronLeft aria-hidden="true" />
+        </button>
+        <div role="radiogroup" aria-labelledby={headingId} aria-describedby={descriptionId} className={styles.cards} onKeyDown={handleKeyDown}>
+          {businessTypes.map(({ id, icon: Icon, name, copy, image, features }) => {
+            const selected = selectedBusiness === id;
+            return (
+              <button
+                key={id}
+                ref={(element) => { cardRefs.current[id] = element; }}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                aria-label={`${name} company`}
+                tabIndex={selected ? 0 : -1}
+                className={cx(styles.businessCard, id === "mover" ? styles.mover : styles.cleaner)}
+                data-selected={selected}
+                onClick={() => setSelectedBusiness(id)}
               >
-                <Icon className="h-5 w-5" aria-hidden="true" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="flex items-center gap-2 text-sm font-black">
-                  {title}
-                  {selected ? (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-2 py-0.5 text-[0.62rem] font-bold uppercase tracking-[0.12em] text-white">
-                      <Check className="h-3 w-3" aria-hidden="true" /> Selected
-                    </span>
-                  ) : null}
+                <span className={styles.cardWash} aria-hidden="true" />
+                <span className={styles.iconTile}><Icon aria-hidden="true" /></span>
+                <span className={styles.selectedBadge} aria-hidden="true"><Check /> Selected</span>
+                <span className={styles.cardHeading}>{name}<br />company</span>
+                <span className={styles.cardCopy}>{copy}</span>
+                <Image src={image} width={240} height={240} alt="" sizes="(max-width: 480px) 112px, 150px" className={styles.illustration} />
+                <span className={styles.features}>
+                  {features.map(({ icon: FeatureIcon, label }) => (
+                    <span key={label} className={styles.feature}><FeatureIcon aria-hidden="true" /><span>{label}</span></span>
+                  ))}
                 </span>
-                <span className="mt-0.5 block text-xs font-medium leading-5 text-slate-500">{copy}</span>
-              </span>
-            </Link>
-          );
-        })}
-      </nav>
-
-      <div className="mt-3 flex flex-col gap-2 border-t border-slate-200 pt-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-xs font-bold uppercase tracking-[0.15em] text-slate-500">I want to</p>
-        <nav aria-label="Choose sign up or log in" className="inline-flex rounded-full border border-slate-200 bg-white p-1 text-sm font-bold shadow-sm">
-          {(["signup", "login"] as const).map((nextMode) => {
-            const selected = mode === nextMode;
-            const label = nextMode === "signup" ? "Create an account" : "Log in";
-            const className = cx(
-              "flex min-h-9 items-center justify-center rounded-full px-4 py-1.5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brandBlue/30",
-              selected ? "bg-slate-900 text-white shadow-sm" : "text-slate-600 hover:bg-slate-100 hover:text-slate-950",
+              </button>
             );
+          })}
+        </div>
+        <button type="button" className={cx(styles.arrow, styles.next)} onClick={switchBusiness} aria-label="Next business type">
+          <ChevronRight aria-hidden="true" />
+        </button>
+      </div>
 
-            return onModeChange ? (
-              <button key={nextMode} type="button" onClick={() => onModeChange(nextMode)} className={className} aria-pressed={selected}>
+      <div className={styles.indicators} aria-label="Business type carousel controls">
+        {businessTypes.map(({ id, name }) => (
+          <button key={id} type="button" className={styles.indicator} aria-label={`Select ${name.toLowerCase()} company`} aria-pressed={selectedBusiness === id} onClick={() => setSelectedBusiness(id)}>
+            <span />
+          </button>
+        ))}
+      </div>
+
+      <div className={styles.footer}>
+        <p className={styles.eyebrow}>I want to</p>
+        <nav className={styles.actions} aria-label="Choose sign up or log in">
+          {(["signup", "login"] as const).map((nextMode) => {
+            const label = nextMode === "signup" ? "Create an account" : "Log in";
+            const actionClass = cx(styles.action, nextMode === "signup" ? styles.createAccount : styles.logIn);
+            return onModeChange && selectedBusiness === active ? (
+              <button key={nextMode} type="button" onClick={() => onModeChange(nextMode)} className={actionClass} aria-pressed={mode === nextMode}>
                 {label}
               </button>
             ) : (
-              <Link
-                key={nextMode}
-                href={active === "mover" ? `/mover/login?mode=${nextMode}` : nextMode === "signup" ? "/cleaner/register" : "/cleaner/login"}
-                className={className}
-                aria-current={selected ? "page" : undefined}
-              >
+              <Link key={nextMode} href={accountHref(selectedBusiness, nextMode)} className={actionClass} aria-current={selectedBusiness === active && mode === nextMode ? "page" : undefined}>
                 {label}
               </Link>
             );
