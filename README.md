@@ -77,6 +77,11 @@ See [Production operations](docs/PRODUCTION_OPERATIONS.md) for the launch-scale 
 - `NEXT_PUBLIC_NO_REPLY_EMAIL`
 
 ## Optional integrations
+- `ADDRESS_AUTOCOMPLETE_BASE_URL`
+  Optional Photon-compatible `/api/` endpoint. When Google Places is unavailable, automatic suggestions
+  use Photon with NZ filtering, a 5-minute bounded cache, and shared requests. Defaults to
+  `https://photon.komoot.io/api/`; its public service is intended for reasonable request volumes and
+  has no availability guarantee. Configure a hosted/private instance for higher traffic.
 - `ADDRESS_SEARCH_BASE_URL`
   Optional Nominatim-compatible endpoint for explicit manual searches. The public endpoint is never used for autocomplete.
 - `GOOGLE_CLOUD_PROJECT_ID`

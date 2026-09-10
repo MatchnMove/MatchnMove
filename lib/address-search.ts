@@ -48,3 +48,24 @@ export const parseNominatimAddress = (x: NominatimResult): AddressSuggestion => 
 export function addressSuggestionToValue(suggestion: AddressSuggestion) {
   return suggestion.street || suggestion.label;
 }
+
+/** Photon returns OSM address components, including partial street/locality matches. */
+export function parsePhotonAddress(properties: Record<string, unknown>): AddressSuggestion | null {
+  const text = (key: string) => typeof properties[key] === "string" ? properties[key].trim() : "";
+  if (text("countrycode").toUpperCase() !== "NZ") return null;
+  const name = text("name");
+  const road = text("street") || (text("type") === "street" ? name : "");
+  const street = [road ? text("housenumber") : "", road].filter(Boolean).join(" ");
+  const suburb = text("district") || text("locality");
+  const city = (text("type") === "city" ? name : "") || text("city") || text("county");
+  const region = text("state") || (text("type") === "state" ? name : "");
+  const postcode = text("postcode");
+  const parts = [name, street, suburb, city, region, postcode].filter(Boolean);
+  if (!parts.length) return null;
+  return {
+    label: [...new Set([...parts, "New Zealand"])].join(", "),
+    street, suburb, city, region, postcode,
+    country: "New Zealand",
+    provider: "openstreetmap",
+  };
+}

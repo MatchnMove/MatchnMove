@@ -43,7 +43,6 @@ export function AddressAutocomplete({
   const [searchError, setSearchError] = useState("");
   const [activeIndex, setActiveIndex] = useState(-1);
   const [provider, setProvider] = useState<"google" | "openstreetmap" | null>(null);
-  const [autocompleteAvailable, setAutocompleteAvailable] = useState(true);
   const abortControllerRef = useRef<AbortController | null>(null);
   const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchSeqRef = useRef(0);
@@ -60,6 +59,7 @@ export function AddressAutocomplete({
   const searchAddresses = useCallback(async (mode: "autocomplete" | "manual") => {
     const query = value.trim();
     abortControllerRef.current?.abort();
+    const searchSeq = ++searchSeqRef.current;
 
     if (query.length < 3) {
       setLoading(false);
@@ -73,8 +73,6 @@ export function AddressAutocomplete({
 
     const controller = new AbortController();
     abortControllerRef.current = controller;
-    const searchSeq = searchSeqRef.current + 1;
-    searchSeqRef.current = searchSeq;
     setIsOpen(true);
     setLoading(true);
     setHasSearched(false);
@@ -82,7 +80,7 @@ export function AddressAutocomplete({
 
     try {
       if (mode === "autocomplete" && !sessionTokenRef.current) {
-        sessionTokenRef.current = crypto.randomUUID();
+        sessionTokenRef.current = globalThis.crypto?.randomUUID?.() || "";
       }
       const params = new URLSearchParams({ q: query, mode });
       if (mode === "autocomplete") params.set("sessionToken", sessionTokenRef.current);
@@ -103,29 +101,19 @@ export function AddressAutocomplete({
       const nextProvider =
         typeof data === "object" && data !== null && "provider" in data && data.provider === "google"
           ? "google"
-          : mode === "manual"
+          : (typeof data === "object" && data !== null && "provider" in data && data.provider === "openstreetmap") || mode === "manual"
             ? "openstreetmap"
             : null;
 
       setSuggestions(nextSuggestions);
       setProvider(nextProvider);
       setActiveIndex(nextSuggestions.length > 0 ? 0 : -1);
-      if (mode === "autocomplete") {
-        setAutocompleteAvailable(response.ok);
-        if (!response.ok) setIsOpen(false);
-      }
-      setSearchError(response.ok || mode === "autocomplete" ? "" : "Address search is temporarily unavailable. You can still type the address manually.");
+      setSearchError(response.ok ? "" : "Address suggestions are temporarily unavailable. Try Search or type the full address manually.");
     } catch {
       if (controller.signal.aborted || searchSeq !== searchSeqRef.current) return;
       setSuggestions([]);
       setActiveIndex(-1);
-      if (mode === "autocomplete") {
-        setAutocompleteAvailable(false);
-        setSearchError("");
-        setIsOpen(false);
-      } else {
-        setSearchError("Address search is temporarily unavailable. You can still type the address manually.");
-      }
+      setSearchError("Address suggestions are temporarily unavailable. Try Search or type the full address manually.");
     } finally {
       if (!controller.signal.aborted && searchSeq === searchSeqRef.current) {
         setLoading(false);
@@ -135,26 +123,29 @@ export function AddressAutocomplete({
   }, [value]);
 
   useEffect(() => {
-    return () => abortControllerRef.current?.abort();
+    return () => {
+      abortControllerRef.current?.abort();
+      if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
+    };
   }, []);
 
   useEffect(() => {
     const query = value.trim();
-    if (!isInputFocused || !userTypedRef.current || !autocompleteAvailable || query.length < 3) return;
+    if (!isInputFocused || !userTypedRef.current || query.length < 3) return;
 
     const timer = setTimeout(() => {
-      void searchAddresses("autocomplete");
-    }, 350);
+      if (userTypedRef.current) void searchAddresses("autocomplete");
+    }, 450);
 
     return () => clearTimeout(timer);
-  }, [autocompleteAvailable, isInputFocused, searchAddresses, value]);
+  }, [isInputFocused, searchAddresses, value]);
 
   const selectSuggestion = async (suggestion: AddressSuggestion) => {
     let selectedSuggestion = suggestion;
 
     clearBlurTimer();
     userTypedRef.current = false;
-    searchSeqRef.current += 1;
+    const searchSeq = ++searchSeqRef.current;
     abortControllerRef.current?.abort();
     setIsInputFocused(false);
     setIsOpen(false);
@@ -169,14 +160,17 @@ export function AddressAutocomplete({
     }
 
     if (suggestion.provider === "google" && suggestion.placeId) {
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
       setLoading(true);
       try {
         const params = new URLSearchParams({
           placeId: suggestion.placeId,
           sessionToken: sessionTokenRef.current,
         });
-        const response = await fetch(`/api/address-search/details?${params.toString()}`);
+        const response = await fetch(`/api/address-search/details?${params.toString()}`, { signal: controller.signal });
         const data: unknown = await response.json().catch(() => ({}));
+        if (controller.signal.aborted || searchSeq !== searchSeqRef.current) return;
         if (
           !response.ok ||
           typeof data !== "object" ||
@@ -187,6 +181,7 @@ export function AddressAutocomplete({
         }
         selectedSuggestion = data.suggestion as AddressSuggestion;
       } catch {
+        if (controller.signal.aborted || searchSeq !== searchSeqRef.current) return;
         setSearchError("Could not load that address. Please choose it again or type it manually.");
         setIsOpen(true);
         setIsInputFocused(true);
@@ -207,6 +202,10 @@ export function AddressAutocomplete({
 
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Escape") {
+      userTypedRef.current = false;
+      searchSeqRef.current += 1;
+      abortControllerRef.current?.abort();
+      setLoading(false);
       setIsOpen(false);
       setSuggestions([]);
       setActiveIndex(-1);
@@ -260,6 +259,9 @@ export function AddressAutocomplete({
           onBlur={() => {
             blurTimerRef.current = setTimeout(() => {
               userTypedRef.current = false;
+              searchSeqRef.current += 1;
+              abortControllerRef.current?.abort();
+              setLoading(false);
               setIsInputFocused(false);
               setIsOpen(false);
               setSuggestions([]);
@@ -271,7 +273,10 @@ export function AddressAutocomplete({
             userTypedRef.current = true;
             setIsInputFocused(true);
             onChange(event.target.value);
+            searchSeqRef.current += 1;
             abortControllerRef.current?.abort();
+            setLoading(false);
+            setActiveIndex(-1);
             setSuggestions([]);
             setSearchError("");
             setHasSearched(false);
@@ -288,6 +293,7 @@ export function AddressAutocomplete({
           role="combobox"
           aria-autocomplete="list"
           aria-controls={listboxId}
+          aria-activedescendant={showDropdown && activeIndex >= 0 ? `${listboxId}-option-${activeIndex}` : undefined}
           aria-expanded={showDropdown}
           aria-invalid={Boolean(error)}
         />
@@ -322,6 +328,7 @@ export function AddressAutocomplete({
           {suggestions.map((suggestion, index) => (
             <button
               key={`${suggestion.label}-${index}`}
+              id={`${listboxId}-option-${index}`}
               type="button"
               role="option"
               aria-selected={activeIndex === index}

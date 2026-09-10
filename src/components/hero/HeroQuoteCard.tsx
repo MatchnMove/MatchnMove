@@ -52,12 +52,12 @@ export function HeroQuoteCard() {
   };
 
   const updateFromAddress = (address: string) => {
-    setFrom((current) => ({ ...current, address }));
+    setFrom({ ...emptyAddress, address });
     setErrors((current) => ({ ...current, from: undefined }));
   };
 
   const updateToAddress = (address: string) => {
-    setTo((current) => ({ ...current, address }));
+    setTo({ ...emptyAddress, address });
     setErrors((current) => ({ ...current, to: undefined }));
   };
 

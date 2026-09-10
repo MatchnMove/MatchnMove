@@ -3,7 +3,10 @@ import { parseNominatimAddress } from "@/lib/address-search";
 import type { NominatimResult } from "@/lib/address-search";
 import { autocompleteGooglePlaces, isGooglePlacesConfigured } from "@/lib/google-places";
 import { requestNominatim } from "@/lib/nominatim";
+import { autocompletePhoton } from "@/lib/photon";
 import { getClientIp, rateLimit } from "@/lib/rate-limit";
+
+let googleRetryAt = 0;
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -20,26 +23,27 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ available: true, suggestions: [] });
   }
 
-  if (mode === "autocomplete") {
-    if (!isGooglePlacesConfigured()) {
-      return NextResponse.json(
-        { available: false, autocomplete: false, suggestions: [] },
-        { status: 503 },
-      );
-    }
+  if (query.length > 300) {
+    return NextResponse.json({ error: "Address search is too long.", suggestions: [] }, { status: 400 });
+  }
 
+  if (mode === "autocomplete") {
+    if (isGooglePlacesConfigured() && Date.now() >= googleRetryAt) {
+      try {
+        const suggestions = await autocompleteGooglePlaces(query, sessionToken);
+        return NextResponse.json({ available: true, autocomplete: true, provider: "google", attribution: "Google Maps", suggestions });
+      } catch {
+        // Avoid making every keystroke wait on the same unavailable provider.
+        googleRetryAt = Date.now() + 60_000;
+        console.warn("Google Places autocomplete unavailable; using Photon fallback.");
+      }
+    }
     try {
-      const suggestions = await autocompleteGooglePlaces(query, sessionToken);
-      return NextResponse.json({
-        available: true,
-        autocomplete: true,
-        provider: "google",
-        attribution: "Google Maps",
-        suggestions,
-      });
+      const suggestions = await autocompletePhoton(query);
+      return NextResponse.json({ available: true, autocomplete: true, provider: "openstreetmap", attribution: "OpenStreetMap contributors", suggestions });
     } catch {
       return NextResponse.json(
-        { available: false, autocomplete: false, suggestions: [] },
+        { available: false, error: "Suggestions are temporarily unavailable. Try Search or enter the address manually.", suggestions: [] },
         { status: 503 },
       );
     }
