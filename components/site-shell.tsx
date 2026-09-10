@@ -451,7 +451,7 @@ export function Footer() {
             </div>
           </div>
 
-          <div className="grid gap-8 py-10 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 xl:gap-8 xl:py-12">
+          <div className="grid gap-8 py-10 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[repeat(5,minmax(0,1fr))_minmax(260px,1.5fr)] xl:gap-6 xl:py-12">
             {footerGroups.map((group) => (
               <div key={group.title}>
                 <h3 className="text-sm font-bold uppercase tracking-[0.18em] text-slate-900">{translatePublicShellLabel(t, group.title)}</h3>
@@ -482,7 +482,7 @@ export function Footer() {
 
               <div className="mt-6 rounded-[28px] border border-slate-800/10 bg-[linear-gradient(145deg,#0f172a,#152645)] p-5 text-white shadow-[0_24px_44px_-28px_rgba(15,23,42,0.8)]">
                 <div className="flex items-center gap-2 text-sm font-semibold text-emerald-200">
-                  <ShieldCheck className="h-4 w-4" />
+                  <ShieldCheck className="h-4 w-4 shrink-0" />
                   {t("publicShell.commitment")}
                 </div>
                 <p className="mt-3 max-w-[20rem] text-sm leading-6 text-slate-300">
@@ -490,10 +490,10 @@ export function Footer() {
                 </p>
                 <Link
                   href="/quote"
-                  className="mt-5 inline-flex min-h-[46px] items-center justify-center gap-2 rounded-2xl bg-accentOrange px-5 py-3 text-sm font-semibold text-white transition hover:translate-y-[-1px] hover:bg-orange-500"
+                  className="mt-5 inline-flex min-h-[46px] items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-accentOrange px-5 py-3 text-sm font-semibold text-white transition hover:translate-y-[-1px] hover:bg-orange-500"
                 >
                   {t("publicShell.getQuotesNow")}
-                  <ArrowRight className="h-4 w-4" />
+                  <ArrowRight className="h-4 w-4 shrink-0" />
                 </Link>
               </div>
             </div>
