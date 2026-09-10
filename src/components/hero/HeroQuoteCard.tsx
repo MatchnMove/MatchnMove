@@ -113,7 +113,7 @@ export function HeroQuoteCard() {
       className={styles.card}
     >
       <p className={styles.eyebrow}>Let’s get you moving</p>
-      <h2 className={styles.title}>Where are you moving?</h2>
+      <h2 className={styles.title}>Where are you moving to?</h2>
       <p className={styles.description}>A fresh start begins with a few details.</p>
 
       <div className={styles.addressFields}>

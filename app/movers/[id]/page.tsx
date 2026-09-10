@@ -7,16 +7,13 @@ import { ReviewStars } from "@/components/review-stars";
 import { SiteShell } from "@/components/site-shell";
 import { PUBLIC_MOVER_DESCRIPTION_FALLBACK } from "@/lib/public-mover-constants";
 import { formatServiceAreaLabel } from "@/lib/nz-regions";
-import { getPublicMoverProfile, getPublicMovers } from "@/lib/public-movers";
+import { getPublicMoverProfile } from "@/lib/public-movers";
 import { absoluteUrl, createPageMetadata, SITE_URL } from "@/lib/seo";
 
-export const revalidate = 300;
-export const dynamicParams = true;
-
-export async function generateStaticParams() {
-  const movers = await getPublicMovers();
-  return movers.map((mover) => ({ id: mover.id }));
-}
+// The shared layout reads the visitor's language cookie. Profiles must render
+// per request, including movers published after the build; data stays cached
+// separately in getPublicMoverProfile.
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,
