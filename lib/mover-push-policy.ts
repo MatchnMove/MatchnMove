@@ -1,5 +1,13 @@
 import { z } from "zod";
 
+export function isSameOriginPushRequest(origin: string | null, host: string | null, protocol: string) {
+  if (!origin || !host || !["https", "http"].includes(protocol)) return false;
+  try {
+    const parsed = new URL(origin);
+    return parsed.origin === origin && parsed.host === host && parsed.protocol === `${protocol}:`;
+  } catch { return false; }
+}
+
 export function isAllowedPushEndpoint(value: string) {
   try {
     const url = new URL(value);

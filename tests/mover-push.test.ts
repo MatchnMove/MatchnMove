@@ -3,8 +3,16 @@ import test from "node:test";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 import { createECDH, randomBytes } from "node:crypto";
-import { getMoverPushPayload, isAllowedPushEndpoint, pushFailureAction, pushSubscriptionSchema } from "../lib/mover-push-policy";
+import { getMoverPushPayload, isAllowedPushEndpoint, isSameOriginPushRequest, pushFailureAction, pushSubscriptionSchema } from "../lib/mover-push-policy";
 import { applicationServerKey, getInstallPlatform } from "../lib/mover-app-client";
+
+test("notification mutations validate the public HTTPS origin behind a reverse proxy", () => {
+  assert.equal(isSameOriginPushRequest("https://www.matchnmove.co.nz", "www.matchnmove.co.nz", "https"), true);
+  assert.equal(isSameOriginPushRequest("http://127.0.0.1:3000", "127.0.0.1:3000", "http"), true);
+  for (const origin of [null, "null", "https://evil.test", "http://www.matchnmove.co.nz", "https://www.matchnmove.co.nz/path", "https://www.matchnmove.co.nz.evil.test"]) {
+    assert.equal(isSameOriginPushRequest(origin, "www.matchnmove.co.nz", "https"), false);
+  }
+});
 
 test("push subscription validation only permits real HTTPS push services and valid keys", () => {
   const ecdh = createECDH("prime256v1");

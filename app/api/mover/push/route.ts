@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuthenticatedMover } from "@/lib/mover-profile";
 import { deliverMoverPush, getMoverPushConfig } from "@/lib/mover-push";
-import { pushEndpointSchema, pushSubscriptionSchema } from "@/lib/mover-push-policy";
+import { isSameOriginPushRequest, pushEndpointSchema, pushSubscriptionSchema } from "@/lib/mover-push-policy";
 import { rateLimit } from "@/lib/rate-limit";
 
 const headers = { "Cache-Control": "private, no-store" };
@@ -24,7 +24,11 @@ export async function GET() {
 
 function validRequest(request: NextRequest) {
   const origin = request.headers.get("origin");
-  return origin === request.nextUrl.origin && request.headers.get("content-type")?.includes("application/json")
+  // Railway terminates HTTPS before forwarding to Next's internal hostname.
+  // Compare the browser origin with the public host/protocol, not localhost.
+  const host = request.headers.get("x-forwarded-host") || request.headers.get("host");
+  const protocol = request.headers.get("x-forwarded-proto") || request.nextUrl.protocol.replace(":", "");
+  return isSameOriginPushRequest(origin, host, protocol) && request.headers.get("content-type")?.includes("application/json")
     && Number(request.headers.get("content-length") || 0) <= 8192;
 }
 
