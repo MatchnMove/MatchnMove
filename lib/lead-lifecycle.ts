@@ -3,7 +3,7 @@ import { LeadStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { sendMoverLeadExpiryWarningEmail, sendMoverNewLeadEmail } from "@/lib/email";
 import { calculateLeadPrice } from "@/lib/lead-pricing";
-import { isMoverProfileLive } from "@/lib/mover-profile";
+import { canMoverAccessLeads } from "@/lib/mover-lead-access";
 import { getQuoteServiceAreas } from "@/lib/nz-regions";
 
 export const INITIAL_LEAD_RECIPIENT_LIMIT = 5;
@@ -335,7 +335,7 @@ async function findReplacementMover(quoteRequestId: string, matchedRegions: stri
     },
   });
 
-  return selectLeadRecipients(candidates.filter(isMoverProfileLive), 1)[0] ?? null;
+  return selectLeadRecipients(candidates.filter(canMoverAccessLeads), 1)[0] ?? null;
 }
 
 function buildLeadEmailInput(lead: LeadEmailContext) {

@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { expireAndRedistributeLead, isLeadPastExpiry, isLeadUnlockable } from "@/lib/lead-lifecycle";
 import { serializeMoverLeadQuoteRequest } from "@/lib/mover-lead-visibility";
-import { isMoverProfileLive } from "@/lib/mover-profile";
+import { getMoverLeadAccessError } from "@/lib/mover-lead-access";
 import { getMoverLaunchTrialSetting } from "@/lib/platform-settings";
 import { revalidateAboutPage } from "@/lib/public-cache";
 
@@ -34,9 +34,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "This mover account is suspended and cannot open leads." }, { status: 403 });
   }
 
-  if (!isMoverProfileLive(lead.moverCompany)) {
+  const accessError = getMoverLeadAccessError(lead.moverCompany);
+  if (accessError) {
     return NextResponse.json(
-      { error: "Complete mover verification in the dashboard before opening new lead details." },
+      { error: accessError },
       { status: 403 },
     );
   }

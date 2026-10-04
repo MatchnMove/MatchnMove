@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { serializeMoverLeadQuoteRequest } from "@/lib/mover-lead-visibility";
-import { calculateMoverProfileReadiness } from "@/lib/mover-profile";
+import { getMoverLeadAccessError } from "@/lib/mover-lead-access";
 
 export async function GET() {
   const session = await auth();
@@ -16,8 +16,9 @@ export async function GET() {
   if (mover.status !== "ACTIVE") {
     return NextResponse.json({ error: "This mover account is suspended." }, { status: 403 });
   }
-  if (!calculateMoverProfileReadiness(mover).isLive) {
-    return NextResponse.json({ error: "Complete mover verification before accessing leads." }, { status: 403 });
+  const accessError = getMoverLeadAccessError(mover);
+  if (accessError) {
+    return NextResponse.json({ error: accessError }, { status: 403 });
   }
 
   const leads = await prisma.lead.findMany({

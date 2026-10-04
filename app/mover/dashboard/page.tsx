@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { LEAD_PRICING } from "@/lib/lead-pricing";
 import { serializeMoverLeadQuoteRequest } from "@/lib/mover-lead-visibility";
+import { canMoverAccessLeads } from "@/lib/mover-lead-access";
 import { calculateMoverProfileReadiness, isPhoneVerificationRequired } from "@/lib/mover-profile";
 import { getMoverLogoUrl } from "@/lib/mover-logo";
 import { getQuoteServiceAreas, sanitiseNzServiceAreas } from "@/lib/nz-regions";
@@ -97,6 +98,7 @@ export default async function MoverDashboardPage({
   const moverServiceAreas = sanitiseNzServiceAreas(mover.serviceAreas);
 
   const readiness = calculateMoverProfileReadiness(mover);
+  const canAccessLeads = canMoverAccessLeads(mover);
   const activePipelineStatuses = ["NEW", "NOTIFIED", "VIEWED"] as const;
   const wonStatuses = ["WON"] as const;
   const purchasedStatuses = ["PURCHASED", "CONTACTED", "WON"] as const;
@@ -149,6 +151,7 @@ export default async function MoverDashboardPage({
     launchTrial,
     profileCompletion: readiness.completion,
     readiness,
+    canAccessLeads,
     stats: {
       activeLeads: mover.leads.filter((lead) => activePipelineStatuses.includes(lead.status as (typeof activePipelineStatuses)[number])).length,
       purchasedLeads: mover.leads.filter((lead) => purchasedStatuses.includes(lead.status as (typeof purchasedStatuses)[number])).length,
@@ -178,7 +181,7 @@ export default async function MoverDashboardPage({
       lastAction: lead.auditLogs[0]?.action ?? null,
       routeMatch: matchesServiceArea(moverServiceAreas, lead.quoteRequest),
       quoteRequest: serializeMoverLeadQuoteRequest(
-        mover.status === "ACTIVE" && readiness.isLive ? lead.status : "VERIFICATION_REQUIRED",
+        canAccessLeads ? lead.status : "ACCESS_REQUIRED",
         lead.quoteRequest,
       ),
     })),

@@ -22,6 +22,7 @@ type SecurityMover = {
   companyName: string;
   email: string;
   emailVerified: boolean;
+  canAccessLeads: boolean;
   documentsCount: number;
   readiness: {
     completion: number;
@@ -420,13 +421,13 @@ export function MoverSecurityPanel({ mover, onOpenDestination }: Props) {
               />
               <StatusCard
                 title="Lead access"
-                value={mover.readiness.isLive ? "Enabled for verified profile" : "Paused until verified"}
+                value={mover.canAccessLeads ? "Enabled" : "Account setup required"}
                 description={
-                  mover.readiness.isLive
-                    ? "Only your verified company account can open leads assigned to this profile."
-                    : "Complete the verification checklist before opening new lead details."
+                  mover.canAccessLeads
+                    ? "Your active account can open assigned leads while business and document verification is pending."
+                    : "Lead access requires an active account, a verified email and valid service regions."
                 }
-                good={mover.readiness.isLive}
+                good={mover.canAccessLeads}
               />
               <StatusCard
                 title="Payment security"

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { sendVerificationReviewSubmitted } from "@/lib/email";
 import { calculateMoverProfileReadiness, isPhoneVerificationRequired, requireAuthenticatedMover } from "@/lib/mover-profile";
 import { getMoverLogoUrl } from "@/lib/mover-logo";
+import { canMoverAccessLeads } from "@/lib/mover-lead-access";
 import { NZBN_VERIFICATION, verifyNzbnAgainstRegister } from "@/lib/nzbn-verification";
 import { revalidateAboutPage, revalidatePublicMovers } from "@/lib/public-cache";
 import { moverProfileSchema, sanitiseServiceAreas } from "@/lib/validators";
@@ -49,6 +50,7 @@ function serialiseProfile(mover: NonNullable<Awaited<ReturnType<typeof requireAu
       createdAt: document.createdAt.toISOString(),
     })),
     readiness,
+    canAccessLeads: canMoverAccessLeads(mover),
   };
 }
 

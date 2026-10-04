@@ -42,6 +42,7 @@ type DashboardMover = {
   status: string;
   email: string;
   emailVerified: boolean;
+  canAccessLeads: boolean;
   contactPerson: string;
   phone: string;
   phoneVerifiedAt?: string | null;
@@ -693,7 +694,7 @@ export function MoverDashboardExperience({
             ) : null}
 
             {activeTab === "overview" ? <OverviewPanel mover={profile} routeFitCount={routeFitCount} onOpenTab={openTab} onOpenDestination={openDashboardDestination} /> : null}
-            {activeTab === "leads" ? <LeadsPanel filteredLeads={filteredLeads} laneFilter={laneFilter} onLaneFilterChange={setLaneFilter} selectedLead={selectedLead} selectedLeadId={selectedLeadId} onSelectLead={setSelectedLeadId} onUnlockLead={unlockLead} onUpdateLeadStatus={updateLeadStatus} busyLeadId={busyLeadId} actionMessage={leadActionMessage} actionError={leadActionError} nowMs={nowMs} readiness={profile.readiness} launchTrial={profile.launchTrial} onOpenDestination={openDashboardDestination} /> : null}
+            {activeTab === "leads" ? <LeadsPanel filteredLeads={filteredLeads} laneFilter={laneFilter} onLaneFilterChange={setLaneFilter} selectedLead={selectedLead} selectedLeadId={selectedLeadId} onSelectLead={setSelectedLeadId} onUnlockLead={unlockLead} onUpdateLeadStatus={updateLeadStatus} busyLeadId={busyLeadId} actionMessage={leadActionMessage} actionError={leadActionError} nowMs={nowMs} canAccessLeads={profile.canAccessLeads} launchTrial={profile.launchTrial} onOpenDestination={openDashboardDestination} /> : null}
             {activeTab === "ratings" ? <MoverRatingsPanel ratings={profile.ratings} /> : null}
             {activeTab === "profile" ? <ProfilePanel mover={profile} focusSection={profileFocusSection} onFocusHandled={() => setProfileFocusSection(null)} onOpenSecurity={() => openDashboardDestination("security")} onProfileChange={(nextProfile) => setProfile((current) => ({ ...current, ...nextProfile, documentsCount: nextProfile.documents.length, profileCompletion: nextProfile.readiness.completion }))} /> : null}
             {activeTab === "payments" ? <PaymentsPanel billingState={billingState} /> : null}
@@ -1136,7 +1137,7 @@ type LeadsPanelProps = {
   actionMessage: string | null;
   actionError: string | null;
   nowMs: number;
-  readiness: DashboardMover["readiness"];
+  canAccessLeads: boolean;
   launchTrial: DashboardMover["launchTrial"];
   onOpenDestination: (destination: DashboardDestination) => void;
 };
@@ -1154,7 +1155,7 @@ function LeadsPanel({
   actionMessage,
   actionError,
   nowMs,
-  readiness,
+  canAccessLeads,
   launchTrial,
   onOpenDestination,
 }: LeadsPanelProps) {
@@ -1266,13 +1267,13 @@ function LeadsPanel({
               {selectedLeadExpiry ? <ExpiryStatusChip state={selectedLeadExpiry} /> : null}
             </div>
             <div className="mt-4 flex flex-col gap-2 sm:mt-5 sm:gap-3 sm:flex-row">
-              {isUnlockedStatus(selectedLead.status) && readiness.isLive ? (
+              {isUnlockedStatus(selectedLead.status) && canAccessLeads ? (
                 <div className="flex min-h-[48px] flex-1 items-center justify-center rounded-2xl bg-emerald-50 px-4 text-sm font-semibold text-emerald-700 sm:min-h-[52px] sm:px-5">{t("moverDashboard.leadOpen")}</div>
               ) : !canOpenLead(selectedLead, nowMs) ? (
                 <div className="flex min-h-[48px] flex-1 items-center justify-center rounded-2xl bg-rose-50 px-4 text-sm font-semibold text-rose-700 sm:min-h-[52px] sm:px-5">
                   {selectedLeadExpiry?.tone === "expired" ? t("moverDashboard.leadExpired") : t("moverDashboard.leadUnavailable")}
                 </div>
-              ) : !readiness.isLive ? (
+              ) : !canAccessLeads ? (
                 <div className="flex-1 rounded-[20px] border border-amber-200 bg-amber-50 p-3 sm:rounded-[24px] sm:p-4">
                    <p className="text-sm font-semibold text-amber-900">{t("moverDashboard.verificationBeforeOpening")}</p>
                   <p className="mt-1 text-sm leading-6 text-amber-800">
@@ -1307,7 +1308,7 @@ function LeadsPanel({
                 {actionMessage}
               </div>
             ) : null}
-            {isUnlockedStatus(selectedLead.status) && readiness.isLive ? (
+            {isUnlockedStatus(selectedLead.status) && canAccessLeads ? (
               <div className="mt-4 grid gap-3 sm:mt-5 sm:gap-4 xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
                 <div className="rounded-[20px] border border-emerald-200 bg-emerald-50 p-4 sm:rounded-[24px] sm:p-5">
                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-700 sm:text-sm">{t("moverDashboard.customerDetails")}</p>
@@ -1329,7 +1330,7 @@ function LeadsPanel({
                 </div>
               </div>
             ) : null}
-            {isUnlockedStatus(selectedLead.status) && readiness.isLive ? (
+            {isUnlockedStatus(selectedLead.status) && canAccessLeads ? (
               <div className="mt-4 rounded-[20px] border border-slate-200 bg-slate-50 p-4 sm:mt-5 sm:rounded-[24px] sm:p-5">
                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700 sm:text-sm">{t("moverDashboard.moveProgress")}</p>
                 <div className="mt-3 flex flex-wrap gap-2">

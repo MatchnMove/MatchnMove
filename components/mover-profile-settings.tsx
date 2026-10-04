@@ -53,6 +53,7 @@ export type MoverProfileState = {
   serviceAreas: string[];
   email: string;
   emailVerified: boolean;
+  canAccessLeads: boolean;
   logoUrl: string | null;
   documents: ProfileDocument[];
   readiness: {
@@ -420,6 +421,7 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
           serviceAreas: data?.serviceAreas ?? payload.serviceAreas,
           email: data?.email ?? profile.email,
           emailVerified: typeof data?.emailVerified === "boolean" ? data.emailVerified : profile.emailVerified,
+          canAccessLeads: data?.canAccessLeads ?? profile.canAccessLeads,
           logoUrl: data?.logoUrl ?? profile.logoUrl,
           documents: data?.documents ?? profile.documents,
           companyName: data?.companyName ?? profile.companyName,
@@ -851,7 +853,7 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
           </div>
 
           <p className="mt-3 text-sm leading-6 text-slate-600">
-            Complete every verification check before your mover profile can go live or open new leads.
+            Complete every verification check to earn a verified profile badge. Active accounts with a verified email and service regions can access matching leads while these checks are pending.
           </p>
 
           <div className="mt-4 h-3 rounded-full bg-slate-200">

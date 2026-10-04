@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { isMoverProfileLive } from "@/lib/mover-profile";
+import { getMoverLeadAccessError } from "@/lib/mover-lead-access";
 
 const privateNoStoreHeaders = { "Cache-Control": "private, no-store" };
 const viewableStatuses = ["NEW", "NOTIFIED"] as const;
@@ -31,9 +31,10 @@ export async function POST(_: Request, { params }: { params: Promise<{ id: strin
   if (!lead) {
     return NextResponse.json({ error: "Lead not found" }, { status: 404, headers: privateNoStoreHeaders });
   }
-  if (lead.moverCompany.status !== "ACTIVE" || !isMoverProfileLive(lead.moverCompany)) {
+  const accessError = getMoverLeadAccessError(lead.moverCompany);
+  if (accessError) {
     return NextResponse.json(
-      { error: "Complete mover verification before viewing assigned leads." },
+      { error: accessError },
       { status: 403, headers: privateNoStoreHeaders },
     );
   }

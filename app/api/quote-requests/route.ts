@@ -8,6 +8,7 @@ import { getLeadExpiryDate, getQuoteMatchedRegions, selectLeadRecipients, sendMo
 import { calculateLeadPrice } from "@/lib/lead-pricing";
 import { resolveLocale } from "@/lib/i18n/config";
 import { isMoverProfileLive } from "@/lib/mover-profile";
+import { canMoverAccessLeads, getMoverLeadAccessError } from "@/lib/mover-lead-access";
 import { quoteSchema } from "@/lib/validators";
 import { getClientIp, rateLimit } from "@/lib/rate-limit";
 
@@ -249,7 +250,8 @@ export async function POST(req: NextRequest) {
         })
       : [];
     const verifiedMovers = matchedMovers.filter(isMoverProfileLive);
-    const selectedMovers = selectLeadRecipients(verifiedMovers);
+    const eligibleMovers = matchedMovers.filter(canMoverAccessLeads);
+    const selectedMovers = selectLeadRecipients(eligibleMovers);
 
     await prisma.adminAuditLog.create({
       data: {
@@ -259,6 +261,11 @@ export async function POST(req: NextRequest) {
           matchedRegions,
           matchedMoverCount: matchedMovers.length,
           verifiedMoverCount: verifiedMovers.length,
+          eligibleMoverCount: eligibleMovers.length,
+          excludedMovers: matchedMovers.filter((mover) => !canMoverAccessLeads(mover)).map((mover) => ({
+            moverCompanyId: mover.id,
+            reason: getMoverLeadAccessError(mover),
+          })),
           selectedMoverCount: selectedMovers.length,
           cleaningSelected,
         },
@@ -317,7 +324,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       id: quote.id,
       distributedTo: selectedMovers.length,
-      matchingMovers: verifiedMovers.length,
+      matchingMovers: eligibleMovers.length,
       cleaningRequested: cleaningSelected,
       cleaningDistributedTo: cleaningDistribution?.assignedCount ?? 0,
       matchingCleaners: cleaningDistribution?.matchingCleanerCount ?? 0,

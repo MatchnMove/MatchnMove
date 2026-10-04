@@ -5,7 +5,7 @@ import { isLeadUnlockable } from "@/lib/lead-lifecycle";
 import { revalidateAboutPage } from "@/lib/public-cache";
 import { sendReviewInviteForLeadCompletion } from "@/lib/reviews";
 import { leadStatusUpdateSchema } from "@/lib/validators";
-import { isMoverProfileLive } from "@/lib/mover-profile";
+import { getMoverLeadAccessError } from "@/lib/mover-lead-access";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -42,8 +42,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (lead.moverCompany.status !== "ACTIVE") {
     return NextResponse.json({ error: "This mover account is suspended and cannot update leads." }, { status: 403 });
   }
-  if (!isMoverProfileLive(lead.moverCompany)) {
-    return NextResponse.json({ error: "Complete mover verification before updating leads." }, { status: 403 });
+  const accessError = getMoverLeadAccessError(lead.moverCompany);
+  if (accessError) {
+    return NextResponse.json({ error: accessError }, { status: 403 });
   }
 
   if (lead.status === "EXPIRED" || (!isLeadUnlockable(lead.status) && !["PURCHASED", "CONTACTED", "WON", "LOST", "ARCHIVED"].includes(lead.status))) {
