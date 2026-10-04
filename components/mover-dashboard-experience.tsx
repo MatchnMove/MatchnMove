@@ -34,6 +34,8 @@ import { MoverLeadTrendsCard } from "@/components/mover-lead-trends-card";
 import { LanguageSelector } from "@/components/language-selector";
 import { useLanguage } from "@/components/language-provider";
 import { cx } from "@/lib/utils";
+import { MoverAppInstallCard } from "@/components/mover-app-install-card";
+import { disconnectMoverPushDevice } from "@/lib/mover-app-client";
 
 type DashboardMover = {
   accountId: string;
@@ -502,6 +504,7 @@ export function MoverDashboardExperience({
     setLogoutLoading(true);
 
     try {
+      await disconnectMoverPushDevice().catch(() => undefined);
       await fetch("/api/mover/logout", { method: "POST" });
       window.location.replace("/mover/login");
     } catch {
@@ -655,6 +658,7 @@ export function MoverDashboardExperience({
           </aside>
 
           <main className="space-y-3 sm:space-y-4">
+            <MoverAppInstallCard accountId={profile.accountId} isTestAccount={profile.status === "TEST"} />
             {profile.status === "TEST" ? (
               <div className="rounded-[24px] border border-sky-200 bg-sky-50 p-4 text-sky-950 shadow-sm sm:rounded-[30px] sm:p-5">
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-700">{t("moverDashboard.testAccount")}</p>

@@ -5,6 +5,7 @@ import { sendMoverLeadExpiryWarningEmail, sendMoverNewLeadEmail } from "@/lib/em
 import { calculateLeadPrice } from "@/lib/lead-pricing";
 import { canMoverAccessLeads } from "@/lib/mover-lead-access";
 import { getQuoteServiceAreas } from "@/lib/nz-regions";
+import { notifyMoverPushForLead } from "@/lib/mover-push";
 
 export const INITIAL_LEAD_RECIPIENT_LIMIT = 5;
 export const LEAD_EXPIRY_HOURS = 48;
@@ -79,7 +80,13 @@ export function isLeadPastExpiry(lead: { expiresAt: Date | null; purchasedAt?: D
 }
 
 export async function sendMoverNewLeadNotification(lead: LeadEmailContext) {
-  return sendMoverNewLeadEmail(buildLeadEmailInput(lead));
+  const [email, push] = await Promise.allSettled([
+    sendMoverNewLeadEmail(buildLeadEmailInput(lead)),
+    notifyMoverPushForLead(lead.id),
+  ]);
+  if (push.status === "rejected") console.warn("Mover push notification could not be queued", { leadId: lead.id });
+  if (email.status === "rejected") throw email.reason;
+  return email.value;
 }
 
 export async function processLeadLifecycle(limit = 50) {

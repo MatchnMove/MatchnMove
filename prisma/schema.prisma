@@ -179,6 +179,7 @@ model MoverCompany {
   reviewSurveyInvites          ReviewSurveyInvite[]
   phoneVerificationCodes       PhoneVerificationCode[]
   verificationAudits           VerificationAudit[]
+  pushSubscriptions            MoverPushSubscription[]
 
   @@index([status, updatedAt])
   @@index([nzbnVerificationStatus, updatedAt])
@@ -416,12 +417,48 @@ model Lead {
   auditLogs           AuditLog[]
   review              Review?
   reviewSurveyInvite  ReviewSurveyInvite?
+  pushDeliveries      MoverPushDelivery[]
 
   @@index([quoteRequestId])
   @@index([moverCompanyId, createdAt])
   @@index([moverCompanyId, status])
   @@index([status, expiresAt])
   @@index([reminderSentAt, createdAt])
+}
+
+model MoverPushSubscription {
+  id             String              @id @default(cuid())
+  moverCompanyId String
+  endpoint       String              @unique
+  p256dh         String
+  auth           String
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  moverCompany   MoverCompany        @relation(fields: [moverCompanyId], references: [id], onDelete: Cascade)
+  deliveries     MoverPushDelivery[]
+
+  @@index([moverCompanyId])
+}
+
+model MoverPushDelivery {
+  id             String                @id @default(cuid())
+  dedupeKey      String                @unique
+  subscriptionId String
+  leadId         String?
+  kind           String                @default("LEAD")
+  status         String                @default("QUEUED")
+  attempts       Int                   @default(0)
+  nextAttemptAt  DateTime              @default(now())
+  expiresAt      DateTime
+  sentAt         DateTime?
+  lastError      String?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  subscription   MoverPushSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  lead           Lead?                 @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([status, nextAttemptAt])
+  @@index([leadId])
 }
 
 model Review {

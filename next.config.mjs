@@ -17,6 +17,7 @@ const nextConfig = {
     ];
 
     return [
+      { source: "/mover-sw.js", headers: [{ key: "Cache-Control", value: "no-cache, no-store, must-revalidate" }, { key: "Service-Worker-Allowed", value: "/mover/" }] },
       { source: "/api/:path*", headers: noIndexHeaders },
       { source: "/admin/:path*", headers: noIndexHeaders },
       { source: "/review/:path*", headers: noIndexHeaders },

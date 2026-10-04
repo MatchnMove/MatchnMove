@@ -17,6 +17,7 @@ import {
   X,
 } from "lucide-react";
 import { cx } from "@/lib/utils";
+import { disconnectMoverPushDevice } from "@/lib/mover-app-client";
 
 type SecurityMover = {
   companyName: string;
@@ -307,6 +308,7 @@ export function MoverSecurityPanel({ mover, onOpenDestination }: Props) {
     setLogoutLoading(true);
 
     try {
+      await disconnectMoverPushDevice().catch(() => undefined);
       await fetch("/api/mover/logout", { method: "POST" });
       window.location.replace("/mover/login");
     } finally {
