@@ -11,6 +11,7 @@ import { isMoverProfileLive } from "@/lib/mover-profile";
 import { canMoverAccessLeads, getMoverLeadAccessError } from "@/lib/mover-lead-access";
 import { quoteSchema } from "@/lib/validators";
 import { getClientIp, rateLimit } from "@/lib/rate-limit";
+import { revalidateAboutPage } from "@/lib/public-cache";
 
 const CONSENT_VERSION = "2026-09-cleaning-v1";
 
@@ -234,6 +235,8 @@ export async function POST(req: NextRequest) {
         cleaningDistributedTo: cleaningDistribution?.assignedCount ?? 0,
       });
     }
+
+    revalidateAboutPage();
 
     const cleaningRequest = await ensureCleaningRequestSafely({
       quoteRequestId: quote.id,

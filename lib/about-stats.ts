@@ -18,7 +18,7 @@ function isRealMover(mover: { id: string; nzbnVerificationSource: string | null 
 
 export const getAboutPageStats = cacheTaggedData(async (): Promise<AboutPageStats> => {
   try {
-    const [movers, successfulMoves] = await Promise.all([
+    const [movers, successfulLeads] = await Promise.all([
       prisma.moverCompany.findMany({
         where: { status: "ACTIVE" },
         select: {
@@ -31,13 +31,8 @@ export const getAboutPageStats = cacheTaggedData(async (): Promise<AboutPageStat
         },
         orderBy: { createdAt: "desc" },
       }),
-      prisma.lead.count({
-        where: {
-          status: {
-            in: ["PURCHASED", "CONTACTED", "WON"],
-          },
-        },
-      }),
+      // Count each customer submission once, regardless of mover assignments or lead status.
+      prisma.quoteRequest.count(),
     ]);
 
     return [
@@ -48,7 +43,7 @@ export const getAboutPageStats = cacheTaggedData(async (): Promise<AboutPageStat
         serviceAreas: mover.serviceAreas,
         yearsOperating: mover.yearsOperating,
       })),
-      successfulMoves,
+      successfulLeads,
       movers.filter(isRealMover).length,
     ];
   } catch {

@@ -68,7 +68,7 @@ const storyCards = [
 export const dynamic = "force-dynamic";
 
 export default async function AboutPage() {
-  const [movers, successfulMoves, moverCount] = await getAboutPageStats();
+  const [movers, successfulLeads, moverCount] = await getAboutPageStats();
 
   const moversWithLogos = movers.filter((mover) => Boolean(mover.logoUrl));
   const networkServiceAreas = dedupeServiceAreaLabels(movers.flatMap((mover) => mover.serviceAreas).filter(Boolean));
@@ -118,9 +118,9 @@ export default async function AboutPage() {
                   <p className="mt-1 text-sm text-slate-300">Companies currently in the network.</p>
                 </div>
                 <div className="rounded-[18px] border border-white/10 bg-white/[0.08] px-4 py-3 backdrop-blur sm:rounded-[24px] sm:py-4">
-                  <p className="text-xs uppercase tracking-[0.18em] text-sky-100/75">Successful moves</p>
-                  <p className="mt-2 text-3xl font-black tracking-[-0.05em] text-white">{successfulMoves}</p>
-                  <p className="mt-1 text-sm text-slate-300">Live count based on leads taken by movers.</p>
+                  <p className="text-xs uppercase tracking-[0.18em] text-sky-100/75">Successful leads</p>
+                  <p className="mt-2 text-3xl font-black tracking-[-0.05em] text-white">{successfulLeads}</p>
+                  <p className="mt-1 text-sm text-slate-300">Total quote requests submitted since launch.</p>
                 </div>
                 <div className="rounded-[18px] border border-white/10 bg-white/[0.08] px-4 py-3 backdrop-blur sm:rounded-[24px] sm:py-4">
                   <p className="text-xs uppercase tracking-[0.18em] text-sky-100/75">Avg. experience</p>
