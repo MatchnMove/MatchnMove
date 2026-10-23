@@ -1,3 +1,4 @@
+import { cleaningTarget, cleaningTargetSelect } from "@/lib/cleaning-target";
 import { NextResponse } from "next/server";
 import { requireAuthenticatedCleaner } from "@/lib/cleaner-auth";
 import { getCleaningGeneralLocation } from "@/lib/cleaner-lead-visibility";
@@ -37,8 +38,13 @@ export async function GET(
             select: {
               cleaningRequest: {
                 select: {
+                  ...cleaningTargetSelect,
                   quoteRequest: {
-                    select: { fromAddress: true, fromCity: true, fromRegion: true },
+                    select: {
+                      fromAddress: true,
+                      fromCity: true,
+                      fromRegion: true,
+                    },
                   },
                 },
               },
@@ -72,10 +78,13 @@ export async function GET(
       sentAt: invoice.sentAt?.toISOString() ?? null,
       dueAt: invoice.dueAt?.toISOString() ?? null,
       paidAt: invoice.paidAt?.toISOString() ?? null,
-      documentAvailable: Boolean(invoice.hostedInvoiceUrl || invoice.invoicePdfUrl),
-      documentUrl: invoice.hostedInvoiceUrl || invoice.invoicePdfUrl
-        ? `/api/cleaner/billing/invoices/${encodeURIComponent(invoice.id)}/document`
-        : null,
+      documentAvailable: Boolean(
+        invoice.hostedInvoiceUrl || invoice.invoicePdfUrl,
+      ),
+      documentUrl:
+        invoice.hostedInvoiceUrl || invoice.invoicePdfUrl
+          ? `/api/cleaner/billing/invoices/${encodeURIComponent(invoice.id)}/document`
+          : null,
       purchases: invoice.purchases.map((purchase) => ({
         id: purchase.id,
         cleaningLeadId: purchase.cleaningLeadId,
@@ -84,7 +93,7 @@ export async function GET(
         status: purchase.status,
         purchasedAt: purchase.purchasedAt.toISOString(),
         generalLocation: getCleaningGeneralLocation(
-          purchase.cleaningLead.cleaningRequest.quoteRequest,
+          cleaningTarget(purchase.cleaningLead.cleaningRequest),
         ),
       })),
     },

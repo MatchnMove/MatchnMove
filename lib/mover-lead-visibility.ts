@@ -1,3 +1,4 @@
+import { inventorySchema, inventorySummary } from "@/lib/inventory";
 const UNLOCKED_LEAD_STATUSES = new Set(["PURCHASED", "CONTACTED", "WON"]);
 
 type MoverLeadQuoteRequest = {
@@ -6,6 +7,7 @@ type MoverLeadQuoteRequest = {
   email: string;
   phone: string;
   movingWhat: string | null;
+  inventory?: unknown;
   bedrooms: string;
   fromAddress: string;
   fromCity: string;
@@ -35,7 +37,10 @@ export function isMoverLeadUnlocked(status: string) {
   return UNLOCKED_LEAD_STATUSES.has(status);
 }
 
-export function serializeMoverLeadQuoteRequest(status: string, quoteRequest: MoverLeadQuoteRequest) {
+export function serializeMoverLeadQuoteRequest(
+  status: string,
+  quoteRequest: MoverLeadQuoteRequest,
+) {
   const unlocked = isMoverLeadUnlocked(status);
 
   return {
@@ -43,7 +48,31 @@ export function serializeMoverLeadQuoteRequest(status: string, quoteRequest: Mov
     name: unlocked ? quoteRequest.name : null,
     email: unlocked ? quoteRequest.email : null,
     phone: unlocked ? quoteRequest.phone : null,
-    movingWhat: unlocked ? quoteRequest.movingWhat : null,
+    movingWhat: unlocked
+      ? (() => {
+          const items = inventorySchema.safeParse(quoteRequest.inventory);
+          if (!items.success || !items.data.length)
+            return quoteRequest.movingWhat;
+          const plain = (quoteRequest.movingWhat ?? "")
+            .split("\n")
+            .filter(
+              (line) =>
+                !items.data.some(
+                  (item) =>
+                    line.trim() === item.label + " x" + item.quantity ||
+                    line.trim() === item.label + " \u00d7" + item.quantity,
+                ),
+            )
+            .join("\n")
+            .trim();
+          return [
+            plain,
+            "Room-by-room inventory:\n" + inventorySummary(items.data),
+          ]
+            .filter(Boolean)
+            .join("\n\n");
+        })()
+      : null,
     bedrooms: quoteRequest.bedrooms,
     fromAddress: unlocked ? quoteRequest.fromAddress : null,
     fromCity: quoteRequest.fromCity,

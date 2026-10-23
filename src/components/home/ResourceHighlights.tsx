@@ -1,5 +1,11 @@
 import Link from "next/link";
-import { ArrowRight, Calculator, CheckSquare2, Route, WalletCards } from "lucide-react";
+import {
+  ArrowRight,
+  Calculator,
+  CheckSquare2,
+  Package,
+  WalletCards,
+} from "lucide-react";
 
 const highlights = [
   {
@@ -15,10 +21,10 @@ const highlights = [
     icon: Calculator,
   },
   {
-    href: "/resources/inter-island-moving-guide",
-    title: "Inter-Island Moving Guide",
-    copy: "Plan freight, timing, packing, storage, insurance questions, and an arrival kit.",
-    icon: Route,
+    href: "/moving-inventory",
+    title: "Moving Inventory Builder",
+    copy: "Build a room-by-room list, add custom items and quantities, then save it for your quote.",
+    icon: Package,
   },
   {
     href: "/resources/moving-house-checklist",
@@ -30,16 +36,22 @@ const highlights = [
 
 export function ResourceHighlights() {
   return (
-    <section data-analytics-section="homepage_resources" className="bg-white py-12 sm:py-16 lg:py-20">
+    <section
+      data-analytics-section="homepage_resources"
+      className="bg-white py-12 sm:py-16 lg:py-20"
+    >
       <div className="container-shell">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">Free moving resources</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">
+              Free moving resources
+            </p>
             <h2 className="mt-3 max-w-[16ch] text-[clamp(2rem,7vw,4rem)] font-black leading-[0.98] tracking-[-0.04em] text-slate-950">
               Plan with practical guides before moving day.
             </h2>
             <p className="mt-4 max-w-2xl text-base leading-8 text-slate-600">
-              Get clearer on likely costs, prepare the right details, and compare moving quotes on equal terms.
+              Get clearer on likely costs, prepare the right details, and
+              compare moving quotes on equal terms.
             </p>
           </div>
           <Link
@@ -64,10 +76,14 @@ export function ResourceHighlights() {
                 <div className="rounded-2xl bg-sky-50 p-3 text-sky-700 w-fit">
                   <Icon className="h-5 w-5" />
                 </div>
-                <h3 className="mt-4 text-xl font-bold tracking-[-0.03em] text-slate-950">{highlight.title}</h3>
-                <p className="mt-2 text-sm leading-7 text-slate-600">{highlight.copy}</p>
+                <h3 className="mt-4 text-xl font-bold tracking-[-0.03em] text-slate-950">
+                  {highlight.title}
+                </h3>
+                <p className="mt-2 text-sm leading-7 text-slate-600">
+                  {highlight.copy}
+                </p>
                 <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-sky-700">
-                  Read resource
+                  Explore resource
                   <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
                 </span>
               </Link>

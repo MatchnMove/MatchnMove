@@ -1,58 +1,32 @@
+import { ensureMovingDistribution } from "@/lib/quote-distribution";
+import {
+  buildCleaningSnapshot,
+  cleaningDetailsSchema,
+} from "@/lib/cleaning-request";
+import {
+  newPrivateToken,
+  tokenHash,
+  setRequestAccess,
+} from "@/lib/customer-access";
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { CLEANING_LEAD_PRICING } from "@/lib/cleaner-lead-pricing";
 import { distributeCleaningRequest } from "@/lib/cleaning-distribution";
 import { sendCleanerNewLeadEmail } from "@/lib/email";
-import { getLeadExpiryDate, getQuoteMatchedRegions, selectLeadRecipients, sendMoverNewLeadNotification } from "@/lib/lead-lifecycle";
-import { calculateLeadPrice } from "@/lib/lead-pricing";
 import { resolveLocale } from "@/lib/i18n/config";
-import { isMoverProfileLive } from "@/lib/mover-profile";
-import { canMoverAccessLeads, getMoverLeadAccessError } from "@/lib/mover-lead-access";
 import { quoteSchema } from "@/lib/validators";
 import { getClientIp, rateLimit } from "@/lib/rate-limit";
 import { revalidateAboutPage } from "@/lib/public-cache";
 
-const CONSENT_VERSION = "2026-10-recruitment-v2";
+const CONSENT_VERSION = "2026-10-cleaning-property-v3";
 
 function getBaseUrl(request: NextRequest) {
-  return (process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || request.nextUrl.origin).replace(/\/$/, "");
-}
-
-async function ensureCleaningRequestSafely(input: {
-  quoteRequestId: string;
-  cleaningSelected: boolean;
-  cleaningNotes: string | null | undefined;
-  consentAt: Date;
-}) {
-  if (!input.cleaningSelected) return null;
-
-  try {
-    return await prisma.cleaningRequest.upsert({
-      where: { quoteRequestId: input.quoteRequestId },
-      update: {},
-      create: {
-        quoteRequestId: input.quoteRequestId,
-        location: "MOVE_OUT",
-        notes: input.cleaningNotes?.trim() || null,
-        consentAt: input.consentAt,
-      },
-      select: { id: true },
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown cleaning request creation failure.";
-    console.error("cleaning request creation failed", {
-      quoteRequestId: input.quoteRequestId,
-      error: message,
-    });
-    await prisma.adminAuditLog.create({
-      data: {
-        action: "cleaning_request_creation_failed",
-        meta: { quoteRequestId: input.quoteRequestId, error: message },
-      },
-    }).catch(() => undefined);
-    return null;
-  }
+  return (
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.NEXTAUTH_URL ||
+    request.nextUrl.origin
+  ).replace(/\/$/, "");
 }
 
 async function distributeCleaningSafely(input: {
@@ -70,36 +44,45 @@ async function distributeCleaningSafely(input: {
   try {
     return await distributeCleaningRequest({
       cleaningRequestId: input.cleaningRequestId,
-      notify: (context) => sendCleanerNewLeadEmail({
-        leadId: context.leadId,
-        email: context.cleanerEmail,
-        cleanerName: context.cleanerName,
-        cleanerCompanyName: context.cleanerCompanyName,
-        dashboardUrl: `${getBaseUrl(input.request)}/cleaner/dashboard?section=leads&lead=${encodeURIComponent(context.leadId)}`,
-        // Email only the canonical service area. The secure dashboard can show
-        // a privacy-checked locality without risking a manual street-address fallback.
-        city: context.pickupServiceArea,
-        region: context.pickupServiceArea,
-        propertyType: input.quote.fromPropertyType,
-        bedrooms: input.quote.bedrooms,
-        preferredDate: input.quote.moveDate,
-        price: CLEANING_LEAD_PRICING.fixedPrice,
-        preferredLocale: context.preferredLocale,
-      }),
+      notify: (context) =>
+        sendCleanerNewLeadEmail({
+          leadId: context.leadId,
+          email: context.cleanerEmail,
+          cleanerName: context.cleanerName,
+          cleanerCompanyName: context.cleanerCompanyName,
+          dashboardUrl: `${getBaseUrl(input.request)}/cleaner/dashboard?section=leads&lead=${encodeURIComponent(context.leadId)}`,
+          // Email only the canonical service area. The secure dashboard can show
+          // a privacy-checked locality without risking a manual street-address fallback.
+          city: context.pickupServiceArea,
+          region: context.pickupServiceArea,
+          propertyType: context.propertyType,
+          bedrooms: context.bedrooms,
+          preferredDate: context.preferredDate,
+          price: CLEANING_LEAD_PRICING.fixedPrice,
+          preferredLocale: context.preferredLocale,
+        }),
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown cleaning distribution failure.";
-    console.error("cleaning distribution failed", { quoteRequestId: input.quoteRequestId, error: message });
-    await prisma.adminAuditLog.create({
-      data: {
-        action: "cleaning_distribution_failed",
-        meta: {
-          quoteRequestId: input.quoteRequestId,
-          cleaningRequestId: input.cleaningRequestId,
-          error: message,
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Unknown cleaning distribution failure.";
+    console.error("cleaning distribution failed", {
+      quoteRequestId: input.quoteRequestId,
+      error: message,
+    });
+    await prisma.adminAuditLog
+      .create({
+        data: {
+          action: "cleaning_distribution_failed",
+          meta: {
+            quoteRequestId: input.quoteRequestId,
+            cleaningRequestId: input.cleaningRequestId,
+            error: message,
+          },
         },
-      },
-    }).catch(() => undefined);
+      })
+      .catch(() => undefined);
     return null;
   }
 }
@@ -112,14 +95,43 @@ export async function POST(req: NextRequest) {
     }
     const contentLength = Number(req.headers.get("content-length") || "0");
     if (contentLength > 128 * 1024) {
-      return NextResponse.json({ error: "Quote request is too large." }, { status: 413 });
+      return NextResponse.json(
+        { error: "Quote request is too large." },
+        { status: 413 },
+      );
     }
 
-    const parsed = quoteSchema.safeParse(await req.json());
-    if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+    const raw = await req.text();
+    if (raw.length > 128 * 1024)
+      return NextResponse.json(
+        { error: "Quote request is too large." },
+        { status: 413 },
+      );
+    let input;
+    try {
+      input = JSON.parse(raw);
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid quote request." },
+        { status: 400 },
+      );
+    }
+    const parsed = quoteSchema.safeParse(input);
+    if (!parsed.success)
+      return NextResponse.json(
+        { error: parsed.error.flatten() },
+        { status: 400 },
+      );
 
     const data = parsed.data;
-    const { transcriptRaw, transcriptFields, clientRequestId, cleaningSelected, cleaningNotes, locale } = data;
+    const {
+      transcriptRaw,
+      transcriptFields,
+      clientRequestId,
+      cleaningSelected,
+      cleaningNotes,
+      locale,
+    } = data;
     // Keep the Prisma payload explicit so request-only controls such as
     // sharingConsent can never be forwarded as unknown database columns.
     const quoteData = {
@@ -127,6 +139,8 @@ export async function POST(req: NextRequest) {
       email: data.email,
       phone: data.phone,
       movingWhat: data.movingWhat,
+      inventory: data.inventory,
+      toBedrooms: data.toBedrooms,
       fromPropertyType: data.fromPropertyType,
       toPropertyType: data.toPropertyType,
       bedrooms: data.bedrooms,
@@ -144,7 +158,10 @@ export async function POST(req: NextRequest) {
     };
     const moveDate = data.moveDate ? new Date(data.moveDate) : null;
     if (moveDate && Number.isNaN(moveDate.getTime())) {
-      return NextResponse.json({ error: "Invalid move date." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid move date." },
+        { status: 400 },
+      );
     }
 
     const existingQuote = clientRequestId
@@ -155,12 +172,8 @@ export async function POST(req: NextRequest) {
       : null;
 
     if (existingQuote) {
-      const cleaningRequest = existingQuote.cleaningRequest ?? await ensureCleaningRequestSafely({
-        quoteRequestId: existingQuote.id,
-        cleaningSelected,
-        cleaningNotes,
-        consentAt: new Date(),
-      });
+      const movingDistribution = await ensureMovingDistribution(existingQuote);
+      const cleaningRequest = existingQuote.cleaningRequest;
       const cleaningDistribution = cleaningRequest
         ? await distributeCleaningSafely({
             request: req,
@@ -172,7 +185,7 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({
         id: existingQuote.id,
-        distributedTo: existingQuote.leads.length,
+        distributedTo: movingDistribution.assignedCount,
         duplicate: true,
         cleaningRequested: Boolean(cleaningRequest),
         cleaningDistributedTo: cleaningDistribution?.assignedCount ?? 0,
@@ -180,11 +193,33 @@ export async function POST(req: NextRequest) {
     }
 
     const consentAt = new Date();
+    const accessToken = newPrivateToken();
     let quote;
     try {
       quote = await prisma.quoteRequest.create({
         data: {
           ...quoteData,
+          customerAccess: {
+            create: {
+              tokenHash: tokenHash(accessToken),
+              expiresAt: new Date(Date.now() + 30 * 86400000),
+            },
+          },
+          ...(cleaningSelected
+            ? {
+                cleaningRequest: {
+                  create: {
+                    ...buildCleaningSnapshot(
+                      data,
+                      data.cleaningDetails ?? cleaningDetailsSchema.parse({}),
+                      consentAt,
+                    ),
+                    notes: cleaningNotes?.trim() || null,
+                    consentAt,
+                  },
+                },
+              }
+            : {}),
           submissionKey: clientRequestId || null,
           moveDate,
           sharingConsentAt: consentAt,
@@ -208,18 +243,19 @@ export async function POST(req: NextRequest) {
         },
       });
     } catch (error) {
-      if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002" || !clientRequestId) throw error;
+      if (
+        !(error instanceof Prisma.PrismaClientKnownRequestError) ||
+        error.code !== "P2002" ||
+        !clientRequestId
+      )
+        throw error;
       const racedQuote = await prisma.quoteRequest.findUnique({
         where: { submissionKey: clientRequestId },
         include: { cleaningRequest: true, leads: { select: { id: true } } },
       });
       if (!racedQuote) throw error;
-      const cleaningRequest = racedQuote.cleaningRequest ?? await ensureCleaningRequestSafely({
-        quoteRequestId: racedQuote.id,
-        cleaningSelected,
-        cleaningNotes,
-        consentAt,
-      });
+      const movingDistribution = await ensureMovingDistribution(racedQuote);
+      const cleaningRequest = racedQuote.cleaningRequest;
       const cleaningDistribution = cleaningRequest
         ? await distributeCleaningSafely({
             request: req,
@@ -230,91 +266,22 @@ export async function POST(req: NextRequest) {
         : null;
       return NextResponse.json({
         id: racedQuote.id,
-        distributedTo: racedQuote.leads.length,
+        distributedTo: movingDistribution.assignedCount,
         duplicate: true,
         cleaningRequested: Boolean(cleaningRequest),
         cleaningDistributedTo: cleaningDistribution?.assignedCount ?? 0,
       });
     }
 
+    await setRequestAccess(accessToken);
     revalidateAboutPage();
 
-    const cleaningRequest = await ensureCleaningRequestSafely({
-      quoteRequestId: quote.id,
-      cleaningSelected,
-      cleaningNotes,
-      consentAt,
+    const cleaningRequest = await prisma.cleaningRequest.findUnique({
+      where: { quoteRequestId: quote.id },
+      select: { id: true },
     });
 
-    const matchedRegions = getQuoteMatchedRegions(data);
-    const matchedMovers = matchedRegions.length
-      ? await prisma.moverCompany.findMany({
-          where: { serviceAreas: { hasSome: matchedRegions }, status: "ACTIVE" },
-          include: { user: true, documents: true },
-        })
-      : [];
-    const verifiedMovers = matchedMovers.filter(isMoverProfileLive);
-    const eligibleMovers = matchedMovers.filter(canMoverAccessLeads);
-    const selectedMovers = selectLeadRecipients(eligibleMovers);
-
-    await prisma.adminAuditLog.create({
-      data: {
-        action: selectedMovers.length ? "quote_distribution_matched" : "quote_distribution_no_recipients",
-        meta: {
-          quoteRequestId: quote.id,
-          matchedRegions,
-          matchedMoverCount: matchedMovers.length,
-          verifiedMoverCount: verifiedMovers.length,
-          eligibleMoverCount: eligibleMovers.length,
-          excludedMovers: matchedMovers.filter((mover) => !canMoverAccessLeads(mover)).map((mover) => ({
-            moverCompanyId: mover.id,
-            reason: getMoverLeadAccessError(mover),
-          })),
-          selectedMoverCount: selectedMovers.length,
-          cleaningSelected,
-        },
-      },
-    });
-
-    const pricing = calculateLeadPrice({
-      bedrooms: data.bedrooms,
-      moveDate,
-      dateFlexible: data.dateFlexible,
-      fromCity: data.fromCity,
-      fromRegion: data.fromRegion,
-      fromCountry: data.fromCountry,
-      toCity: data.toCity,
-      toRegion: data.toRegion,
-      toCountry: data.toCountry,
-    });
-    const expiresAt = getLeadExpiryDate();
-    const leads = selectedMovers.length
-      ? await prisma.$transaction(
-          selectedMovers.map((mover) => prisma.lead.create({
-            data: {
-              quoteRequestId: quote.id,
-              moverCompanyId: mover.id,
-              status: "NOTIFIED",
-              price: pricing.price,
-              expiresAt,
-            },
-            include: { quoteRequest: true, moverCompany: { include: { user: true } } },
-          })),
-        )
-      : [];
-
-    if (leads.length > 0) {
-      await Promise.allSettled([
-        ...leads.map((lead) => sendMoverNewLeadNotification(lead)),
-        ...leads.map((lead) => prisma.auditLog.create({
-          data: {
-            leadId: lead.id,
-            action: "lead_initially_notified",
-            meta: { quoteRequestId: quote.id, matchedRegions, expiresAt: lead.expiresAt?.toISOString() ?? null },
-          },
-        })),
-      ]);
-    }
+    const movingDistribution = await ensureMovingDistribution(quote);
 
     const cleaningDistribution = cleaningRequest
       ? await distributeCleaningSafely({
@@ -327,14 +294,19 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       id: quote.id,
-      distributedTo: selectedMovers.length,
-      matchingMovers: eligibleMovers.length,
+      distributedTo: movingDistribution.assignedCount,
       cleaningRequested: cleaningSelected,
       cleaningDistributedTo: cleaningDistribution?.assignedCount ?? 0,
       matchingCleaners: cleaningDistribution?.matchingCleanerCount ?? 0,
     });
   } catch (error) {
-    console.error("quote POST failed", error);
-    return NextResponse.json({ error: "Server failed to process quote submission." }, { status: 500 });
+    console.error(
+      "quote POST failed",
+      error instanceof Error ? error.name : "Unknown error",
+    );
+    return NextResponse.json(
+      { error: "Server failed to process quote submission." },
+      { status: 500 },
+    );
   }
 }

@@ -7,9 +7,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const nextConfig = {
   poweredByHeader: false,
   images: {
-    remotePatterns: [
-      { protocol: "https", hostname: "images.unsplash.com" }
-    ]
+    remotePatterns: [{ protocol: "https", hostname: "images.unsplash.com" }],
   },
   async headers() {
     const noIndexHeaders = [
@@ -17,11 +15,36 @@ const nextConfig = {
     ];
 
     return [
-      { source: "/mover-sw.js", headers: [{ key: "Cache-Control", value: "no-cache, no-store, must-revalidate" }, { key: "Service-Worker-Allowed", value: "/mover/" }] },
+      {
+        source: "/mover-sw.js",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "no-cache, no-store, must-revalidate",
+          },
+          { key: "Service-Worker-Allowed", value: "/mover/" },
+        ],
+      },
       { source: "/api/:path*", headers: noIndexHeaders },
       { source: "/admin/:path*", headers: noIndexHeaders },
       { source: "/review/:path*", headers: noIndexHeaders },
-      { source: "/thank-you", headers: noIndexHeaders },
+      {
+        source: "/thank-you",
+        headers: [
+          ...noIndexHeaders,
+          { key: "Referrer-Policy", value: "no-referrer" },
+          { key: "Cache-Control", value: "private, no-store" },
+        ],
+      },
+      {
+        source: "/request/:path*",
+        headers: [
+          ...noIndexHeaders,
+          { key: "Referrer-Policy", value: "no-referrer" },
+          { key: "Cache-Control", value: "private, no-store" },
+        ],
+      },
+      { source: "/mover/reviews", headers: noIndexHeaders },
       { source: "/mover/dashboard/:path*", headers: noIndexHeaders },
       { source: "/mover/login", headers: noIndexHeaders },
       { source: "/mover/forgot-password", headers: noIndexHeaders },
@@ -36,16 +59,20 @@ const nextConfig = {
       {
         source: "/:path*",
         headers: [
-          { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
+          {
+            key: "Strict-Transport-Security",
+            value: "max-age=31536000; includeSubDomains",
+          },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "DENY" },
-          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Referrer-Policy", value: "no-referrer" },
           {
             key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=(self), browsing-topics=()"
-          }
-        ]
-      }
+            value:
+              "camera=(), microphone=(), geolocation=(self), browsing-topics=()",
+          },
+        ],
+      },
     ];
   },
   async redirects() {
@@ -54,13 +81,13 @@ const nextConfig = {
         source: "/:path*",
         has: [{ type: "host", value: "matchnmove.co.nz" }],
         destination: "https://www.matchnmove.co.nz/:path*",
-        permanent: true
-      }
+        permanent: true,
+      },
     ];
   },
   turbopack: {
-    root: __dirname
-  }
+    root: __dirname,
+  },
 };
 
 export default nextConfig;

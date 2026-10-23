@@ -3,9 +3,19 @@
 import { Nav } from "@/components/site-shell";
 import { PartnerAccountSwitcher } from "@/components/partner-account-switcher";
 import Link from "next/link";
+import { trackAnalyticsEvent } from "@/lib/analytics";
 import Script from "next/script";
 import { FormEvent, useEffect, useEffectEvent, useRef, useState } from "react";
-import { ArrowRight, BadgeCheck, Building2, Eye, EyeOff, LockKeyhole, ShieldCheck, Sparkles } from "lucide-react";
+import {
+  ArrowRight,
+  BadgeCheck,
+  Building2,
+  Eye,
+  EyeOff,
+  LockKeyhole,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
 
 declare global {
   interface Window {
@@ -26,7 +36,7 @@ declare global {
               size?: string;
               width?: number;
               logo_alignment?: string;
-            }
+            },
           ) => void;
         };
       };
@@ -40,19 +50,30 @@ const GOOGLE_BUTTON_SCALE = 1.2;
 const trustPoints = [
   "Create a mover profile that saves your company details with Match 'n Move",
   "Passwords are hashed before storage and sessions are locked into secure HTTP-only cookies",
-  "Google sign-in is available for faster access when your Google client ID is configured"
+  "Google sign-in is available for faster access when your Google client ID is configured",
 ];
 
 const onboardingSteps = [
   { label: "Create account", detail: "Business details and a secure password" },
-  { label: "Complete profile", detail: "Add coverage regions, NZBN details, logo and documents" },
-  { label: "Go live", detail: "Verified movers can appear publicly and open lead details" }
+  {
+    label: "Complete profile",
+    detail: "Add coverage regions, NZBN details, logo and documents",
+  },
+  {
+    label: "Go live",
+    detail: "Verified movers can appear publicly and open lead details",
+  },
 ];
 
 type Mode = "login" | "signup";
 
 function getSafeRedirectPath(value: string | null) {
-  if (!value || !value.startsWith("/") || value.startsWith("//") || value.includes("\\")) {
+  if (
+    !value ||
+    !value.startsWith("/") ||
+    value.startsWith("//") ||
+    value.includes("\\")
+  ) {
     return "/mover/dashboard";
   }
 
@@ -60,7 +81,7 @@ function getSafeRedirectPath(value: string | null) {
 }
 
 function getNetworkErrorMessage(action: string) {
-  return `${action} could not reach the server. Check that the local dev server is running, then try again.`;
+  return `${action} could not reach the server. Check your connection and try again.`;
 }
 
 function getAdminRedirectPath(value: string) {
@@ -82,7 +103,7 @@ export default function MoverLoginPage() {
     phone: "",
     password: "",
     confirmPassword: "",
-    acceptedTerms: false
+    acceptedTerms: false,
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -96,7 +117,7 @@ export default function MoverLoginPage() {
     { label: "8+ characters", valid: signupForm.password.length >= 8 },
     { label: "Uppercase", valid: /[A-Z]/.test(signupForm.password) },
     { label: "Lowercase", valid: /[a-z]/.test(signupForm.password) },
-    { label: "Number", valid: /[0-9]/.test(signupForm.password) }
+    { label: "Number", valid: /[0-9]/.test(signupForm.password) },
   ];
 
   useEffect(() => {
@@ -114,7 +135,9 @@ export default function MoverLoginPage() {
     }
     if (searchParams.get("account") === "deleted") {
       setMode("login");
-      setSuccess("Your mover account and its Match 'n Move data were permanently deleted.");
+      setSuccess(
+        "Your mover account and its Match 'n Move data were permanently deleted.",
+      );
     }
   }, []);
 
@@ -127,16 +150,23 @@ export default function MoverLoginPage() {
       const res = await fetch("/api/mover/google", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ credential })
+        body: JSON.stringify({ credential }),
       });
 
-      const payload = (await res.json().catch(() => ({}))) as { error?: string; adminMfaRequired?: boolean };
+      const payload = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        adminMfaRequired?: boolean;
+      };
       if (!res.ok) {
         setError(payload.error || "Google sign-in failed");
         return;
       }
 
-      setSuccess(payload.adminMfaRequired ? "Admin sign-in accepted. Complete authenticator verification..." : "Signed in with Google. Redirecting to your mover dashboard...");
+      setSuccess(
+        payload.adminMfaRequired
+          ? "Admin sign-in accepted. Complete authenticator verification..."
+          : "Signed in with Google. Redirecting to your mover dashboard...",
+      );
       window.location.replace(
         payload.adminMfaRequired
           ? `/admin/mfa?next=${encodeURIComponent(getAdminRedirectPath(redirectPath))}`
@@ -150,22 +180,34 @@ export default function MoverLoginPage() {
   });
 
   useEffect(() => {
-    if (!GOOGLE_CLIENT_ID || !googleReady || !googleButtonRef.current || googleRenderedRef.current) return;
+    if (
+      !GOOGLE_CLIENT_ID ||
+      !googleReady ||
+      !googleButtonRef.current ||
+      googleRenderedRef.current
+    )
+      return;
     const google = window.google?.accounts?.id;
     if (!google) return;
-    const availableWidth = googleButtonRef.current.getBoundingClientRect().width;
-    const buttonWidth = Math.max(220, Math.min(400, Math.floor(availableWidth / GOOGLE_BUTTON_SCALE)));
+    const availableWidth =
+      googleButtonRef.current.getBoundingClientRect().width;
+    const buttonWidth = Math.max(
+      220,
+      Math.min(400, Math.floor(availableWidth / GOOGLE_BUTTON_SCALE)),
+    );
 
     google.initialize({
       client_id: GOOGLE_CLIENT_ID,
       callback: async (response) => {
         if (!response.credential) {
-          setError("Google sign-in did not return a credential. Please try again.");
+          setError(
+            "Google sign-in did not return a credential. Please try again.",
+          );
           return;
         }
 
         await submitGoogleCredential(response.credential);
-      }
+      },
     });
 
     google.renderButton(googleButtonRef.current, {
@@ -175,7 +217,7 @@ export default function MoverLoginPage() {
       shape: "rectangular",
       size: "large",
       width: buttonWidth,
-      logo_alignment: "left"
+      logo_alignment: "left",
     });
 
     googleRenderedRef.current = true;
@@ -191,7 +233,7 @@ export default function MoverLoginPage() {
       const res = await fetch("/api/mover/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(loginForm)
+        body: JSON.stringify(loginForm),
       });
 
       const payload = (await res.json().catch(() => ({}))) as {
@@ -227,16 +269,23 @@ export default function MoverLoginPage() {
       const res = await fetch("/api/mover/login/verify-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: loginCodeEmail, code: loginCode })
+        body: JSON.stringify({ email: loginCodeEmail, code: loginCode }),
       });
 
-      const payload = (await res.json().catch(() => ({}))) as { error?: string; adminMfaRequired?: boolean };
+      const payload = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        adminMfaRequired?: boolean;
+      };
       if (!res.ok) {
         setError(payload.error || "Unable to verify sign-in code");
         return;
       }
 
-      setSuccess(payload.adminMfaRequired ? "Code accepted. Complete authenticator verification..." : "Welcome back. Taking you to your dashboard...");
+      setSuccess(
+        payload.adminMfaRequired
+          ? "Code accepted. Complete authenticator verification..."
+          : "Welcome back. Taking you to your dashboard...",
+      );
       window.location.replace(
         payload.adminMfaRequired
           ? `/admin/mfa?next=${encodeURIComponent(getAdminRedirectPath(redirectPath))}`
@@ -259,19 +308,25 @@ export default function MoverLoginPage() {
       const res = await fetch("/api/mover/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(signupForm)
+        body: JSON.stringify(signupForm),
       });
 
-      const payload = (await res.json().catch(() => ({}))) as { error?: string; verificationEmailSent?: boolean };
+      const payload = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        verificationEmailSent?: boolean;
+      };
       if (!res.ok) {
         setError(payload.error || "Unable to create account");
         return;
       }
 
+      trackAnalyticsEvent("partner_registration_completed", {
+        source: "mover",
+      });
       setSuccess(
         payload.verificationEmailSent
           ? "Your Match 'n Move mover account is ready. Check your inbox for a verification email while we take you to the dashboard..."
-          : "Your Match 'n Move mover account is ready. Email verification is available once SMTP is configured, and we're taking you to the dashboard now..."
+          : "Your account is ready. Open account security in your dashboard to request email verification or contact support if it does not arrive.",
       );
       window.location.replace(redirectPath);
     } catch {
@@ -283,7 +338,11 @@ export default function MoverLoginPage() {
 
   return (
     <>
-      <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" onLoad={() => setGoogleReady(true)} />
+      <Script
+        src="https://accounts.google.com/gsi/client"
+        strategy="afterInteractive"
+        onLoad={() => setGoogleReady(true)}
+      />
       <Nav />
       <section className="relative overflow-hidden bg-[linear-gradient(180deg,#edf4fb_0%,#e9f1fb_28%,#f7fbff_100%)]">
         <div className="pointer-events-none absolute inset-0">
@@ -307,27 +366,37 @@ export default function MoverLoginPage() {
                 </span>
               </h1>
               <p className="mt-5 max-w-[34rem] text-base leading-7 text-slate-600 sm:text-lg">
-                Sign up as a moving company, save your business details with us, and step straight into a dashboard designed to convert real move requests into booked jobs.
+                Sign up as a moving company, save your business details with us,
+                and step straight into a dashboard designed to convert real move
+                requests into booked jobs.
               </p>
 
               <div className="mt-6 hidden rounded-[28px] border border-white/70 bg-white/70 p-5 shadow-[0_22px_45px_-32px_rgba(15,23,42,0.28)] backdrop-blur sm:hidden">
-                <p className="text-xs font-bold uppercase tracking-[0.22em] text-sky-700">Mover setup</p>
-                <p className="mt-3 text-lg font-bold tracking-[-0.03em] text-slate-950">A fast path from sign-up to lead-ready.</p>
+                <p className="text-xs font-bold uppercase tracking-[0.22em] text-sky-700">
+                  Mover setup
+                </p>
+                <p className="mt-3 text-lg font-bold tracking-[-0.03em] text-slate-950">
+                  A fast path from sign-up to lead-ready.
+                </p>
                 <div className="mt-4 space-y-3">
                   {onboardingSteps.map((step, index) => (
                     <div key={step.label} className="group relative">
                       <div className="pointer-events-none absolute inset-x-5 -bottom-3 h-10 rounded-full bg-[rgba(222,122,58,0.18)] blur-2xl transition duration-300 group-hover:bg-[rgba(222,122,58,0.4)] group-hover:blur-3xl" />
-                      <div
-                        className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/80 px-4 py-4 shadow-[0_18px_36px_-28px_rgba(15,23,42,0.28)] transition duration-300 hover:-translate-y-1 hover:border-orange-200 hover:shadow-[0_24px_48px_-24px_rgba(222,122,58,0.38)]"
-                      >
+                      <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white/80 px-4 py-4 shadow-[0_18px_36px_-28px_rgba(15,23,42,0.28)] transition duration-300 hover:-translate-y-1 hover:border-orange-200 hover:shadow-[0_24px_48px_-24px_rgba(222,122,58,0.38)]">
                         <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.2),transparent_55%)] opacity-70" />
                         <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.14),transparent_70%)] opacity-0 transition duration-300 group-hover:opacity-100" />
                         <div className="relative flex items-center justify-between gap-3">
-                          <span className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400 transition duration-300 group-hover:text-orange-500">Step {index + 1}</span>
+                          <span className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400 transition duration-300 group-hover:text-orange-500">
+                            Step {index + 1}
+                          </span>
                           <ArrowRight className="h-4 w-4 text-brandBlue transition duration-300 group-hover:translate-x-0.5 group-hover:text-orange-500" />
                         </div>
-                        <p className="relative mt-3 text-base font-bold text-slate-950">{step.label}</p>
-                        <p className="relative mt-1 text-sm leading-6 text-slate-500">{step.detail}</p>
+                        <p className="relative mt-3 text-base font-bold text-slate-950">
+                          {step.label}
+                        </p>
+                        <p className="relative mt-1 text-sm leading-6 text-slate-500">
+                          {step.detail}
+                        </p>
                       </div>
                     </div>
                   ))}
@@ -339,17 +408,21 @@ export default function MoverLoginPage() {
                   <div key={step.label} className="group relative">
                     <div className="pointer-events-none absolute inset-x-6 bottom-1 h-14 rounded-full bg-[rgba(222,122,58,0.18)] blur-3xl transition duration-300 group-hover:bg-[rgba(222,122,58,0.42)] group-hover:blur-[56px]" />
                     <div className="pointer-events-none absolute inset-x-10 -bottom-2 h-10 rounded-full bg-[rgba(255,192,145,0.12)] opacity-0 blur-2xl transition duration-300 group-hover:opacity-100" />
-                    <div
-                      className="relative flex h-full min-h-[260px] flex-col overflow-hidden rounded-[28px] border border-white/70 bg-white/70 p-5 shadow-[0_22px_45px_-32px_rgba(15,23,42,0.35)] backdrop-blur transition duration-300 hover:-translate-y-2 hover:border-orange-200/80 hover:shadow-[0_28px_54px_-22px_rgba(222,122,58,0.34)]"
-                    >
+                    <div className="relative flex h-full min-h-[260px] flex-col overflow-hidden rounded-[28px] border border-white/70 bg-white/70 p-5 shadow-[0_22px_45px_-32px_rgba(15,23,42,0.35)] backdrop-blur transition duration-300 hover:-translate-y-2 hover:border-orange-200/80 hover:shadow-[0_28px_54px_-22px_rgba(222,122,58,0.34)]">
                       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.24),transparent_52%)] opacity-80" />
                       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_100%,rgba(255,196,152,0.18),transparent_45%)] opacity-0 transition duration-300 group-hover:opacity-100" />
                       <div className="relative flex items-center justify-between">
-                        <span className="text-xs font-bold uppercase tracking-[0.22em] text-slate-400 transition duration-300 group-hover:text-orange-500">Step {index + 1}</span>
+                        <span className="text-xs font-bold uppercase tracking-[0.22em] text-slate-400 transition duration-300 group-hover:text-orange-500">
+                          Step {index + 1}
+                        </span>
                         <ArrowRight className="h-4 w-4 text-brandBlue transition duration-300 group-hover:translate-x-1 group-hover:text-orange-500" />
                       </div>
-                      <p className="relative mt-4 min-h-[4.5rem] text-lg font-bold text-slate-950">{step.label}</p>
-                      <p className="relative mt-2 text-sm leading-6 text-slate-500">{step.detail}</p>
+                      <p className="relative mt-4 min-h-[4.5rem] text-lg font-bold text-slate-950">
+                        {step.label}
+                      </p>
+                      <p className="relative mt-2 text-sm leading-6 text-slate-500">
+                        {step.detail}
+                      </p>
                     </div>
                   </div>
                 ))}
@@ -362,9 +435,14 @@ export default function MoverLoginPage() {
                 </div>
                 <div className="mt-4 space-y-3 sm:mt-5">
                   {trustPoints.map((point) => (
-                    <div key={point} className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                    <div
+                      key={point}
+                      className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3"
+                    >
                       <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
-                      <p className="text-sm leading-6 text-slate-200 sm:text-sm">{point}</p>
+                      <p className="text-sm leading-6 text-slate-200 sm:text-sm">
+                        {point}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -394,75 +472,112 @@ export default function MoverLoginPage() {
                   <div>
                     <div className="text-center sm:text-left">
                       <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">
-                        {loginCodeEmail ? "Email verification" : "Partner portal"}
+                        {loginCodeEmail
+                          ? "Email verification"
+                          : "Partner portal"}
                       </p>
                       <h2 className="mt-2 text-[clamp(2rem,8vw,3rem)] font-black tracking-[-0.04em] text-slate-950">
-                        {loginCodeEmail ? "Check your email" : mode === "signup" ? "Create your mover account" : "Welcome back"}
+                        {loginCodeEmail
+                          ? "Check your email"
+                          : mode === "signup"
+                            ? "Create your mover account"
+                            : "Welcome back"}
                       </h2>
                       <p className="mt-2 max-w-md text-sm leading-6 text-slate-500 sm:max-w-md">
                         {loginCodeEmail
                           ? "Enter the one-time code we sent to finish signing in securely."
                           : mode === "signup"
-                          ? "Set up the account movers will use to manage their profile, team details, and purchased leads."
-                          : "Sign in to review leads, update your company profile, and keep your Match 'n Move presence current."}
+                            ? "Set up the account movers will use to manage their profile, team details, and purchased leads."
+                            : "Sign in to review leads, update your company profile, and keep your Match 'n Move presence current."}
                       </p>
                     </div>
                   </div>
 
-                  {!loginCodeEmail ? <div className="mt-6 rounded-[22px] border border-slate-200 bg-white px-4 py-4 shadow-[0_15px_30px_-24px_rgba(15,23,42,0.35)] sm:rounded-[26px]">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-50 text-brandBlue">
-                        {mode === "signup" ? <Building2 className="h-5 w-5" /> : <LockKeyhole className="h-5 w-5" />}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-semibold text-slate-950">
-                          {mode === "signup" ? "Mover company onboarding" : "Secure mover login"}
-                        </p>
-                        <p className="text-sm leading-6 text-slate-500">
-                          {mode === "signup" ? "Start with your account details, then complete your profile" : "Stay signed in on this device"}
-                        </p>
+                  {!loginCodeEmail ? (
+                    <div className="mt-6 rounded-[22px] border border-slate-200 bg-white px-4 py-4 shadow-[0_15px_30px_-24px_rgba(15,23,42,0.35)] sm:rounded-[26px]">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-50 text-brandBlue">
+                          {mode === "signup" ? (
+                            <Building2 className="h-5 w-5" />
+                          ) : (
+                            <LockKeyhole className="h-5 w-5" />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-semibold text-slate-950">
+                            {mode === "signup"
+                              ? "Mover company onboarding"
+                              : "Secure mover login"}
+                          </p>
+                          <p className="text-sm leading-6 text-slate-500">
+                            {mode === "signup"
+                              ? "Start with your account details, then complete your profile"
+                              : "Stay signed in on this device"}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div> : null}
+                  ) : null}
 
-                  {!loginCodeEmail ? <div className="mt-6">
-                    {GOOGLE_CLIENT_ID ? (
-                      <div
-                        ref={googleButtonRef}
-                        className="mx-auto min-h-[48px] w-full max-w-[440px] [&>div]:origin-top-left [&>div]:scale-[1.2]"
-                      />
-                    ) : (
-                      <div className="w-full rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-center text-sm leading-6 text-slate-500">
-                        Add <code>NEXT_PUBLIC_GOOGLE_CLIENT_ID</code> to enable one-click Google sign-in for movers.
-                      </div>
-                    )}
-                  </div> : null}
+                  {!loginCodeEmail ? (
+                    <div className="mt-6">
+                      {GOOGLE_CLIENT_ID ? (
+                        <div
+                          ref={googleButtonRef}
+                          className="mx-auto min-h-[48px] w-full max-w-[440px] [&>div]:origin-top-left [&>div]:scale-[1.2]"
+                        />
+                      ) : (
+                        <div className="w-full rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-center text-sm leading-6 text-slate-500">
+                          Add <code>NEXT_PUBLIC_GOOGLE_CLIENT_ID</code> to
+                          enable one-click Google sign-in for movers.
+                        </div>
+                      )}
+                    </div>
+                  ) : null}
 
-                  {!loginCodeEmail ? <div className="my-6 flex items-center gap-3 sm:gap-4">
-                    <div className="h-px flex-1 bg-slate-200" />
-                    <span className="text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400 sm:text-xs sm:tracking-[0.22em]">or continue with email</span>
-                    <div className="h-px flex-1 bg-slate-200" />
-                  </div> : null}
+                  {!loginCodeEmail ? (
+                    <div className="my-6 flex items-center gap-3 sm:gap-4">
+                      <div className="h-px flex-1 bg-slate-200" />
+                      <span className="text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400 sm:text-xs sm:tracking-[0.22em]">
+                        or continue with email
+                      </span>
+                      <div className="h-px flex-1 bg-slate-200" />
+                    </div>
+                  ) : null}
 
                   {mode === "signup" ? (
                     <form onSubmit={handleSignupSubmit} className="space-y-4">
                       <div className="grid gap-4">
                         <label className="block min-w-0">
-                          <span className="mb-2 block text-sm font-semibold text-slate-700">Full name</span>
+                          <span className="mb-2 block text-sm font-semibold text-slate-700">
+                            Full name
+                          </span>
                           <input
                             required
                             value={signupForm.name}
-                            onChange={(event) => setSignupForm((current) => ({ ...current, name: event.target.value }))}
+                            onChange={(event) =>
+                              setSignupForm((current) => ({
+                                ...current,
+                                name: event.target.value,
+                              }))
+                            }
                             className="w-full min-w-0 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[15px] text-slate-900 outline-none transition placeholder:text-[15px] placeholder:text-slate-400 focus:border-brandBlue focus:ring-4 focus:ring-indigo-100 sm:text-base sm:placeholder:text-base"
                             placeholder="Alex Morgan"
                           />
                         </label>
                         <label className="block min-w-0">
-                          <span className="mb-2 block text-sm font-semibold text-slate-700">Company name</span>
+                          <span className="mb-2 block text-sm font-semibold text-slate-700">
+                            Company name
+                          </span>
                           <input
                             required
                             value={signupForm.companyName}
-                            onChange={(event) => setSignupForm((current) => ({ ...current, companyName: event.target.value }))}
+                            onChange={(event) =>
+                              setSignupForm((current) => ({
+                                ...current,
+                                companyName: event.target.value,
+                              }))
+                            }
                             className="w-full min-w-0 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[15px] text-slate-900 outline-none transition placeholder:text-[15px] placeholder:text-slate-400 focus:border-brandBlue focus:ring-4 focus:ring-indigo-100 sm:text-base sm:placeholder:text-base"
                             placeholder="North Harbour Movers"
                           />
@@ -471,22 +586,36 @@ export default function MoverLoginPage() {
 
                       <div className="grid gap-4">
                         <label className="block min-w-0">
-                          <span className="mb-2 block text-sm font-semibold text-slate-700">Work email</span>
+                          <span className="mb-2 block text-sm font-semibold text-slate-700">
+                            Work email
+                          </span>
                           <input
                             required
                             type="email"
                             value={signupForm.email}
-                            onChange={(event) => setSignupForm((current) => ({ ...current, email: event.target.value }))}
+                            onChange={(event) =>
+                              setSignupForm((current) => ({
+                                ...current,
+                                email: event.target.value,
+                              }))
+                            }
                             className="w-full min-w-0 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[15px] text-slate-900 outline-none transition placeholder:text-[15px] placeholder:text-slate-400 focus:border-brandBlue focus:ring-4 focus:ring-indigo-100 sm:text-base sm:placeholder:text-base"
                             placeholder="ops@yourmovingcompany.co.nz"
                           />
                         </label>
                         <label className="block min-w-0">
-                          <span className="mb-2 block text-sm font-semibold text-slate-700">Phone</span>
+                          <span className="mb-2 block text-sm font-semibold text-slate-700">
+                            Phone
+                          </span>
                           <input
                             required
                             value={signupForm.phone}
-                            onChange={(event) => setSignupForm((current) => ({ ...current, phone: event.target.value }))}
+                            onChange={(event) =>
+                              setSignupForm((current) => ({
+                                ...current,
+                                phone: event.target.value,
+                              }))
+                            }
                             className="w-full min-w-0 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[15px] text-slate-900 outline-none transition placeholder:text-[15px] placeholder:text-slate-400 focus:border-brandBlue focus:ring-4 focus:ring-indigo-100 sm:text-base sm:placeholder:text-base"
                             placeholder="+64 21 555 0123"
                           />
@@ -495,57 +624,104 @@ export default function MoverLoginPage() {
 
                       <div className="grid gap-4">
                         <label className="block min-w-0">
-                          <span className="mb-2 block text-sm font-semibold text-slate-700">Password</span>
+                          <span className="mb-2 block text-sm font-semibold text-slate-700">
+                            Password
+                          </span>
                           <div className="relative">
                             <input
                               required
                               type={showPassword ? "text" : "password"}
                               value={signupForm.password}
-                              onChange={(event) => setSignupForm((current) => ({ ...current, password: event.target.value }))}
+                              onChange={(event) =>
+                                setSignupForm((current) => ({
+                                  ...current,
+                                  password: event.target.value,
+                                }))
+                              }
                               className="w-full min-w-0 rounded-2xl border border-slate-200 bg-white px-4 py-3 pr-12 text-[15px] text-slate-900 outline-none transition placeholder:text-[15px] placeholder:text-slate-400 focus:border-brandBlue focus:ring-4 focus:ring-indigo-100 sm:text-base sm:placeholder:text-base"
                               placeholder="Create a secure password"
                             />
                             <button
                               type="button"
-                              onClick={() => setShowPassword((current) => !current)}
+                              onClick={() =>
+                                setShowPassword((current) => !current)
+                              }
                               className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
-                              aria-label={showPassword ? "Hide password" : "Show password"}
+                              aria-label={
+                                showPassword ? "Hide password" : "Show password"
+                              }
                             >
-                              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                              {showPassword ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
                             </button>
                           </div>
                         </label>
 
                         <label className="block min-w-0">
-                          <span className="mb-2 block text-sm font-semibold text-slate-700">Confirm password</span>
+                          <span className="mb-2 block text-sm font-semibold text-slate-700">
+                            Confirm password
+                          </span>
                           <div className="relative">
                             <input
                               required
                               type={showConfirmPassword ? "text" : "password"}
                               value={signupForm.confirmPassword}
-                              onChange={(event) => setSignupForm((current) => ({ ...current, confirmPassword: event.target.value }))}
+                              onChange={(event) =>
+                                setSignupForm((current) => ({
+                                  ...current,
+                                  confirmPassword: event.target.value,
+                                }))
+                              }
                               className="w-full min-w-0 rounded-2xl border border-slate-200 bg-white px-4 py-3 pr-12 text-[15px] text-slate-900 outline-none transition placeholder:text-[15px] placeholder:text-slate-400 focus:border-brandBlue focus:ring-4 focus:ring-indigo-100 sm:text-base sm:placeholder:text-base"
                               placeholder="Re-enter password"
                             />
                             <button
                               type="button"
-                              onClick={() => setShowConfirmPassword((current) => !current)}
+                              onClick={() =>
+                                setShowConfirmPassword((current) => !current)
+                              }
                               className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
-                              aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                              aria-label={
+                                showConfirmPassword
+                                  ? "Hide confirm password"
+                                  : "Show confirm password"
+                              }
                             >
-                              {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                              {showConfirmPassword ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
                             </button>
                           </div>
                         </label>
                       </div>
 
                       <div className="rounded-[26px] border border-slate-200 bg-slate-50 px-4 py-4">
-                        <p className="text-sm font-semibold text-slate-800">Password checklist</p>
+                        <p className="text-sm font-semibold text-slate-800">
+                          Password checklist
+                        </p>
                         <div className="mt-3 grid gap-2 sm:grid-cols-2">
                           {passwordChecks.map((check) => (
-                            <div key={check.label} className="flex items-center gap-2 text-sm">
-                              <span className={`inline-block h-2.5 w-2.5 rounded-full ${check.valid ? "bg-emerald-500" : "bg-slate-300"}`} />
-                              <span className={check.valid ? "text-slate-800" : "text-slate-500"}>{check.label}</span>
+                            <div
+                              key={check.label}
+                              className="flex items-center gap-2 text-sm"
+                            >
+                              <span
+                                className={`inline-block h-2.5 w-2.5 rounded-full ${check.valid ? "bg-emerald-500" : "bg-slate-300"}`}
+                              />
+                              <span
+                                className={
+                                  check.valid
+                                    ? "text-slate-800"
+                                    : "text-slate-500"
+                                }
+                              >
+                                {check.label}
+                              </span>
                             </div>
                           ))}
                         </div>
@@ -556,16 +732,27 @@ export default function MoverLoginPage() {
                           required
                           type="checkbox"
                           checked={signupForm.acceptedTerms}
-                          onChange={(event) => setSignupForm((current) => ({ ...current, acceptedTerms: event.target.checked }))}
+                          onChange={(event) =>
+                            setSignupForm((current) => ({
+                              ...current,
+                              acceptedTerms: event.target.checked,
+                            }))
+                          }
                           className="mt-1 h-4 w-4 rounded border-slate-300 text-brandBlue focus:ring-brandBlue"
                         />
                         <span className="text-sm leading-6 text-slate-600">
                           I agree to the{" "}
-                          <Link href="/terms" className="font-semibold text-brandBlue hover:text-indigo-700">
+                          <Link
+                            href="/terms"
+                            className="font-semibold text-brandBlue hover:text-indigo-700"
+                          >
                             Terms
                           </Link>{" "}
                           and{" "}
-                          <Link href="/privacy" className="font-semibold text-brandBlue hover:text-indigo-700">
+                          <Link
+                            href="/privacy"
+                            className="font-semibold text-brandBlue hover:text-indigo-700"
+                          >
                             Privacy Policy
                           </Link>
                           .
@@ -576,22 +763,33 @@ export default function MoverLoginPage() {
                         disabled={submitting}
                         className="inline-flex min-h-[56px] w-full items-center justify-center gap-2 rounded-[22px] bg-[linear-gradient(135deg,#5f6ee8_0%,#4f7cf0_45%,#3ca5e8_100%)] px-5 py-3 text-base font-semibold text-white shadow-[0_20px_35px_-20px_rgba(95,110,232,0.8)] transition hover:translate-y-[-1px] disabled:cursor-not-allowed disabled:opacity-70"
                       >
-                        {submitting ? "Creating account..." : "Create mover account"}
+                        {submitting
+                          ? "Creating account..."
+                          : "Create mover account"}
                         <ArrowRight className="h-4 w-4" />
                       </button>
                     </form>
                   ) : loginCodeEmail ? (
-                    <form onSubmit={handleLoginCodeSubmit} className="mt-8 space-y-5">
+                    <form
+                      onSubmit={handleLoginCodeSubmit}
+                      className="mt-8 space-y-5"
+                    >
                       <div className="border-y border-slate-200 py-5 text-center">
                         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-sky-50 text-brandBlue">
                           <LockKeyhole className="h-5 w-5" />
                         </div>
-                        <p className="mt-4 text-sm leading-6 text-slate-600">We sent a 6-digit sign-in code to</p>
-                        <p className="break-all text-base font-bold text-slate-950">{loginCodeEmail}</p>
+                        <p className="mt-4 text-sm leading-6 text-slate-600">
+                          We sent a 6-digit sign-in code to
+                        </p>
+                        <p className="break-all text-base font-bold text-slate-950">
+                          {loginCodeEmail}
+                        </p>
                       </div>
 
                       <label className="block">
-                        <span className="mb-3 block text-center text-sm font-semibold text-slate-700">Enter your code</span>
+                        <span className="mb-3 block text-center text-sm font-semibold text-slate-700">
+                          Enter your code
+                        </span>
                         <input
                           autoFocus
                           required
@@ -600,7 +798,11 @@ export default function MoverLoginPage() {
                           pattern="[0-9]{6}"
                           maxLength={6}
                           value={loginCode}
-                          onChange={(event) => setLoginCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                          onChange={(event) =>
+                            setLoginCode(
+                              event.target.value.replace(/\D/g, "").slice(0, 6),
+                            )
+                          }
                           className="min-h-[68px] w-full rounded-2xl border-2 border-slate-200 bg-white px-4 py-3 text-center text-2xl font-bold tracking-[0.35em] text-slate-900 outline-none transition placeholder:text-slate-300 focus:border-brandBlue focus:ring-4 focus:ring-indigo-100"
                           placeholder="000000"
                         />
@@ -630,12 +832,19 @@ export default function MoverLoginPage() {
                   ) : (
                     <form onSubmit={handleLoginSubmit} className="space-y-4">
                       <label className="block">
-                        <span className="mb-2 block text-sm font-semibold text-slate-700">Email address</span>
+                        <span className="mb-2 block text-sm font-semibold text-slate-700">
+                          Email address
+                        </span>
                         <input
                           required
                           type="email"
                           value={loginForm.email}
-                          onChange={(event) => setLoginForm((current) => ({ ...current, email: event.target.value }))}
+                          onChange={(event) =>
+                            setLoginForm((current) => ({
+                              ...current,
+                              email: event.target.value,
+                            }))
+                          }
                           className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-brandBlue focus:ring-4 focus:ring-indigo-100"
                           placeholder="you@company.com"
                         />
@@ -643,8 +852,13 @@ export default function MoverLoginPage() {
 
                       <label className="block">
                         <div className="mb-2 flex items-center justify-between gap-3">
-                          <span className="text-sm font-semibold text-slate-700">Password</span>
-                          <Link href="/mover/forgot-password" className="text-sm font-semibold text-brandBlue hover:text-indigo-700">
+                          <span className="text-sm font-semibold text-slate-700">
+                            Password
+                          </span>
+                          <Link
+                            href="/mover/forgot-password"
+                            className="text-sm font-semibold text-brandBlue hover:text-indigo-700"
+                          >
                             Forgot password?
                           </Link>
                         </div>
@@ -653,17 +867,30 @@ export default function MoverLoginPage() {
                             required
                             type={showPassword ? "text" : "password"}
                             value={loginForm.password}
-                            onChange={(event) => setLoginForm((current) => ({ ...current, password: event.target.value }))}
+                            onChange={(event) =>
+                              setLoginForm((current) => ({
+                                ...current,
+                                password: event.target.value,
+                              }))
+                            }
                             className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 pr-12 text-slate-900 outline-none transition focus:border-brandBlue focus:ring-4 focus:ring-indigo-100"
                             placeholder="Enter your password"
                           />
                           <button
                             type="button"
-                            onClick={() => setShowPassword((current) => !current)}
+                            onClick={() =>
+                              setShowPassword((current) => !current)
+                            }
                             className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
-                            aria-label={showPassword ? "Hide password" : "Show password"}
+                            aria-label={
+                              showPassword ? "Hide password" : "Show password"
+                            }
                           >
-                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            {showPassword ? (
+                              <EyeOff className="h-4 w-4" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
                           </button>
                         </div>
                       </label>
@@ -678,25 +905,39 @@ export default function MoverLoginPage() {
                     </form>
                   )}
 
-                  {error ? <p className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
-                  {success ? <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{success}</p> : null}
+                  {error ? (
+                    <p className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                      {error}
+                    </p>
+                  ) : null}
+                  {success ? (
+                    <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                      {success}
+                    </p>
+                  ) : null}
 
-                  {!loginCodeEmail ? <p className="mt-5 text-center text-sm text-slate-500">
-                    {mode === "signup" ? "Already have a mover account?" : "Need a new mover account?"}{" "}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMode(mode === "signup" ? "login" : "signup");
-                        setLoginCodeEmail("");
-                        setLoginCode("");
-                        setError("");
-                        setSuccess("");
-                      }}
-                      className="font-semibold text-brandBlue hover:text-indigo-700"
-                    >
-                      {mode === "signup" ? "Log in instead" : "Create one here"}
-                    </button>
-                  </p> : null}
+                  {!loginCodeEmail ? (
+                    <p className="mt-5 text-center text-sm text-slate-500">
+                      {mode === "signup"
+                        ? "Already have a mover account?"
+                        : "Need a new mover account?"}{" "}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMode(mode === "signup" ? "login" : "signup");
+                          setLoginCodeEmail("");
+                          setLoginCode("");
+                          setError("");
+                          setSuccess("");
+                        }}
+                        className="font-semibold text-brandBlue hover:text-indigo-700"
+                      >
+                        {mode === "signup"
+                          ? "Log in instead"
+                          : "Create one here"}
+                      </button>
+                    </p>
+                  ) : null}
                 </div>
               </div>
             </div>

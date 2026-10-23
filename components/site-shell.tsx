@@ -4,8 +4,24 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowRight, ChevronDown, Mail, Menu, ShieldCheck, Sparkles, UserRound, X } from "lucide-react";
-import { ReactNode, useCallback, useEffect, useId, useRef, useState } from "react";
+import {
+  ArrowRight,
+  ChevronDown,
+  Mail,
+  Menu,
+  ShieldCheck,
+  Sparkles,
+  UserRound,
+  X,
+} from "lucide-react";
+import {
+  ReactNode,
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
 import { LanguageSelector } from "@/components/language-selector";
 import { useLanguage } from "@/components/language-provider";
 import { SITE_EMAILS, toMailto } from "@/lib/site-emails";
@@ -21,41 +37,131 @@ const navGroups = [
   {
     label: "Get moving",
     links: [
-      { href: "/quote", label: "Get free moving quotes", copy: "Tell us about your move once." },
-      { href: "/cleaning-quotes", label: "Move-out cleaning quotes", copy: "Get the move and the clean organised together." },
-      { href: "/#how-it-works", label: "How it works", copy: "See the three simple steps." },
-      { href: "/faq", label: "Moving FAQs", copy: "Quick answers before you begin." },
+      {
+        href: "/quote",
+        label: "Get free moving quotes",
+        copy: "Tell us about your move once.",
+      },
+      {
+        href: "/cleaning-quotes",
+        label: "Moving & cleaning quotes",
+        copy: "Get the move and the clean organised together.",
+      },
+      {
+        href: "/#how-it-works",
+        label: "How it works",
+        copy: "See the three simple steps.",
+      },
+      {
+        href: "/faq",
+        label: "Moving FAQs",
+        copy: "Quick answers before you begin.",
+      },
     ],
   },
   {
     label: "Find movers",
     links: [
-      { href: "/movers", label: "Movers directory", copy: "Browse public mover profiles." },
-      { href: "/#mover-reviews", label: "Mover reviews", copy: "Compare verified customer feedback." },
-      { href: "/moving-quotes/auckland", label: "Auckland moving quotes", copy: "Find movers for Auckland routes." },
-      { href: "/moving-quotes/wellington", label: "Wellington moving quotes", copy: "Find movers for Wellington routes." },
-      { href: "/moving-quotes/canterbury", label: "Christchurch moving quotes", copy: "Find movers for Canterbury routes." },
+      {
+        href: "/movers",
+        label: "Movers directory",
+        copy: "Browse public mover profiles.",
+      },
+      {
+        href: "/#mover-reviews",
+        label: "Mover reviews",
+        copy: "Read available customer feedback.",
+      },
+      {
+        href: "/moving-quotes/auckland",
+        label: "Auckland moving quotes",
+        copy: "Find movers for Auckland routes.",
+      },
+      {
+        href: "/moving-quotes/wellington",
+        label: "Wellington moving quotes",
+        copy: "Find movers for Wellington routes.",
+      },
+      {
+        href: "/moving-quotes/canterbury",
+        label: "Christchurch moving quotes",
+        copy: "Find movers for Canterbury routes.",
+      },
     ],
   },
   {
-    label: "Resources",
+    label: "Planning tools",
     links: [
-      { href: "/resources", label: "All moving resources", copy: "Guides and planning tools in one place." },
-      { href: "/resources#cleaning-guides", label: "Cleaning guides", copy: "Move-out checklists, costs, and practical cleaning advice." },
-      { href: "/resources/moving-cost-calculator", label: "Moving cost calculator", copy: "Build a broad moving budget." },
-      { href: "/resources/nz-moving-costs-2026", label: "NZ moving costs 2026", copy: "Understand common price drivers." },
-      { href: "/resources/moving-house-checklist", label: "Moving-house checklist", copy: "Stay organised before moving day." },
-      { href: "/resources/inter-island-moving-guide", label: "Inter-Island guide", copy: "Plan a move between the islands." },
+      {
+        href: "/moving-inventory",
+        label: "Moving inventory builder",
+        copy: "Plan items by room and reuse your list in a quote.",
+      },
+      {
+        href: "/resources",
+        label: "All moving resources",
+        copy: "Guides and planning tools in one place.",
+      },
+      {
+        href: "/resources#cleaning-guides",
+        label: "Cleaning guides",
+        copy: "Move-out checklists, costs, and practical cleaning advice.",
+      },
+      {
+        href: "/resources/moving-cost-calculator",
+        label: "Moving cost calculator",
+        copy: "Build a broad moving budget.",
+      },
+      {
+        href: "/resources/nz-moving-costs-2026",
+        label: "NZ moving costs 2026",
+        copy: "Understand common price drivers.",
+      },
+      {
+        href: "/resources/moving-house-checklist",
+        label: "Moving-house checklist",
+        copy: "Stay organised before moving day.",
+      },
+      {
+        href: "/resources/inter-island-moving-guide",
+        label: "Inter-Island guide",
+        copy: "Plan a move between the islands.",
+      },
     ],
   },
   {
     label: "About",
     links: [
-      { href: "/about", label: "About Match 'n Move", copy: "Why we built a simpler way to move." },
-      { href: "/contact", label: "Contact us", copy: "Talk with the Match 'n Move team." },
-      { href: "/mover/pricing", label: "Mover pricing", copy: "Information for moving companies." },
-      { href: "/mover/login?mode=signup", label: "Partner signup", copy: "Moving and cleaning companies choose their account type here." },
-      { href: "/mover/login?mode=login", label: "Partner login", copy: "Access your mover or cleaner dashboard." },
+      {
+        href: "/trust",
+        label: "Trust & provider checks",
+        copy: "Understand what we check and how enquiries work.",
+      },
+      {
+        href: "/about",
+        label: "About Match 'n Move",
+        copy: "Why we built a simpler way to move.",
+      },
+      {
+        href: "/contact",
+        label: "Contact us",
+        copy: "Talk with the Match 'n Move team.",
+      },
+      {
+        href: "/mover/pricing",
+        label: "Mover pricing",
+        copy: "Information for moving companies.",
+      },
+      {
+        href: "/mover/login?mode=signup",
+        label: "Partner signup",
+        copy: "Moving and cleaning companies choose their account type here.",
+      },
+      {
+        href: "/mover/login?mode=login",
+        label: "Partner login",
+        copy: "Access your mover or cleaner dashboard.",
+      },
     ],
   },
 ] as const;
@@ -72,18 +178,34 @@ const footerGroups = [
       { href: "/resources/moving-cost-calculator", label: "Cost Calculator" },
       { href: "/moving-quotes/auckland", label: "Auckland Moving Quotes" },
       { href: "/moving-quotes/wellington", label: "Wellington Moving Quotes" },
-      { href: "/moving-quotes/canterbury", label: "Christchurch Moving Quotes" },
-      { href: "/cleaning-quotes", label: "Move-out Cleaning Quotes" },
+      {
+        href: "/moving-quotes/canterbury",
+        label: "Christchurch Moving Quotes",
+      },
+      { href: "/cleaning-quotes", label: "Moving & Cleaning Quotes" },
     ],
   },
   {
     title: "Guides & Tools",
     links: [
-      { href: "/resources/nz-moving-costs-2026", label: "NZ Moving Costs 2026" },
+      { href: "/moving-inventory", label: "Moving Inventory Builder" },
+      {
+        href: "/resources/nz-moving-costs-2026",
+        label: "NZ Moving Costs 2026",
+      },
       { href: "/resources/moving-house-checklist", label: "Moving Checklist" },
-      { href: "/resources/inter-island-moving-guide", label: "Inter-Island Guide" },
-      { href: "/resources/compare-moving-quotes", label: "Compare Moving Quotes" },
-      { href: "/resources/move-out-cleaning-checklist-nz", label: "Move-out Cleaning Checklist" },
+      {
+        href: "/resources/inter-island-moving-guide",
+        label: "Inter-Island Guide",
+      },
+      {
+        href: "/resources/compare-moving-quotes",
+        label: "Compare Moving Quotes",
+      },
+      {
+        href: "/resources/move-out-cleaning-checklist-nz",
+        label: "Move-out Cleaning Checklist",
+      },
     ],
   },
   {
@@ -106,6 +228,7 @@ const footerGroups = [
   {
     title: "Legal & Compliance",
     links: [
+      { href: "/trust", label: "Trust & Provider Checks" },
       { href: "/terms", label: "Terms & Conditions" },
       { href: "/privacy", label: "Data Consent & Privacy" },
     ],
@@ -160,7 +283,9 @@ export function Nav() {
   const logoFilterId = useId();
   const { t } = useLanguage();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [moverSession, setMoverSession] = useState<MoverSessionState | null>(null);
+  const [moverSession, setMoverSession] = useState<MoverSessionState | null>(
+    null,
+  );
   const sessionRequestRef = useRef(0);
 
   const moverAccountHref = moverSession?.authenticated
@@ -210,7 +335,9 @@ export function Nav() {
         cache: "no-store",
         credentials: "same-origin",
       });
-      const data = (await response.json().catch(() => null)) as MoverSessionState | null;
+      const data = (await response
+        .json()
+        .catch(() => null)) as MoverSessionState | null;
 
       if (requestId === sessionRequestRef.current) {
         setMoverSession(data?.authenticated ? data : { authenticated: false });
@@ -253,11 +380,20 @@ export function Nav() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/95 shadow-[0_10px_30px_-28px_rgba(15,23,42,0.5)] backdrop-blur-xl">
-      <svg aria-hidden="true" focusable="false" className="pointer-events-none absolute h-0 w-0">
+      <svg
+        aria-hidden="true"
+        focusable="false"
+        className="pointer-events-none absolute h-0 w-0"
+      >
         <defs>
           <filter id={logoFilterId} colorInterpolationFilters="sRGB">
             {/* Remove the white image background while retaining the saturated brand colours. */}
-            <feColorMatrix in="SourceGraphic" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  -1 -1 -1 0 3" result="withoutWhite" />
+            <feColorMatrix
+              in="SourceGraphic"
+              type="matrix"
+              values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  -1 -1 -1 0 3"
+              result="withoutWhite"
+            />
             <feComposite in="withoutWhite" in2="SourceGraphic" operator="in" />
           </filter>
         </defs>
@@ -278,7 +414,10 @@ export function Nav() {
             style={{ filter: `url(#${logoFilterId})` }}
           />
         </Link>
-        <nav className="hidden items-center gap-0.5 rounded-full border border-slate-200/80 bg-slate-50/80 p-1 font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] lg:flex" aria-label={t("publicShell.mainNavigation")}>
+        <nav
+          className="hidden items-center gap-0.5 rounded-full border border-slate-200/80 bg-slate-50/80 p-1 font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] lg:flex"
+          aria-label={t("publicShell.mainNavigation")}
+        >
           {navGroups.map((group) => (
             <div key={group.label} className="group relative">
               <button
@@ -290,18 +429,26 @@ export function Nav() {
               </button>
               <div className="pointer-events-none invisible absolute left-1/2 top-full z-50 w-[21rem] -translate-x-1/2 translate-y-2 rounded-[22px] border border-slate-200 bg-white p-2 opacity-0 shadow-[0_24px_70px_-30px_rgba(15,23,42,0.35)] transition duration-200 group-hover:pointer-events-auto group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100">
                 <div className="p-2">
-                  <p className="text-[0.68rem] font-bold uppercase tracking-[0.18em] text-sky-700">{translatePublicShellLabel(t, group.label)}</p>
+                  <p className="text-[0.68rem] font-bold uppercase tracking-[0.18em] text-sky-700">
+                    {translatePublicShellLabel(t, group.label)}
+                  </p>
                 </div>
                 {group.links.map((link, index) => (
                   <Link
                     key={link.href}
                     href={link.href}
                     className={`block rounded-2xl px-4 py-3 transition hover:bg-sky-50 focus-visible:bg-sky-50 focus-visible:outline-none ${
-                      group.label === "Find movers" && index === 0 ? "bg-[linear-gradient(135deg,#eff8ff,#f0fdf4)]" : ""
+                      group.label === "Find movers" && index === 0
+                        ? "bg-[linear-gradient(135deg,#eff8ff,#f0fdf4)]"
+                        : ""
                     }`}
                   >
-                    <span className="block text-sm font-bold text-slate-950">{getNavLinkLabel(link.href, link.label)}</span>
-                    <span className="mt-1 block text-xs font-normal leading-5 text-slate-500">{link.copy}</span>
+                    <span className="block text-sm font-bold text-slate-950">
+                      {getNavLinkLabel(link.href, link.label)}
+                    </span>
+                    <span className="mt-1 block text-xs font-normal leading-5 text-slate-500">
+                      {link.copy}
+                    </span>
                   </Link>
                 ))}
               </div>
@@ -329,11 +476,19 @@ export function Nav() {
             type="button"
             aria-expanded={mobileMenuOpen}
             aria-controls="mobile-nav"
-            aria-label={mobileMenuOpen ? t("publicShell.closeMenu") : t("publicShell.openMenu")}
+            aria-label={
+              mobileMenuOpen
+                ? t("publicShell.closeMenu")
+                : t("publicShell.openMenu")
+            }
             onClick={() => setMobileMenuOpen((open) => !open)}
             className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#07162b] text-white shadow-[0_8px_18px_-10px_rgba(7,22,43,0.8)] transition hover:bg-slate-800 md:h-10 md:w-10 lg:hidden"
           >
-            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            {mobileMenuOpen ? (
+              <X className="h-5 w-5" />
+            ) : (
+              <Menu className="h-5 w-5" />
+            )}
           </button>
         </div>
       </div>
@@ -378,22 +533,34 @@ export function Nav() {
                     {t("publicShell.moversDirectory")}
                     <ArrowRight className="h-4 w-4 text-sky-700" />
                   </span>
-                  <span className="mt-1.5 block text-sm leading-6 text-slate-600">Browse mover profiles, service areas, and public reviews.</span>
+                  <span className="mt-1.5 block text-sm leading-6 text-slate-600">
+                    Browse mover profiles, service areas, and public reviews.
+                  </span>
                 </Link>
                 {navGroups.map((group) => (
-                  <div key={group.label} className="border-t border-slate-200 px-1 py-3 first:border-t-0">
-                    <p className="px-3 text-[0.68rem] font-bold uppercase tracking-[0.18em] text-slate-400">{translatePublicShellLabel(t, group.label)}</p>
+                  <div
+                    key={group.label}
+                    className="border-t border-slate-200 px-1 py-3 first:border-t-0"
+                  >
+                    <p className="px-3 text-[0.68rem] font-bold uppercase tracking-[0.18em] text-slate-400">
+                      {translatePublicShellLabel(t, group.label)}
+                    </p>
                     <div className="mt-1.5 grid gap-0.5">
-                      {group.links.filter((link) => link.href !== "/quote" && link.href !== "/movers").map((link) => (
-                        <Link
-                          key={link.href}
-                          href={link.href}
-                          onClick={() => setMobileMenuOpen(false)}
-                          className="rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
-                        >
-                          {getNavLinkLabel(link.href, link.label)}
-                        </Link>
-                      ))}
+                      {group.links
+                        .filter(
+                          (link) =>
+                            link.href !== "/quote" && link.href !== "/movers",
+                        )
+                        .map((link) => (
+                          <Link
+                            key={link.href}
+                            href={link.href}
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
+                          >
+                            {getNavLinkLabel(link.href, link.label)}
+                          </Link>
+                        ))}
                     </div>
                   </div>
                 ))}
@@ -441,12 +608,20 @@ export function Footer() {
 
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-[24px] border border-white/70 bg-white/60 px-4 py-4 shadow-[0_18px_36px_-30px_rgba(15,23,42,0.35)] backdrop-blur">
-                <p className="text-sm font-semibold text-slate-900">{t("publicShell.freeCustomers")}</p>
-                <p className="mt-1 text-sm leading-6 text-slate-500">{t("publicShell.freeCustomersCopy")}</p>
+                <p className="text-sm font-semibold text-slate-900">
+                  {t("publicShell.freeCustomers")}
+                </p>
+                <p className="mt-1 text-sm leading-6 text-slate-500">
+                  {t("publicShell.freeCustomersCopy")}
+                </p>
               </div>
               <div className="rounded-[24px] border border-white/70 bg-white/60 px-4 py-4 shadow-[0_18px_36px_-30px_rgba(15,23,42,0.35)] backdrop-blur">
-                <p className="text-sm font-semibold text-slate-900">{t("publicShell.transparentMovers")}</p>
-                <p className="mt-1 text-sm leading-6 text-slate-500">{t("publicShell.transparentMoversCopy")}</p>
+                <p className="text-sm font-semibold text-slate-900">
+                  {t("publicShell.transparentMovers")}
+                </p>
+                <p className="mt-1 text-sm leading-6 text-slate-500">
+                  {t("publicShell.transparentMoversCopy")}
+                </p>
               </div>
             </div>
           </div>
@@ -454,7 +629,9 @@ export function Footer() {
           <div className="grid gap-8 py-10 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[repeat(5,minmax(0,1fr))_minmax(260px,1.5fr)] xl:gap-6 xl:py-12">
             {footerGroups.map((group) => (
               <div key={group.title}>
-                <h3 className="text-sm font-bold uppercase tracking-[0.18em] text-slate-900">{translatePublicShellLabel(t, group.title)}</h3>
+                <h3 className="text-sm font-bold uppercase tracking-[0.18em] text-slate-900">
+                  {translatePublicShellLabel(t, group.title)}
+                </h3>
                 <nav className="mt-4 flex flex-col gap-3 text-[0.98rem] text-slate-600">
                   {group.links.map((link) => (
                     <Link
@@ -470,10 +647,16 @@ export function Footer() {
             ))}
 
             <div>
-              <h3 className="text-sm font-bold uppercase tracking-[0.18em] text-slate-900">{t("publicShell.contact")}</h3>
+              <h3 className="text-sm font-bold uppercase tracking-[0.18em] text-slate-900">
+                {t("publicShell.contact")}
+              </h3>
               <div className="mt-4 flex flex-col gap-3 text-[0.98rem] text-slate-600">
                 {contactLinks.map((link) => (
-                  <Link key={link.label} href={link.href} className="flex w-fit items-center gap-2 transition hover:text-slate-950">
+                  <Link
+                    key={link.label}
+                    href={link.href}
+                    className="flex w-fit items-center gap-2 transition hover:text-slate-950"
+                  >
                     <Mail className="h-4 w-4 text-slate-400" />
                     {link.label}
                   </Link>
@@ -520,5 +703,11 @@ export function Footer() {
 }
 
 export function SiteShell({ children }: { children: ReactNode }) {
-  return <main><Nav />{children}<Footer /></main>;
+  return (
+    <main>
+      <Nav />
+      {children}
+      <Footer />
+    </main>
+  );
 }

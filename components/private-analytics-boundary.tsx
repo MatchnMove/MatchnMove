@@ -2,6 +2,7 @@
 
 import { ReactNode, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { PublicSignals } from "@/components/public-signals";
 import { GoogleAnalytics } from "@/app/google-analytics";
 import { MicrosoftClarity } from "@/app/microsoft-clarity";
 import { isPrivateWorkspacePath } from "@/lib/analytics-privacy";
@@ -13,6 +14,23 @@ export function PrivateAnalyticsBoundary({
   children: ReactNode;
   measurementId?: string;
 }) {
+  const [analyticsAllowed, setAnalyticsAllowed] = useState(false);
+  useEffect(() => {
+    let active = true;
+    queueMicrotask(() => {
+      if (active) {
+        try {
+          setAnalyticsAllowed(
+            navigator.doNotTrack !== "1" &&
+              localStorage.getItem("mm_analytics_opt_out") !== "1",
+          );
+        } catch {}
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
   const privateRoute = isPrivateWorkspacePath(usePathname());
   const [initialPrivateRoute] = useState(privateRoute);
   const needsNewDocument = privateRoute !== initialPrivateRoute;
@@ -28,9 +46,16 @@ export function PrivateAnalyticsBoundary({
         Opening your workspace…
       </p>
     );
-  if (privateRoute) return children;
+  if (privateRoute || !analyticsAllowed)
+    return (
+      <>
+        <PublicSignals />
+        {children}
+      </>
+    );
   return (
     <>
+      <PublicSignals />
       <GoogleAnalytics measurementId={measurementId} />
       <MicrosoftClarity />
       {children}

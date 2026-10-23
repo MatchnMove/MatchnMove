@@ -1,23 +1,18 @@
-import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { SiteShell } from "@/components/site-shell";
 import { Hero } from "@/src/components/hero/Hero";
 import { MoverReviewsShowcase } from "@/src/components/home/MoverReviewsShowcase";
-import { CleaningQuotesSeoSection } from "@/src/components/home/CleaningQuotesSeoSection";
 import { MobileQuoteCta } from "@/src/components/home/MobileQuoteCta";
 import { MovingQuotesSeoSection } from "@/src/components/home/MovingQuotesSeoSection";
 import { ResourceHighlights } from "@/src/components/home/ResourceHighlights";
 import { ScrollJourneySection } from "@/src/components/home/ScrollJourneySection";
 import { createPageMetadata } from "@/lib/seo";
-
-export const metadata: Metadata = createPageMetadata({
-  title: "Free Moving Quotes NZ | Match 'n Move",
+export const metadata = createPageMetadata({
+  title: "Free Moving & Cleaning Quotes NZ | Match 'n Move",
   description:
-    "Compare free moving quotes from trusted moving companies across New Zealand. Submit your move once for local, intercity, or long-distance mover quotes.",
+    "Request moving quotes from New Zealand companies. Add optional move-out or move-in cleaning, plan your inventory and compare your options without obligation.",
   path: "/",
 });
-
 export default function Home() {
   return (
     <SiteShell>
@@ -25,99 +20,35 @@ export default function Home() {
       <ScrollJourneySection />
       <MoverReviewsShowcase />
       <MovingQuotesSeoSection />
-      <CleaningQuotesSeoSection />
       <ResourceHighlights />
-      <section data-analytics-section="homepage_for_movers" className="relative overflow-hidden bg-white py-10 sm:py-16 lg:py-20">
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute left-[8%] top-8 h-32 w-32 rounded-full bg-emerald-100 blur-3xl sm:h-48 sm:w-48" />
-          <div className="absolute right-[10%] top-10 h-40 w-40 rounded-full bg-sky-100/80 blur-3xl sm:h-56 sm:w-56" />
-          <div className="absolute inset-x-0 bottom-0 h-32 bg-[linear-gradient(180deg,transparent,rgba(248,250,252,0.85))]" />
-        </div>
-
-        <div className="container-shell relative">
-          <div className="overflow-hidden rounded-[24px] border border-slate-200/80 bg-[linear-gradient(135deg,#ffffff_0%,#f8fbff_58%,#f2fbf7_100%)] shadow-[0_30px_90px_-48px_rgba(15,23,42,0.3)] sm:rounded-[32px]">
-            <div className="grid gap-6 px-4 py-5 sm:gap-10 sm:px-8 sm:py-8 lg:grid-cols-[minmax(0,1fr)_minmax(420px,0.92fr)] lg:items-center lg:gap-12 lg:px-12 lg:py-12">
-              <div className="max-w-[36rem]">
-                <p className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-emerald-700 sm:text-sm">
-                  For moving companies
-                </p>
-
-                <h3 className="mt-4 max-w-[13ch] text-[clamp(1.85rem,8vw,4.4rem)] font-black leading-[0.98] tracking-[-0.03em] text-slate-950 sm:mt-5 sm:max-w-[12ch] sm:leading-[0.94] sm:tracking-[-0.05em]">
-                  Turn more quote requests into booked jobs.
-                </h3>
-
-                <p className="mt-5 max-w-[34rem] text-[1rem] leading-7 text-slate-600 sm:text-[1.05rem]">
-                  Get in front of homeowners already planning a move, respond faster, and only pay for verified leads that match your service area.
-                </p>
-
-                <div className="mt-5 grid gap-2.5 sm:mt-7 sm:grid-cols-2 sm:gap-3">
-                  <div className="rounded-2xl border border-slate-200 bg-white/80 px-4 py-4 shadow-sm">
-                    <p className="text-sm font-semibold text-slate-900">High-intent customers</p>
-                    <p className="mt-1 text-sm leading-6 text-slate-500">Reach movers-ready customers instead of cold traffic.</p>
-                  </div>
-                  <div className="rounded-2xl border border-slate-200 bg-white/80 px-4 py-4 shadow-sm">
-                    <p className="text-sm font-semibold text-slate-900">Flexible lead spend</p>
-                    <p className="mt-1 text-sm leading-6 text-slate-500">No long contracts, just verified opportunities.</p>
-                  </div>
-                </div>
-
-                <div className="mt-6 flex flex-col gap-3 sm:mt-7 sm:flex-row sm:items-center sm:gap-4">
-                  <Link
-                    href="/about"
-                    className="inline-flex min-h-[46px] w-full items-center justify-center rounded-xl bg-[linear-gradient(135deg,#0f172a,#1e293b)] px-6 py-3 text-[0.95rem] font-semibold text-white shadow-[0_18px_40px_-24px_rgba(15,23,42,0.45)] transition duration-200 hover:translate-y-[-1px] hover:shadow-[0_24px_48px_-24px_rgba(15,23,42,0.55)] sm:min-h-[52px] sm:w-auto sm:rounded-2xl sm:px-7 sm:text-base"
-                  >
-                    Learn how Match &apos;n Move works
-                  </Link>
-                  <p className="max-w-[22rem] text-sm leading-6 text-slate-500">
-                    Learn how Match &apos;n Move helps movers grow, then join when you&apos;re ready.
-                  </p>
-                </div>
-
-                <div className="mt-6 grid grid-cols-3 gap-2.5 border-t border-slate-200/80 pt-5 sm:mt-8 sm:gap-3 sm:pt-6">
-                  <div>
-                    <p className="text-2xl font-black tracking-[-0.04em] text-slate-950 sm:text-3xl">24/7</p>
-                    <p className="mt-1 text-xs uppercase tracking-[0.18em] text-slate-400 sm:text-[0.72rem]">Lead flow</p>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-black tracking-[-0.04em] text-slate-950 sm:text-3xl">0</p>
-                    <p className="mt-1 text-xs uppercase tracking-[0.18em] text-slate-400 sm:text-[0.72rem]">Lock-in contracts</p>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-black tracking-[-0.04em] text-slate-950 sm:text-3xl">1</p>
-                    <p className="mt-1 text-xs uppercase tracking-[0.18em] text-slate-400 sm:text-[0.72rem]">Simple dashboard</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="relative">
-                <div className="relative overflow-hidden rounded-[22px] border border-slate-200 bg-slate-950 shadow-[0_32px_70px_-36px_rgba(15,23,42,0.8)] sm:rounded-[28px]">
-                  <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between border-b border-white/10 bg-slate-950/80 px-4 py-3 backdrop-blur">
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.18em] text-emerald-300/80">Mover partner preview</p>
-                      <p className="mt-1 text-sm font-semibold text-white">Example lead workspace</p>
-                    </div>
-                    <div className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-200">
-                      Preview
-                    </div>
-                  </div>
-
-                  <Image
-                    src="/images/movers/mover-partner-preview.svg"
-                    alt="Illustration of a moving company dashboard with incoming leads and scheduled jobs."
-                    width={960}
-                    height={760}
-                    className="h-auto w-full pt-[74px]"
-                    priority={false}
-                  />
-
-                  <div className="absolute bottom-3 left-3 right-3 rounded-xl border border-white/10 bg-slate-900/88 px-3 py-2.5 shadow-xl backdrop-blur sm:bottom-4 sm:left-4 sm:right-auto sm:rounded-2xl sm:px-4 sm:py-3">
-                    <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-slate-400">This week</p>
-                    <p className="mt-1 text-xl font-black tracking-[-0.03em] text-white sm:text-2xl sm:tracking-[-0.04em]">New request</p>
-                    <p className="mt-1 text-sm text-emerald-300">Route and timing ready to review</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+      <section className="bg-slate-50 py-12 sm:py-16">
+        <div className="container-shell grid gap-8 md:grid-cols-2">
+          <div>
+            <p className="font-semibold text-teal-700">
+              For moving and cleaning companies
+            </p>
+            <h2 className="mt-3 text-3xl font-bold text-slate-950">
+              Meet customers planning their next move.
+            </h2>
+            <p className="mt-4 leading-7 text-slate-600">
+              Register, set your service areas and review relevant enquiries.
+              See the price before choosing to unlock customer details. Enquiry
+              volume and bookings are not guaranteed.
+            </p>
+          </div>
+          <div className="flex flex-col justify-center gap-4">
+            <Link
+              className="rounded-xl bg-teal-700 px-5 py-3 text-center font-semibold text-white"
+              href="/mover/pricing"
+            >
+              Mover pricing &amp; how it works
+            </Link>
+            <Link
+              className="rounded-xl border border-slate-300 px-5 py-3 text-center font-semibold text-slate-900"
+              href="/cleaner/partner"
+            >
+              Information for cleaning companies
+            </Link>
           </div>
         </div>
       </section>

@@ -20,14 +20,24 @@ import {
   Table2,
   Tv,
   UtensilsCrossed,
-  WashingMachine
+  WashingMachine,
 } from "lucide-react";
 import {
   AddressAutocomplete,
-  AddressSuggestion
+  AddressSuggestion,
 } from "@/components/address-autocomplete";
 import { useLanguage } from "@/components/language-provider";
 import { addressSuggestionToValue } from "@/lib/address-search";
+import {
+  CleaningOptions,
+  initialCleaning,
+} from "@/components/cleaning-options";
+import {
+  cleaningDetailsSchema,
+  type CleaningDetails,
+} from "@/lib/cleaning-request";
+import { InventoryEditor } from "@/components/inventory-editor";
+import { inventorySchema, type InventoryItem } from "@/lib/inventory";
 import { trackAnalyticsEvent } from "@/lib/analytics";
 
 type Form = {
@@ -98,7 +108,7 @@ const init: Form = {
   toCountry: "New Zealand",
   moveDate: "",
   dateFlexible: false,
-  movingWhat: ""
+  movingWhat: "",
 };
 
 const initExtra: ExtraDetails = {
@@ -109,7 +119,7 @@ const initExtra: ExtraDetails = {
   toBedrooms: "",
   toFloor: "",
   toHasLift: "",
-  toStorageSize: ""
+  toStorageSize: "",
 };
 
 const bedroomOptions = ["1", "2", "3", "4", "5+"] as const;
@@ -117,12 +127,15 @@ const storageOptions = [
   "Small (4-9m2)",
   "Medium (10-15m2)",
   "Large (16-21m2)",
-  "XL (22m2+)"
+  "XL (22m2+)",
 ] as const;
 const MAX_ITEM_QTY = 200;
 const MAX_CLEANING_NOTES_LENGTH = 2000;
 function createClientRequestId() {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+  if (
+    typeof crypto !== "undefined" &&
+    typeof crypto.randomUUID === "function"
+  ) {
     return crypto.randomUUID();
   }
 
@@ -139,14 +152,19 @@ const commonItems = [
   { id: "armchair", label: "Armchair", room: "Living Room", icon: Armchair },
   { id: "fridge", label: "Fridge", room: "Kitchen", icon: Refrigerator },
   { id: "dining-table", label: "Dining Table", room: "Kitchen", icon: Table2 },
-  { id: "washing-machine", label: "Washing Machine", room: "Kitchen", icon: WashingMachine },
-  { id: "boxes", label: "Boxes", room: "Kitchen", icon: Package }
+  {
+    id: "washing-machine",
+    label: "Washing Machine",
+    room: "Kitchen",
+    icon: WashingMachine,
+  },
+  { id: "boxes", label: "Boxes", room: "Kitchen", icon: Package },
 ] as const;
 
 const roomIcons = {
   Bedroom: BedDouble,
   "Living Room": Sofa,
-  Kitchen: UtensilsCrossed
+  Kitchen: UtensilsCrossed,
 } as const;
 const monthNames = [
   "January",
@@ -160,7 +178,7 @@ const monthNames = [
   "September",
   "October",
   "November",
-  "December"
+  "December",
 ] as const;
 const dayLabels = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"] as const;
 
@@ -176,43 +194,140 @@ const primaryButtonClass =
 const propertyOptions: Array<{ label: PropertyType; image: string }> = [
   { label: "Apartment", image: "/images/property/apartment.webp" },
   { label: "House", image: "/images/property/house.webp" },
-  { label: "Storage", image: "/images/property/storage.webp" }
+  { label: "Storage", image: "/images/property/storage.webp" },
 ];
 
 export function QuoteForm() {
   const { locale, t, formatNumber } = useLanguage();
   const steps = [
-    { number: 1, label: t("quote.step.pickup"), summary: t("quote.step.pickupSummary") },
-    { number: 2, label: t("quote.step.destination"), summary: t("quote.step.destinationSummary") },
-    { number: 3, label: t("quote.step.contact"), summary: t("quote.step.contactSummary") }
+    {
+      number: 1,
+      label: t("quote.step.pickup"),
+      summary: t("quote.step.pickupSummary"),
+    },
+    {
+      number: 2,
+      label: t("quote.step.destination"),
+      summary: t("quote.step.destinationSummary"),
+    },
+    {
+      number: 3,
+      label: t("quote.step.contact"),
+      summary: t("quote.step.contactSummary"),
+    },
   ] as const;
-  const fieldMeta: Record<keyof Form, { label: string; placeholder: string; required?: boolean; type?: string }> = {
-    name: { label: t("quote.field.name"), placeholder: t("quote.placeholder.name"), required: true },
-    email: { label: t("quote.field.email"), placeholder: "you@example.com", required: true, type: "email" },
-    phone: { label: t("quote.field.phone"), placeholder: t("quote.placeholder.phone"), required: true, type: "tel" },
-    fromPropertyType: { label: t("quote.field.fromPropertyType"), placeholder: t("quote.property.apartment"), required: true },
-    toPropertyType: { label: t("quote.field.toPropertyType"), placeholder: t("quote.property.house"), required: true },
-    bedrooms: { label: t("quote.field.bedrooms"), placeholder: "1", required: true },
-    fromAddress: { label: t("quote.field.fromAddress"), placeholder: t("quote.placeholder.fromAddress"), required: true },
-    fromCity: { label: t("quote.field.fromCity"), placeholder: "Auckland", required: true },
-    fromRegion: { label: t("quote.field.fromRegion"), placeholder: t("quote.placeholder.fromRegion"), required: true },
-    fromPostcode: { label: t("quote.field.fromPostcode"), placeholder: "1010", required: true },
-    fromCountry: { label: t("quote.field.fromCountry"), placeholder: t("quote.placeholder.country"), required: true },
-    toAddress: { label: t("quote.field.toAddress"), placeholder: t("quote.placeholder.toAddress"), required: true },
-    toCity: { label: t("quote.field.toCity"), placeholder: "Wellington", required: true },
-    toRegion: { label: t("quote.field.toRegion"), placeholder: t("quote.placeholder.toRegion"), required: true },
-    toPostcode: { label: t("quote.field.toPostcode"), placeholder: "6011", required: true },
-    toCountry: { label: t("quote.field.toCountry"), placeholder: t("quote.placeholder.country"), required: true },
-    moveDate: { label: t("quote.field.moveDate"), placeholder: "YYYY-MM-DD", type: "date" },
+  const fieldMeta: Record<
+    keyof Form,
+    { label: string; placeholder: string; required?: boolean; type?: string }
+  > = {
+    name: {
+      label: t("quote.field.name"),
+      placeholder: t("quote.placeholder.name"),
+      required: true,
+    },
+    email: {
+      label: t("quote.field.email"),
+      placeholder: "you@example.com",
+      required: true,
+      type: "email",
+    },
+    phone: {
+      label: t("quote.field.phone"),
+      placeholder: t("quote.placeholder.phone"),
+      required: true,
+      type: "tel",
+    },
+    fromPropertyType: {
+      label: t("quote.field.fromPropertyType"),
+      placeholder: t("quote.property.apartment"),
+      required: true,
+    },
+    toPropertyType: {
+      label: t("quote.field.toPropertyType"),
+      placeholder: t("quote.property.house"),
+      required: true,
+    },
+    bedrooms: {
+      label: t("quote.field.bedrooms"),
+      placeholder: "1",
+      required: true,
+    },
+    fromAddress: {
+      label: t("quote.field.fromAddress"),
+      placeholder: t("quote.placeholder.fromAddress"),
+      required: true,
+    },
+    fromCity: {
+      label: t("quote.field.fromCity"),
+      placeholder: "Auckland",
+      required: true,
+    },
+    fromRegion: {
+      label: t("quote.field.fromRegion"),
+      placeholder: t("quote.placeholder.fromRegion"),
+      required: true,
+    },
+    fromPostcode: {
+      label: t("quote.field.fromPostcode"),
+      placeholder: "1010",
+      required: true,
+    },
+    fromCountry: {
+      label: t("quote.field.fromCountry"),
+      placeholder: t("quote.placeholder.country"),
+      required: true,
+    },
+    toAddress: {
+      label: t("quote.field.toAddress"),
+      placeholder: t("quote.placeholder.toAddress"),
+      required: true,
+    },
+    toCity: {
+      label: t("quote.field.toCity"),
+      placeholder: "Wellington",
+      required: true,
+    },
+    toRegion: {
+      label: t("quote.field.toRegion"),
+      placeholder: t("quote.placeholder.toRegion"),
+      required: true,
+    },
+    toPostcode: {
+      label: t("quote.field.toPostcode"),
+      placeholder: "6011",
+      required: true,
+    },
+    toCountry: {
+      label: t("quote.field.toCountry"),
+      placeholder: t("quote.placeholder.country"),
+      required: true,
+    },
+    moveDate: {
+      label: t("quote.field.moveDate"),
+      placeholder: "YYYY-MM-DD",
+      type: "date",
+    },
     dateFlexible: { label: t("quote.field.dateFlexible"), placeholder: "" },
-    movingWhat: { label: t("quote.field.items"), placeholder: t("quote.placeholder.items") }
+    movingWhat: {
+      label: t("quote.field.items"),
+      placeholder: t("quote.placeholder.items"),
+    },
   };
+  const [cleaning, setCleaning] = useState<CleaningDetails>(initialCleaning);
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [itemNotes, setItemNotes] = useState<Record<string, string>>({});
+  const [draftMessage, setDraftMessage] = useState("");
+  const [draftReady, setDraftReady] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [cleaningIntent, setCleaningIntent] = useState(false);
+  const submittingRef = useRef(false);
   const [step, setStep] = useState(1);
   const [form, setForm] = useState<Form>(init);
   const [extra, setExtra] = useState<ExtraDetails>(initExtra);
   const [errors, setErrors] = useState<Errors>({});
   const [sharingConsent, setSharingConsent] = useState(false);
-  const [recruitmentSharingAllowed, setRecruitmentSharingAllowed] = useState(false);
+  const [recruitmentSharingAllowed, setRecruitmentSharingAllowed] =
+    useState(false);
   const [cleaningSelected, setCleaningSelected] = useState(false);
   const [cleaningNotesExpanded, setCleaningNotesExpanded] = useState(false);
   const [cleaningNotes, setCleaningNotes] = useState("");
@@ -224,7 +339,9 @@ export function QuoteForm() {
   const [submitError, setSubmitError] = useState("");
   const [locating, setLocating] = useState(false);
   const [showItemsPicker, setShowItemsPicker] = useState(false);
-  const [itemQuantities, setItemQuantities] = useState<Record<string, number>>({});
+  const [itemQuantities, setItemQuantities] = useState<Record<string, number>>(
+    {},
+  );
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [draftItemQty, setDraftItemQty] = useState("");
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
@@ -244,9 +361,13 @@ export function QuoteForm() {
   const cleaningInfoId = useId();
   const cleaningNotesId = useId();
   const cleaningInfoOpen =
-    !cleaningInfoDismissed && (cleaningInfoPinned || cleaningInfoHovered || cleaningInfoFocused);
+    !cleaningInfoDismissed &&
+    (cleaningInfoPinned || cleaningInfoHovered || cleaningInfoFocused);
 
-  const trackQuoteFormEvent = (eventName: string, params: Record<string, string | number | boolean | undefined> = {}) => {
+  const trackQuoteFormEvent = (
+    eventName: string,
+    params: Record<string, string | number | boolean | undefined> = {},
+  ) => {
     trackAnalyticsEvent(eventName, {
       source: "quote_form",
       step,
@@ -260,7 +381,10 @@ export function QuoteForm() {
     setErrors((prev) => ({ ...prev, [k]: undefined }));
   };
 
-  const updateExtra = <K extends keyof ExtraDetails>(k: K, v: ExtraDetails[K]) => {
+  const updateExtra = <K extends keyof ExtraDetails>(
+    k: K,
+    v: ExtraDetails[K],
+  ) => {
     setExtra((prev) => ({ ...prev, [k]: v }));
     setErrors((prev) => ({ ...prev, [k]: undefined }));
   };
@@ -270,60 +394,96 @@ export function QuoteForm() {
     prefillAppliedRef.current = true;
 
     const params = new URLSearchParams(window.location.search);
-    const referrerParams = (() => {
-      try {
-        return new URL(document.referrer).searchParams;
-      } catch {
-        return new URLSearchParams();
-      }
-    })();
-    const attributionKeys = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "gclid", "fbclid"] as const;
-    attributionRef.current = {
-      landingPage: window.location.href,
-      referrer: document.referrer,
-      ...Object.fromEntries(
-        attributionKeys.flatMap((key) => {
-          const value = params.get(key) || referrerParams.get(key);
-          return value ? [[key, value]] : [];
-        })
-      ),
-    };
-    trackAnalyticsEvent("quote_form_view", {
-      source: params.get("utm_source") || referrerParams.get("utm_source") || (document.referrer ? "referral" : "direct"),
-      campaign: params.get("utm_campaign") || referrerParams.get("utm_campaign") || undefined,
-      has_prefill: params.has("fromAddress") || params.has("toAddress"),
-    });
-
-    const keys = [
-      "fromAddress",
-      "fromCity",
-      "fromRegion",
-      "fromPostcode",
-      "fromCountry",
-      "toAddress",
-      "toCity",
-      "toRegion",
-      "toPostcode",
-      "toCountry"
-    ] as const;
-
-    const prefill = keys.reduce<Partial<Form>>((acc, key) => {
-      const value = params.get(key);
-      if (value) acc[key] = value;
-      return acc;
-    }, {});
-
-    if (Object.keys(prefill).length > 0) {
-      setForm((current) => ({ ...current, ...prefill }));
-      trackAnalyticsEvent("quote_prefill_applied", {
-        source: "homepage_hero",
-        has_from_region: Boolean(prefill.fromRegion),
-        has_to_region: Boolean(prefill.toRegion),
-      });
-    }
+    setCleaningIntent(params.get("cleaning") === "1");
+    trackAnalyticsEvent("quote_form_view", { source: "quote_form" });
+    fetch("/api/quote-draft", { cache: "no-store" })
+      .then(async (res) => {
+        if (!res.ok) throw Error();
+        return res.json();
+      })
+      .then(({ draft }) => {
+        setDraftReady(true);
+        if (!draft) return;
+        if (draft.form) setForm((current) => ({ ...current, ...draft.form }));
+        if (draft.extra)
+          setExtra((current) => ({ ...current, ...draft.extra }));
+        if (draft.step) setStep(draft.step);
+        if (draft.cleaning)
+          setCleaning({
+            ...initialCleaning,
+            ...draft.cleaning,
+            destinationConsent: false,
+          });
+        if (draft.cleaningSelected) setCleaningSelected(true);
+        if (draft.cleaningNotes) setCleaningNotes(draft.cleaningNotes);
+        const items = inventorySchema.safeParse(draft.inventory ?? []);
+        if (items.success) {
+          setItemNotes(
+            Object.fromEntries(items.data.map((item) => [item.id, item.notes])),
+          );
+          setItemQuantities(
+            Object.fromEntries(
+              items.data
+                .filter((item) => commonItems.some((i) => i.id === item.id))
+                .map((i) => [i.id, i.quantity]),
+            ),
+          );
+          setInventory(
+            items.data.filter(
+              (item) => !commonItems.some((i) => i.id === item.id),
+            ),
+          );
+        }
+        if (draft.calculator) {
+          const c = draft.calculator;
+          const bedrooms = (
+            { small: "1", one: "1", two: "2", three: "3", four: "4" } as Record<
+              string,
+              string
+            >
+          )[c.homeSize];
+          setForm((current) => ({
+            ...current,
+            bedrooms: bedrooms ?? current.bedrooms,
+            movingWhat: [
+              current.movingWhat,
+              c.packing ? "Packing assistance requested" : "",
+              c.difficultAccess ? "Difficult access: please discuss" : "",
+              c.heavyItem ? "Heavy items: please discuss" : "",
+              c.busyTiming
+                ? "Busy timing selected in budget planning: please confirm availability"
+                : "",
+              "Budget planning route: " +
+                (
+                  {
+                    local: "Local",
+                    regional: "Regional",
+                    "long-distance": "Long-distance, same island",
+                    "inter-island": "Inter-island",
+                  } as Record<string, string>
+                )[c.routeType],
+              c.city !== "other" ? "Budget planning city: " + c.city : "",
+            ]
+              .filter(Boolean)
+              .join("\n"),
+          }));
+          trackAnalyticsEvent("calculator_to_quote", { source: "calculator" });
+        }
+        setDraftMessage(
+          "Saved progress restored. Please check your details and confirm consent before submitting.",
+        );
+      })
+      .catch(() =>
+        setDraftMessage(
+          "Saved progress could not be loaded. Reload before saving to preserve an earlier draft.",
+        ),
+      );
   }, []);
 
-  const applyAddressSuggestion = (kind: "from" | "to", suggestion: AddressSuggestion) => {
+  const applyAddressSuggestion = (
+    kind: "from" | "to",
+    suggestion: AddressSuggestion,
+  ) => {
     const address = addressSuggestionToValue(suggestion);
     trackQuoteFormEvent("quote_address_selected", {
       address_type: kind,
@@ -337,7 +497,7 @@ export function QuoteForm() {
             fromCity: suggestion.city,
             fromRegion: suggestion.region,
             fromPostcode: suggestion.postcode,
-            fromCountry: suggestion.country
+            fromCountry: suggestion.country,
           }
         : {
             ...prev,
@@ -345,8 +505,8 @@ export function QuoteForm() {
             toCity: suggestion.city,
             toRegion: suggestion.region,
             toPostcode: suggestion.postcode,
-            toCountry: suggestion.country
-          }
+            toCountry: suggestion.country,
+          },
     );
     setErrors((prev) =>
       kind === "from"
@@ -356,7 +516,7 @@ export function QuoteForm() {
             fromCity: undefined,
             fromRegion: undefined,
             fromPostcode: undefined,
-            fromCountry: undefined
+            fromCountry: undefined,
           }
         : {
             ...prev,
@@ -364,8 +524,8 @@ export function QuoteForm() {
             toCity: undefined,
             toRegion: undefined,
             toPostcode: undefined,
-            toCountry: undefined
-          }
+            toCountry: undefined,
+          },
     );
   };
 
@@ -381,7 +541,7 @@ export function QuoteForm() {
       async ({ coords }) => {
         try {
           const res = await fetch(
-            `/api/address-search/reverse?lat=${encodeURIComponent(coords.latitude)}&lon=${encodeURIComponent(coords.longitude)}`
+            `/api/address-search/reverse?lat=${encodeURIComponent(coords.latitude)}&lon=${encodeURIComponent(coords.longitude)}`,
           );
           const data: unknown = await res.json().catch(() => ({}));
           const suggestion =
@@ -403,15 +563,20 @@ export function QuoteForm() {
       () => {
         setSubmitError(t("quote.error.locationDenied"));
         setLocating(false);
-      }
+      },
     );
   };
 
   const validateField = (k: FieldKey, value: string | boolean) => {
     const v = String(value ?? "").trim();
-    if (k in fieldMeta && fieldMeta[k as keyof Form].required && !v) return t("quote.error.required", { field: fieldMeta[k as keyof Form].label });
-    if (k === "email" && v && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return t("quote.error.email");
-    if (k === "phone" && v && v.replace(/[^\d]/g, "").length < 7) return t("quote.error.phone");
+    if (k in fieldMeta && fieldMeta[k as keyof Form].required && !v)
+      return t("quote.error.required", {
+        field: fieldMeta[k as keyof Form].label,
+      });
+    if (k === "email" && v && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v))
+      return t("quote.error.email");
+    if (k === "phone" && v && v.replace(/[^\d]/g, "").length < 7)
+      return t("quote.error.phone");
     if (k === "moveDate" && v) {
       const date = new Date(v);
       if (Number.isNaN(date.getTime())) return t("quote.error.moveDate");
@@ -420,9 +585,12 @@ export function QuoteForm() {
       if (date < today) return t("quote.error.moveDatePast");
     }
     if (k === "toKnownPropertyType" && !v) return t("quote.error.yesNo");
-    if ((k === "fromFloor" || k === "toFloor") && !v) return t("quote.error.floor");
-    if ((k === "fromHasLift" || k === "toHasLift") && !v) return t("quote.error.lift");
-    if ((k === "fromStorageSize" || k === "toStorageSize") && !v) return t("quote.error.storageSize");
+    if ((k === "fromFloor" || k === "toFloor") && !v)
+      return t("quote.error.floor");
+    if ((k === "fromHasLift" || k === "toHasLift") && !v)
+      return t("quote.error.lift");
+    if ((k === "fromStorageSize" || k === "toStorageSize") && !v)
+      return t("quote.error.storageSize");
     if (k === "toBedrooms" && !v) return t("quote.error.bedrooms");
     return "";
   };
@@ -465,13 +633,20 @@ export function QuoteForm() {
         if (err) nextErrors[key] = err;
       }
 
-      const knowErr = validateField("toKnownPropertyType", extra.toKnownPropertyType);
+      const knowErr = validateField(
+        "toKnownPropertyType",
+        extra.toKnownPropertyType,
+      );
       if (knowErr) nextErrors.toKnownPropertyType = knowErr;
 
       if (extra.toKnownPropertyType === "yes") {
-        if (!form.toPropertyType) nextErrors.toPropertyType = t("quote.error.toPropertyType");
+        if (!form.toPropertyType)
+          nextErrors.toPropertyType = t("quote.error.toPropertyType");
         if (form.toPropertyType === "Storage") {
-          const storageErr = validateField("toStorageSize", extra.toStorageSize);
+          const storageErr = validateField(
+            "toStorageSize",
+            extra.toStorageSize,
+          );
           if (storageErr) nextErrors.toStorageSize = storageErr;
         } else if (form.toPropertyType === "Apartment") {
           const bErr = validateField("toBedrooms", extra.toBedrooms);
@@ -554,9 +729,56 @@ export function QuoteForm() {
     };
   }, [cleaningInfoOpen]);
 
+  const fullInventory: InventoryItem[] = [
+    ...commonItems
+      .filter((item) => (itemQuantities[item.id] ?? 0) > 0)
+      .map((item) => ({
+        id: item.id,
+        label: item.label,
+        room: item.room,
+        quantity: itemQuantities[item.id],
+        notes: itemNotes[item.id] ?? "",
+      })),
+    ...inventory,
+  ];
+  const saveDraft = async (clear = false) => {
+    setSavingDraft(true);
+    try {
+      const res = await fetch("/api/quote-draft", {
+        method: clear ? "DELETE" : "POST",
+        headers: { "Content-Type": "application/json" },
+        ...(!clear
+          ? {
+              body: JSON.stringify({
+                form,
+                extra,
+                step,
+                inventory: fullInventory,
+                cleaningSelected,
+                cleaningNotes,
+                cleaning: { ...cleaning, destinationConsent: undefined },
+              }),
+            }
+          : {}),
+      });
+      if (!res.ok) throw Error();
+      setDraftMessage(
+        clear
+          ? "Saved copy cleared. Your current entries remain until you leave this page."
+          : "Progress saved securely for 7 days on this browser.",
+      );
+    } catch {
+      setDraftMessage("Your progress could not be saved. Please try again.");
+    } finally {
+      setSavingDraft(false);
+    }
+  };
   const submit = async () => {
+    if (submittingRef.current) return;
     trackQuoteFormEvent("quote_submit_attempt", {
-      selected_items_count: Object.values(itemQuantities).filter((qty) => qty > 0).length,
+      selected_items_count: Object.values(itemQuantities).filter(
+        (qty) => qty > 0,
+      ).length,
       date_flexible: form.dateFlexible,
       cleaning_selected: cleaningSelected,
     });
@@ -575,25 +797,52 @@ export function QuoteForm() {
       trackQuoteFormEvent("quote_submit_consent_missing");
       return;
     }
+    if (cleaningSelected) {
+      const result = cleaningDetailsSchema.safeParse(cleaning);
+      if (!result.success) {
+        setSubmitError(result.error.issues[0].message);
+        return;
+      }
+      if (
+        cleaning.location === "MOVE_IN" &&
+        extra.toKnownPropertyType !== "yes"
+      ) {
+        setSubmitError(
+          "Confirm the destination property details in step 2 for move-in cleaning.",
+        );
+        return;
+      }
+    }
+    submittingRef.current = true;
     setSubmitError("");
     setLoading(true);
     try {
-      const normalizedToPropertyType = extra.toKnownPropertyType === "no" ? "Unknown" : form.toPropertyType;
+      const normalizedToPropertyType =
+        extra.toKnownPropertyType === "no" ? "Unknown" : form.toPropertyType;
       const meta = {
         currentProperty: {
           type: form.fromPropertyType,
           bedrooms: form.fromPropertyType === "Storage" ? null : form.bedrooms,
           floor: form.fromPropertyType === "Apartment" ? extra.fromFloor : null,
-          hasLift: form.fromPropertyType === "Apartment" ? extra.fromHasLift : null,
-          storageSize: form.fromPropertyType === "Storage" ? extra.fromStorageSize : null
+          hasLift:
+            form.fromPropertyType === "Apartment" ? extra.fromHasLift : null,
+          storageSize:
+            form.fromPropertyType === "Storage" ? extra.fromStorageSize : null,
         },
         destinationProperty: {
           knownType: extra.toKnownPropertyType,
           type: normalizedToPropertyType,
-          bedrooms: normalizedToPropertyType === "Storage" || normalizedToPropertyType === "Unknown" ? null : extra.toBedrooms,
-          floor: normalizedToPropertyType === "Apartment" ? extra.toFloor : null,
-          hasLift: normalizedToPropertyType === "Apartment" ? extra.toHasLift : null,
-          storageSize: normalizedToPropertyType === "Storage" ? extra.toStorageSize : null
+          bedrooms:
+            normalizedToPropertyType === "Storage" ||
+            normalizedToPropertyType === "Unknown"
+              ? null
+              : extra.toBedrooms,
+          floor:
+            normalizedToPropertyType === "Apartment" ? extra.toFloor : null,
+          hasLift:
+            normalizedToPropertyType === "Apartment" ? extra.toHasLift : null,
+          storageSize:
+            normalizedToPropertyType === "Storage" ? extra.toStorageSize : null,
         },
         selectedItems: commonItems
           .filter((item) => (itemQuantities[item.id] ?? 0) > 0)
@@ -603,10 +852,17 @@ export function QuoteForm() {
 
       const payload = {
         ...form,
-        clientRequestId: clientRequestIdRef.current ?? (clientRequestIdRef.current = createClientRequestId()),
+        clientRequestId:
+          clientRequestIdRef.current ??
+          (clientRequestIdRef.current = createClientRequestId()),
         locale,
         cleaningSelected,
-        cleaningNotes: cleaningSelected ? cleaningNotes.trim() || undefined : undefined,
+        cleaningDetails: cleaningSelected ? cleaning : undefined,
+        inventory: fullInventory,
+        toBedrooms: extra.toBedrooms || null,
+        cleaningNotes: cleaningSelected
+          ? cleaningNotes.trim() || undefined
+          : undefined,
         sharingConsent,
         recruitmentSharingAllowed,
         // Keep locality separate from the free-form street address. Cleaner
@@ -620,19 +876,22 @@ export function QuoteForm() {
         movingWhat: form.movingWhat.trim(),
         toPropertyType: normalizedToPropertyType,
         moveDate: form.moveDate.trim() ? form.moveDate : null,
-        transcriptFields: meta
+        transcriptFields: meta,
       };
       const res = await fetch("/api/quote-requests", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
       if (res.ok) {
-        const data = (await res.json().catch(() => null)) as { id?: string } | null;
-        const successParams = new URLSearchParams();
-        if (data?.id) successParams.set("id", data.id);
-        if (cleaningSelected) successParams.set("cleaning", "1");
-        const successQuery = successParams.toString();
+        const data = (await res.json().catch(() => null)) as {
+          id?: string;
+        } | null;
+        await fetch("/api/quote-draft", { method: "DELETE" }).catch(
+          () => undefined,
+        );
+        if (fullInventory.length)
+          trackQuoteFormEvent("inventory_used_in_quote");
         trackQuoteFormEvent("quote_submit_success", {
           request_created: Boolean(data?.id),
           from_region: form.fromRegion || undefined,
@@ -645,7 +904,7 @@ export function QuoteForm() {
             property_type: form.fromPropertyType,
           });
         }
-        router.push(`/thank-you${successQuery ? `?${successQuery}` : ""}`);
+        router.push("/thank-you");
         return;
       }
 
@@ -674,6 +933,7 @@ export function QuoteForm() {
         status_code: "network",
       });
     } finally {
+      submittingRef.current = false;
       setLoading(false);
     }
   };
@@ -686,21 +946,25 @@ export function QuoteForm() {
     });
     setItemQuantities((prev) => {
       if (safeQty <= 0) {
-        const rest = Object.fromEntries(Object.entries(prev).filter(([key]) => key !== itemId)) as Record<string, number>;
+        const rest = Object.fromEntries(
+          Object.entries(prev).filter(([key]) => key !== itemId),
+        ) as Record<string, number>;
         return rest;
       }
       return { ...prev, [itemId]: safeQty };
     });
   };
 
-  const syncManualItemsWithSelections = (quantities: Record<string, number>) => {
+  const syncManualItemsWithSelections = (
+    quantities: Record<string, number>,
+  ) => {
     const selectedLines = commonItems
       .map((item) => ({ item, qty: quantities[item.id] ?? 0 }))
       .filter(({ qty }) => qty > 0)
       .map(({ item, qty }) => `${item.label} x${qty}`);
 
     const selectedLineMatcher = new RegExp(
-      `^(${commonItems.map((item) => item.label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})\\s+x\\d+\\s*$`
+      `^(${commonItems.map((item) => item.label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})\\s+x\\d+\\s*$`,
     );
 
     const customLines = form.movingWhat
@@ -735,7 +999,11 @@ export function QuoteForm() {
   const formatDateLabel = (isoDate: string) => {
     if (!isoDate) return t("quote.date.select");
     const d = new Date(`${isoDate}T00:00:00`);
-    return d.toLocaleDateString(locale, { month: "long", day: "numeric", year: "numeric" });
+    return d.toLocaleDateString(locale, {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
   };
 
   const toIso = (d: Date) => {
@@ -747,7 +1015,9 @@ export function QuoteForm() {
 
   const todayIso = toIso(new Date());
   const openDatePicker = () => {
-    const base = form.moveDate ? new Date(`${form.moveDate}T00:00:00`) : new Date();
+    const base = form.moveDate
+      ? new Date(`${form.moveDate}T00:00:00`)
+      : new Date();
     setCalendarMonth(base.getMonth());
     setCalendarYear(base.getFullYear());
     setDraftMoveDate(form.moveDate || "");
@@ -764,11 +1034,21 @@ export function QuoteForm() {
     const firstDay = new Date(calendarYear, calendarMonth, 1);
     const startWeekday = firstDay.getDay();
     const daysInMonth = new Date(calendarYear, calendarMonth + 1, 0).getDate();
-    const cells: Array<{ iso: string; day: number; inMonth: boolean; disabled: boolean }> = [];
+    const cells: Array<{
+      iso: string;
+      day: number;
+      inMonth: boolean;
+      disabled: boolean;
+    }> = [];
 
     for (let i = 0; i < startWeekday; i++) {
       const d = new Date(calendarYear, calendarMonth, i - startWeekday + 1);
-      cells.push({ iso: toIso(d), day: d.getDate(), inMonth: false, disabled: true });
+      cells.push({
+        iso: toIso(d),
+        day: d.getDate(),
+        inMonth: false,
+        disabled: true,
+      });
     }
     for (let day = 1; day <= daysInMonth; day++) {
       const d = new Date(calendarYear, calendarMonth, day);
@@ -776,8 +1056,17 @@ export function QuoteForm() {
       cells.push({ iso, day, inMonth: true, disabled: iso < todayIso });
     }
     while (cells.length % 7 !== 0) {
-      const d = new Date(calendarYear, calendarMonth + 1, cells.length - (startWeekday + daysInMonth) + 1);
-      cells.push({ iso: toIso(d), day: d.getDate(), inMonth: false, disabled: true });
+      const d = new Date(
+        calendarYear,
+        calendarMonth + 1,
+        cells.length - (startWeekday + daysInMonth) + 1,
+      );
+      cells.push({
+        iso: toIso(d),
+        day: d.getDate(),
+        inMonth: false,
+        disabled: true,
+      });
     }
     return cells;
   };
@@ -828,7 +1117,7 @@ export function QuoteForm() {
 
   const PropertyCards = ({
     value,
-    onSelect
+    onSelect,
   }: {
     value: string;
     onSelect: (next: PropertyType) => void;
@@ -836,7 +1125,10 @@ export function QuoteForm() {
     <div className="grid grid-cols-3 gap-2 sm:gap-3">
       {propertyOptions.map(({ label, image }) => {
         const active = value === label;
-        const imageClass = label === "Apartment" ? "mx-auto h-16 w-16 object-contain scale-110 sm:h-24 sm:w-24 sm:scale-125" : "mx-auto h-16 w-16 object-contain sm:h-24 sm:w-24";
+        const imageClass =
+          label === "Apartment"
+            ? "mx-auto h-16 w-16 object-contain scale-110 sm:h-24 sm:w-24 sm:scale-125"
+            : "mx-auto h-16 w-16 object-contain sm:h-24 sm:w-24";
         return (
           <button
             key={label}
@@ -845,8 +1137,16 @@ export function QuoteForm() {
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => onSelect(label)}
           >
-            <Image src={image} alt={t(`quote.property.${label.toLowerCase()}`)} width={96} height={96} className={imageClass} />
-            <span className="mt-1.5 block text-xs font-medium text-slate-700 sm:mt-2 sm:text-sm">{t(`quote.property.${label.toLowerCase()}`)}</span>
+            <Image
+              src={image}
+              alt={t(`quote.property.${label.toLowerCase()}`)}
+              width={96}
+              height={96}
+              className={imageClass}
+            />
+            <span className="mt-1.5 block text-xs font-medium text-slate-700 sm:mt-2 sm:text-sm">
+              {t(`quote.property.${label.toLowerCase()}`)}
+            </span>
           </button>
         );
       })}
@@ -856,7 +1156,7 @@ export function QuoteForm() {
   const BedroomsSelector = ({
     value,
     onSelect,
-    error
+    error,
   }: {
     value: string;
     onSelect: (next: string) => void;
@@ -885,7 +1185,9 @@ export function QuoteForm() {
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-[#101b34] to-[#0f2747] py-8 sm:py-12">
       <div className="container-shell relative text-white">
         <div className="mb-5 max-w-3xl sm:mb-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-200">{t("quote.eyebrow")}</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-200">
+            {t("quote.eyebrow")}
+          </p>
           <h1 className="mt-2 max-w-2xl text-2xl font-black leading-tight text-white sm:text-4xl">
             {t("quote.title")}
           </h1>
@@ -894,22 +1196,80 @@ export function QuoteForm() {
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             {(cleaningSelected
-              ? [t("quote.trust.free"), t("quote.trust.providers"), t("quote.trust.noObligation")]
-              : [t("quote.trust.free"), t("quote.trust.movers"), t("quote.trust.noObligation")]
+              ? [
+                  t("quote.trust.free"),
+                  t("quote.trust.providers"),
+                  t("quote.trust.noObligation"),
+                ]
+              : [
+                  t("quote.trust.free"),
+                  t("quote.trust.movers"),
+                  t("quote.trust.noObligation"),
+                ]
             ).map((note) => (
-              <span key={note} className="rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-xs font-semibold text-slate-100">
+              <span
+                key={note}
+                className="rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-xs font-semibold text-slate-100"
+              >
                 {note}
               </span>
             ))}
           </div>
         </div>
-        <div ref={formCardRef} className="max-w-3xl rounded-[22px] border border-slate-200/80 bg-white p-4 text-slate-900 shadow-[0_20px_45px_-25px_rgba(2,6,23,0.65)] sm:rounded-2xl sm:p-7">
+        {cleaningIntent && (
+          <p className="mb-4 max-w-3xl rounded-xl border border-teal-300/30 bg-teal-950 p-4 text-teal-50">
+            Moving &amp; cleaning: start with your moving details, then choose
+            optional cleaning in step 3. Cleaning is only requested if you
+            select it.
+          </p>
+        )}
+        <div className="mb-4 max-w-3xl rounded-xl bg-white p-4 text-slate-800">
+          <div className="flex flex-wrap gap-4">
+            <button
+              type="button"
+              disabled={!draftReady || savingDraft}
+              onClick={() => void saveDraft()}
+              className="min-h-11 font-semibold text-teal-700 underline disabled:opacity-50"
+            >
+              {savingDraft ? "Saving..." : "Save progress for 7 days"}
+            </button>
+            <button
+              type="button"
+              disabled={savingDraft}
+              onClick={() => void saveDraft(true)}
+              className="min-h-11 text-sm underline"
+            >
+              Clear saved progress
+            </button>
+          </div>
+          <p className="text-xs leading-6 text-slate-600">
+            Encrypted server storage with a private browser cookie. Contact
+            details are not saved in browser local storage. Consent must be
+            confirmed when you submit.
+          </p>
+          <p className="text-sm" role="status">
+            {draftMessage}
+          </p>
+        </div>
+        <div
+          ref={formCardRef}
+          className="max-w-3xl rounded-[22px] border border-slate-200/80 bg-white p-4 text-slate-900 shadow-[0_20px_45px_-25px_rgba(2,6,23,0.65)] sm:rounded-2xl sm:p-7"
+        >
           <div className="mb-5 sm:mb-7">
             <div className="mb-2 flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
               <span>{t("quote.progress")}</span>
-              <span>{steps[step - 1].label} · Step {step} of 3</span>
+              <span>
+                {steps[step - 1].label} · Step {step} of 3
+              </span>
             </div>
-            <div className="h-2 overflow-hidden rounded-full bg-slate-200">
+            <div
+              role="progressbar"
+              aria-label="Quote request progress"
+              aria-valuemin={1}
+              aria-valuemax={3}
+              aria-valuenow={step}
+              className="h-2 overflow-hidden rounded-full bg-slate-200"
+            >
               <div
                 className="h-full rounded-full bg-gradient-to-r from-brandBlue to-accentOrange transition-[width] duration-300"
                 style={{ width: `${((step - 1) / 2) * 100}%` }}
@@ -920,14 +1280,20 @@ export function QuoteForm() {
                 <div key={item.number} className="flex items-start gap-2">
                   <span
                     className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-semibold transition-colors ${
-                      step >= item.number ? "bg-brandBlue text-white" : "bg-slate-200 text-slate-500"
+                      step >= item.number
+                        ? "bg-brandBlue text-white"
+                        : "bg-slate-200 text-slate-500"
                     }`}
                   >
                     {item.number}
                   </span>
-                  <span className={`hidden text-xs sm:block ${step >= item.number ? "text-slate-700" : "text-slate-400"}`}>
+                  <span
+                    className={`hidden text-xs sm:block ${step >= item.number ? "text-slate-700" : "text-slate-400"}`}
+                  >
                     <span className="block font-semibold">{item.label}</span>
-                    <span className="mt-0.5 block font-normal normal-case tracking-normal">{item.summary}</span>
+                    <span className="mt-0.5 block font-normal normal-case tracking-normal">
+                      {item.summary}
+                    </span>
                   </span>
                 </div>
               ))}
@@ -936,42 +1302,69 @@ export function QuoteForm() {
           {step === 3 && (
             <div className="space-y-4">
               <div>
-                <h2 className="text-xl font-semibold">{t("quote.contact.title")}</h2>
+                <h2 className="text-xl font-semibold">
+                  {t("quote.contact.title")}
+                </h2>
                 <p className="mt-1 text-sm leading-6 text-slate-500">
                   {t("quote.contact.support")}
                 </p>
               </div>
+              <p className="rounded-xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">
+                Requesting quotes is free and accepting an offer is optional.
+                Suitable providers may contact you directly by phone or email.
+                Responses depend on coverage and availability. Review what is
+                shared before you submit.
+              </p>
               {(["name", "email", "phone"] as const).map((k) => (
                 <label key={k} className="block">
-                  <span className="mb-1 block text-sm font-medium">{fieldMeta[k].label}</span>
+                  <span className="mb-1 block text-sm font-medium">
+                    {fieldMeta[k].label}
+                  </span>
                   <input
                     className={`${fieldClass} ${errors[k] ? "border-red-500 focus:border-red-400 focus:ring-red-100" : ""}`}
                     placeholder={fieldMeta[k].placeholder}
+                    aria-invalid={Boolean(errors[k])}
+                    aria-describedby={
+                      errors[k] ? "quote-error-" + k : undefined
+                    }
+                    autoComplete={
+                      k === "name" ? "name" : k === "email" ? "email" : "tel"
+                    }
                     type={fieldMeta[k].type ?? "text"}
                     value={form[k]}
                     onChange={(e) => update(k, e.target.value)}
                   />
-                  {errors[k] && <span className="mt-1 block text-sm text-red-600">{errors[k]}</span>}
+                  {errors[k] && (
+                    <span className="mt-1 block text-sm text-red-600">
+                      {errors[k]}
+                    </span>
+                  )}
                 </label>
               ))}
               <section
                 className={`rounded-2xl border px-4 py-4 transition-colors sm:px-5 ${
-                  cleaningSelected ? "border-sky-200 bg-sky-50/80" : "border-slate-200 bg-white"
+                  cleaningSelected
+                    ? "border-sky-200 bg-sky-50/80"
+                    : "border-slate-200 bg-white"
                 }`}
                 aria-labelledby={`${cleaningInfoId}-heading`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <h3 id={`${cleaningInfoId}-heading`} className="text-base font-semibold text-slate-950">
-                        {t("quote.cleaning.heading")}
+                      <h3
+                        id={`${cleaningInfoId}-heading`}
+                        className="text-base font-semibold text-slate-950"
+                      >
+                        Need your old or new place cleaned too?
                       </h3>
                       <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-sky-700 shadow-sm">
                         {t("quote.cleaning.optional")}
                       </span>
                     </div>
                     <p className="mt-1 text-sm leading-6 text-slate-600">
-                      {t("quote.cleaning.support")}
+                      Add optional cleaning for the property you choose, without
+                      filling out another form.
                     </p>
                   </div>
 
@@ -988,7 +1381,11 @@ export function QuoteForm() {
                       setCleaningInfoFocused(true);
                     }}
                     onBlurCapture={(event) => {
-                      if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                      if (
+                        !event.currentTarget.contains(
+                          event.relatedTarget as Node | null,
+                        )
+                      ) {
                         setCleaningInfoFocused(false);
                       }
                     }}
@@ -1012,7 +1409,10 @@ export function QuoteForm() {
                     >
                       <Info className="h-4 w-4" aria-hidden="true" />
                     </button>
-                    <span id={`${cleaningInfoId}-description`} className="sr-only">
+                    <span
+                      id={`${cleaningInfoId}-description`}
+                      className="sr-only"
+                    >
                       {t("quote.cleaning.info")}
                     </span>
                     {cleaningInfoOpen ? (
@@ -1037,10 +1437,15 @@ export function QuoteForm() {
                       setCleaningSelected(selected);
                       if (!selected) setCleaningNotesExpanded(false);
                       if (selected && sharingConsent) setSharingConsent(false);
-                      trackQuoteFormEvent(selected ? "cleaning_quote_opt_in" : "cleaning_quote_opt_out", {
-                        region: form.fromRegion || undefined,
-                        property_type: form.fromPropertyType,
-                      });
+                      trackQuoteFormEvent(
+                        selected
+                          ? "cleaning_quote_opt_in"
+                          : "cleaning_quote_opt_out",
+                        {
+                          region: form.fromRegion || undefined,
+                          property_type: form.fromPropertyType,
+                        },
+                      );
                       trackQuoteFormEvent("cleaning_quote_selected", {
                         cleaning_selected: selected,
                         region: form.fromRegion || undefined,
@@ -1049,11 +1454,18 @@ export function QuoteForm() {
                     }}
                   />
                   <span>
-                    <span className="block text-sm font-semibold text-slate-900">{t("quote.cleaning.toggle")}</span>
-                    <span className="mt-1 block text-sm leading-6 text-slate-500">{t("quote.cleaning.freeSupport")}</span>
+                    <span className="block text-sm font-semibold text-slate-900">
+                      Also send me cleaning quotes for my selected property
+                    </span>
+                    <span className="mt-1 block text-sm leading-6 text-slate-500">
+                      {t("quote.cleaning.freeSupport")}
+                    </span>
                   </span>
                 </label>
 
+                {cleaningSelected && (
+                  <CleaningOptions value={cleaning} onChange={setCleaning} />
+                )}
                 {cleaningSelected ? (
                   <div className="mt-3">
                     <button
@@ -1072,28 +1484,45 @@ export function QuoteForm() {
                       }}
                       className="inline-flex min-h-10 items-center rounded-xl px-2 text-sm font-semibold text-sky-800 transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brandBlue/15"
                     >
-                      {cleaningNotesExpanded ? t("quote.cleaning.hideNotes") : t("quote.cleaning.addNotes")}
+                      {cleaningNotesExpanded
+                        ? t("quote.cleaning.hideNotes")
+                        : t("quote.cleaning.addNotes")}
                     </button>
                     <div
                       aria-hidden={!cleaningNotesExpanded}
                       className={`grid transition-[grid-template-rows,opacity,margin] duration-200 ${
-                        cleaningNotesExpanded ? "mt-2 grid-rows-[1fr] opacity-100" : "mt-0 grid-rows-[0fr] opacity-0"
+                        cleaningNotesExpanded
+                          ? "mt-2 grid-rows-[1fr] opacity-100"
+                          : "mt-0 grid-rows-[0fr] opacity-0"
                       }`}
                     >
                       <div className="overflow-hidden">
-                        <label id={cleaningNotesId} className="block rounded-xl border border-sky-100 bg-white p-3">
-                          <span className="mb-2 block text-sm font-medium text-slate-800">{t("quote.cleaning.notesLabel")}</span>
+                        <label
+                          id={cleaningNotesId}
+                          className="block rounded-xl border border-sky-100 bg-white p-3"
+                        >
+                          <span className="mb-2 block text-sm font-medium text-slate-800">
+                            {t("quote.cleaning.notesLabel")}
+                          </span>
                           <textarea
                             className={fieldClass}
                             rows={4}
                             maxLength={MAX_CLEANING_NOTES_LENGTH}
                             disabled={!cleaningNotesExpanded}
                             value={cleaningNotes}
-                            onChange={(event) => setCleaningNotes(event.target.value.slice(0, MAX_CLEANING_NOTES_LENGTH))}
+                            onChange={(event) =>
+                              setCleaningNotes(
+                                event.target.value.slice(
+                                  0,
+                                  MAX_CLEANING_NOTES_LENGTH,
+                                ),
+                              )
+                            }
                             placeholder={t("quote.cleaning.notesPlaceholder")}
                           />
                           <span className="mt-1 block text-right text-xs text-slate-500">
-                            {formatNumber(cleaningNotes.length)}/{formatNumber(MAX_CLEANING_NOTES_LENGTH)}
+                            {formatNumber(cleaningNotes.length)}/
+                            {formatNumber(MAX_CLEANING_NOTES_LENGTH)}
                           </span>
                         </label>
                       </div>
@@ -1123,13 +1552,44 @@ export function QuoteForm() {
                 </span>
               </label>
               <label className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-                <input type="checkbox" className="mt-1 h-4 w-4" checked={recruitmentSharingAllowed} onChange={(event) => setRecruitmentSharingAllowed(event.target.checked)} />
-                <span className="text-sm leading-6 text-slate-600">Optional: allow Match &apos;n Move to invite relevant moving companies using a general summary of this request (regions, date and home size). Your name, contact details and exact addresses will remain private. <a className="underline" href="/privacy" target="_blank" rel="noreferrer">Privacy details</a></span>
+                <input
+                  type="checkbox"
+                  className="mt-1 h-4 w-4"
+                  checked={recruitmentSharingAllowed}
+                  onChange={(event) =>
+                    setRecruitmentSharingAllowed(event.target.checked)
+                  }
+                />
+                <span className="text-sm leading-6 text-slate-600">
+                  Optional: allow Match &apos;n Move to invite relevant moving
+                  companies using a general summary of this request (regions,
+                  date and home size). Your name, contact details and exact
+                  addresses will remain private.{" "}
+                  <a
+                    className="underline"
+                    href="/privacy"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Privacy details
+                  </a>
+                </span>
               </label>
-              {submitError && <p className="text-sm text-red-600">{submitError}</p>}
+              {submitError && (
+                <p className="text-sm text-red-600">{submitError}</p>
+              )}
               <div className="flex flex-col gap-3 sm:flex-row">
-                <button className={secondaryButtonClass} onClick={() => transitionToStep(2)}>{t("quote.back")}</button>
-                <button onClick={submit} disabled={loading} className={`${primaryButtonClass} disabled:cursor-not-allowed disabled:opacity-70`}>
+                <button
+                  className={secondaryButtonClass}
+                  onClick={() => transitionToStep(2)}
+                >
+                  {t("quote.back")}
+                </button>
+                <button
+                  onClick={submit}
+                  disabled={loading}
+                  className={`${primaryButtonClass} disabled:cursor-not-allowed disabled:opacity-70`}
+                >
                   {loading ? t("quote.submitting") : t("quote.submit")}
                 </button>
               </div>
@@ -1138,7 +1598,9 @@ export function QuoteForm() {
           {step === 1 && (
             <div className="grid gap-4">
               <div>
-                <h2 className="text-xl font-semibold">{t("quote.pickup.title")}</h2>
+                <h2 className="text-xl font-semibold">
+                  {t("quote.pickup.title")}
+                </h2>
                 <p className="mt-1 text-sm leading-6 text-slate-500">
                   {t("quote.pickup.support")}
                 </p>
@@ -1151,49 +1613,80 @@ export function QuoteForm() {
                 }}
               />
               {form.fromPropertyType !== "Storage" && (
-                <BedroomsSelector value={form.bedrooms} onSelect={(next) => update("bedrooms", next)} error={errors.bedrooms} />
+                <BedroomsSelector
+                  value={form.bedrooms}
+                  onSelect={(next) => update("bedrooms", next)}
+                  error={errors.bedrooms}
+                />
               )}
               {form.fromPropertyType === "Apartment" && (
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className="block">
-                    <span className="mb-1 block text-sm font-medium">{t("quote.field.floor")}</span>
+                    <span className="mb-1 block text-sm font-medium">
+                      {t("quote.field.floor")}
+                    </span>
                     <input
                       className={`${fieldClass} ${errors.fromFloor ? "border-red-500 focus:border-red-400 focus:ring-red-100" : ""}`}
                       placeholder={t("quote.placeholder.floor", { floor: 3 })}
                       value={extra.fromFloor}
                       onChange={(e) => updateExtra("fromFloor", e.target.value)}
                     />
-                    {errors.fromFloor && <span className="mt-1 block text-sm text-red-600">{errors.fromFloor}</span>}
+                    {errors.fromFloor && (
+                      <span className="mt-1 block text-sm text-red-600">
+                        {errors.fromFloor}
+                      </span>
+                    )}
                   </label>
                   <label className="block">
-                    <span className="mb-1 block text-sm font-medium">{t("quote.field.lift")}</span>
+                    <span className="mb-1 block text-sm font-medium">
+                      {t("quote.field.lift")}
+                    </span>
                     <select
                       className={`${selectClass} ${errors.fromHasLift ? "border-red-500 focus:border-red-400 focus:ring-red-100" : ""}`}
                       value={extra.fromHasLift}
-                      onChange={(e) => updateExtra("fromHasLift", e.target.value as "yes" | "no")}
+                      onChange={(e) =>
+                        updateExtra(
+                          "fromHasLift",
+                          e.target.value as "yes" | "no",
+                        )
+                      }
                     >
                       <option value="">{t("quote.select")}</option>
                       <option value="yes">{t("quote.yes")}</option>
                       <option value="no">{t("quote.no")}</option>
                     </select>
-                    {errors.fromHasLift && <span className="mt-1 block text-sm text-red-600">{errors.fromHasLift}</span>}
+                    {errors.fromHasLift && (
+                      <span className="mt-1 block text-sm text-red-600">
+                        {errors.fromHasLift}
+                      </span>
+                    )}
                   </label>
                 </div>
               )}
               {form.fromPropertyType === "Storage" && (
                 <label className="block">
-                  <span className="mb-1 block text-sm font-medium">{t("quote.field.storageSize")}</span>
+                  <span className="mb-1 block text-sm font-medium">
+                    {t("quote.field.storageSize")}
+                  </span>
                   <select
                     className={`${selectClass} ${errors.fromStorageSize ? "border-red-500 focus:border-red-400 focus:ring-red-100" : ""}`}
                     value={extra.fromStorageSize}
-                    onChange={(e) => updateExtra("fromStorageSize", e.target.value)}
+                    onChange={(e) =>
+                      updateExtra("fromStorageSize", e.target.value)
+                    }
                   >
                     <option value="">{t("quote.select")}</option>
                     {storageOptions.map((size) => (
-                      <option key={size} value={size}>{size}</option>
+                      <option key={size} value={size}>
+                        {size}
+                      </option>
                     ))}
                   </select>
-                  {errors.fromStorageSize && <span className="mt-1 block text-sm text-red-600">{errors.fromStorageSize}</span>}
+                  {errors.fromStorageSize && (
+                    <span className="mt-1 block text-sm text-red-600">
+                      {errors.fromStorageSize}
+                    </span>
+                  )}
                 </label>
               )}
               <AddressAutocomplete
@@ -1201,7 +1694,9 @@ export function QuoteForm() {
                 placeholder={fieldMeta.fromAddress.placeholder}
                 value={form.fromAddress}
                 onChange={(value) => update("fromAddress", value)}
-                onSelect={(suggestion) => applyAddressSuggestion("from", suggestion)}
+                onSelect={(suggestion) =>
+                  applyAddressSuggestion("from", suggestion)
+                }
                 error={errors.fromAddress}
                 labelClassName="mb-1 block text-sm font-medium"
               />
@@ -1211,24 +1706,32 @@ export function QuoteForm() {
                 disabled={locating}
                 className="inline-flex min-h-[42px] w-full items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm text-slate-700 shadow-sm transition-colors duration-150 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 sm:w-fit"
               >
-                {locating ? t("quote.location.detecting") : t("quote.location.use")}
+                {locating
+                  ? t("quote.location.detecting")
+                  : t("quote.location.use")}
               </button>
               <p className="text-xs leading-5 text-slate-500">
                 {t("quote.pickup.addressSupport")}
               </p>
-              <button className={primaryButtonClass} onClick={goNext}>{t("quote.continue.destination")}</button>
+              <button className={primaryButtonClass} onClick={goNext}>
+                {t("quote.continue.destination")}
+              </button>
             </div>
           )}
           {step === 2 && (
             <div className="grid gap-4">
               <div>
-                <h2 className="text-xl font-semibold">{t("quote.destination.title")}</h2>
+                <h2 className="text-xl font-semibold">
+                  {t("quote.destination.title")}
+                </h2>
                 <p className="mt-1 text-sm leading-6 text-slate-500">
                   {t("quote.destination.support")}
                 </p>
               </div>
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                <p className="text-sm font-medium">{t("quote.destination.knownProperty")}</p>
+                <p className="text-sm font-medium">
+                  {t("quote.destination.knownProperty")}
+                </p>
                 <div className="mt-3 grid grid-cols-2 gap-2 sm:flex">
                   <button
                     type="button"
@@ -1236,7 +1739,8 @@ export function QuoteForm() {
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => {
                       updateExtra("toKnownPropertyType", "yes");
-                      if (form.toPropertyType === "Unknown") update("toPropertyType", "House");
+                      if (form.toPropertyType === "Unknown")
+                        update("toPropertyType", "House");
                     }}
                   >
                     {t("quote.yes")}
@@ -1253,59 +1757,109 @@ export function QuoteForm() {
                     {t("quote.no")}
                   </button>
                 </div>
-                {errors.toKnownPropertyType && <p className="mt-1 text-sm text-red-600">{errors.toKnownPropertyType}</p>}
+                {errors.toKnownPropertyType && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.toKnownPropertyType}
+                  </p>
+                )}
               </div>
               {extra.toKnownPropertyType === "yes" && (
                 <>
-                  <PropertyCards value={form.toPropertyType} onSelect={(next) => update("toPropertyType", next)} />
-                  {errors.toPropertyType && <p className="text-sm text-red-600">{errors.toPropertyType}</p>}
+                  <PropertyCards
+                    value={form.toPropertyType}
+                    onSelect={(next) => update("toPropertyType", next)}
+                  />
+                  {errors.toPropertyType && (
+                    <p className="text-sm text-red-600">
+                      {errors.toPropertyType}
+                    </p>
+                  )}
                   {form.toPropertyType === "Apartment" && (
                     <div className="grid gap-4">
-                      <BedroomsSelector value={extra.toBedrooms} onSelect={(next) => updateExtra("toBedrooms", next)} error={errors.toBedrooms} />
+                      <BedroomsSelector
+                        value={extra.toBedrooms}
+                        onSelect={(next) => updateExtra("toBedrooms", next)}
+                        error={errors.toBedrooms}
+                      />
                       <div className="grid gap-4 sm:grid-cols-2">
                         <label className="block">
-                          <span className="mb-1 block text-sm font-medium">{t("quote.field.floor")}</span>
+                          <span className="mb-1 block text-sm font-medium">
+                            {t("quote.field.floor")}
+                          </span>
                           <input
                             className={`${fieldClass} ${errors.toFloor ? "border-red-500 focus:border-red-400 focus:ring-red-100" : ""}`}
-                            placeholder={t("quote.placeholder.floor", { floor: 2 })}
+                            placeholder={t("quote.placeholder.floor", {
+                              floor: 2,
+                            })}
                             value={extra.toFloor}
-                            onChange={(e) => updateExtra("toFloor", e.target.value)}
+                            onChange={(e) =>
+                              updateExtra("toFloor", e.target.value)
+                            }
                           />
-                          {errors.toFloor && <span className="mt-1 block text-sm text-red-600">{errors.toFloor}</span>}
+                          {errors.toFloor && (
+                            <span className="mt-1 block text-sm text-red-600">
+                              {errors.toFloor}
+                            </span>
+                          )}
                         </label>
                         <label className="block">
-                          <span className="mb-1 block text-sm font-medium">{t("quote.field.lift")}</span>
+                          <span className="mb-1 block text-sm font-medium">
+                            {t("quote.field.lift")}
+                          </span>
                           <select
                             className={`${selectClass} ${errors.toHasLift ? "border-red-500 focus:border-red-400 focus:ring-red-100" : ""}`}
                             value={extra.toHasLift}
-                            onChange={(e) => updateExtra("toHasLift", e.target.value as "yes" | "no")}
+                            onChange={(e) =>
+                              updateExtra(
+                                "toHasLift",
+                                e.target.value as "yes" | "no",
+                              )
+                            }
                           >
                             <option value="">{t("quote.select")}</option>
                             <option value="yes">{t("quote.yes")}</option>
                             <option value="no">{t("quote.no")}</option>
                           </select>
-                          {errors.toHasLift && <span className="mt-1 block text-sm text-red-600">{errors.toHasLift}</span>}
+                          {errors.toHasLift && (
+                            <span className="mt-1 block text-sm text-red-600">
+                              {errors.toHasLift}
+                            </span>
+                          )}
                         </label>
                       </div>
                     </div>
                   )}
                   {form.toPropertyType === "House" && (
-                    <BedroomsSelector value={extra.toBedrooms} onSelect={(next) => updateExtra("toBedrooms", next)} error={errors.toBedrooms} />
+                    <BedroomsSelector
+                      value={extra.toBedrooms}
+                      onSelect={(next) => updateExtra("toBedrooms", next)}
+                      error={errors.toBedrooms}
+                    />
                   )}
                   {form.toPropertyType === "Storage" && (
                     <label className="block">
-                      <span className="mb-1 block text-sm font-medium">{t("quote.field.storageSize")}</span>
+                      <span className="mb-1 block text-sm font-medium">
+                        {t("quote.field.storageSize")}
+                      </span>
                       <select
                         className={`${selectClass} ${errors.toStorageSize ? "border-red-500 focus:border-red-400 focus:ring-red-100" : ""}`}
                         value={extra.toStorageSize}
-                        onChange={(e) => updateExtra("toStorageSize", e.target.value)}
+                        onChange={(e) =>
+                          updateExtra("toStorageSize", e.target.value)
+                        }
                       >
                         <option value="">{t("quote.select")}</option>
                         {storageOptions.map((size) => (
-                          <option key={size} value={size}>{size}</option>
+                          <option key={size} value={size}>
+                            {size}
+                          </option>
                         ))}
                       </select>
-                      {errors.toStorageSize && <span className="mt-1 block text-sm text-red-600">{errors.toStorageSize}</span>}
+                      {errors.toStorageSize && (
+                        <span className="mt-1 block text-sm text-red-600">
+                          {errors.toStorageSize}
+                        </span>
+                      )}
                     </label>
                   )}
                 </>
@@ -1315,7 +1869,9 @@ export function QuoteForm() {
                 placeholder={fieldMeta.toAddress.placeholder}
                 value={form.toAddress}
                 onChange={(value) => update("toAddress", value)}
-                onSelect={(suggestion) => applyAddressSuggestion("to", suggestion)}
+                onSelect={(suggestion) =>
+                  applyAddressSuggestion("to", suggestion)
+                }
                 error={errors.toAddress}
                 labelClassName="mb-1 block text-sm font-medium"
               />
@@ -1323,7 +1879,9 @@ export function QuoteForm() {
                 {t("quote.destination.addressSupport")}
               </p>
               <div className="block">
-                <span className="mb-1 block text-sm font-medium">{fieldMeta.moveDate.label}</span>
+                <span className="mb-1 block text-sm font-medium">
+                  {fieldMeta.moveDate.label}
+                </span>
                 <div className="relative" ref={datePickerRef}>
                   <button
                     type="button"
@@ -1332,10 +1890,18 @@ export function QuoteForm() {
                   >
                     <span className="inline-flex items-center gap-2 text-slate-700">
                       <CalendarDays className="h-4 w-4 text-brandBlue" />
-                      <span className={form.moveDate ? "text-slate-800" : "text-slate-500"}>{formatDateLabel(form.moveDate)}</span>
+                      <span
+                        className={
+                          form.moveDate ? "text-slate-800" : "text-slate-500"
+                        }
+                      >
+                        {formatDateLabel(form.moveDate)}
+                      </span>
                     </span>
                     <span className="rounded-full bg-brandBlue/10 px-2 py-0.5 text-xs font-semibold text-brandBlue">
-                      {form.moveDate ? t("quote.date.change") : t("quote.date.pick")}
+                      {form.moveDate
+                        ? t("quote.date.change")
+                        : t("quote.date.pick")}
                     </span>
                   </button>
                   {isDatePickerOpen && (
@@ -1347,6 +1913,7 @@ export function QuoteForm() {
                         <button
                           type="button"
                           className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-50"
+                          aria-label="Previous month"
                           onClick={() => changeCalendarMonth(-1)}
                         >
                           <ChevronLeft className="h-4 w-4" />
@@ -1355,26 +1922,37 @@ export function QuoteForm() {
                           <select
                             className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-700"
                             value={calendarMonth}
-                            onChange={(e) => setCalendarMonth(Number(e.target.value))}
+                            onChange={(e) =>
+                              setCalendarMonth(Number(e.target.value))
+                            }
                           >
                             {monthNames.map((m, idx) => (
-                              <option key={m} value={idx}>{m}</option>
+                              <option key={m} value={idx}>
+                                {m}
+                              </option>
                             ))}
                           </select>
                           <select
                             className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-700"
                             value={calendarYear}
-                            onChange={(e) => setCalendarYear(Number(e.target.value))}
+                            onChange={(e) =>
+                              setCalendarYear(Number(e.target.value))
+                            }
                           >
                             {Array.from({ length: 6 }).map((_, i) => {
                               const y = new Date().getFullYear() + i;
-                              return <option key={y} value={y}>{y}</option>;
+                              return (
+                                <option key={y} value={y}>
+                                  {y}
+                                </option>
+                              );
                             })}
                           </select>
                         </div>
                         <button
                           type="button"
                           className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-50"
+                          aria-label="Next month"
                           onClick={() => changeCalendarMonth(1)}
                         >
                           <ChevronRight className="h-4 w-4" />
@@ -1382,7 +1960,12 @@ export function QuoteForm() {
                       </div>
                       <div className="mb-1 grid grid-cols-7 gap-1">
                         {dayLabels.map((d) => (
-                          <span key={d} className="text-center text-[11px] font-semibold text-slate-400">{d}</span>
+                          <span
+                            key={d}
+                            className="text-center text-[11px] font-semibold text-slate-400"
+                          >
+                            {d}
+                          </span>
                         ))}
                       </div>
                       <div className="grid grid-cols-7 gap-1">
@@ -1445,12 +2028,20 @@ export function QuoteForm() {
                     </div>
                   )}
                 </div>
-                <span className="mt-1 block text-xs text-slate-500">{t("quote.date.support")}</span>
-                {errors.moveDate && <span className="mt-1 block text-sm text-red-600">{errors.moveDate}</span>}
+                <span className="mt-1 block text-xs text-slate-500">
+                  {t("quote.date.support")}
+                </span>
+                {errors.moveDate && (
+                  <span className="mt-1 block text-sm text-red-600">
+                    {errors.moveDate}
+                  </span>
+                )}
               </div>
               <div className="rounded-lg border border-slate-200 p-4">
                 <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-                  <span className="text-sm font-medium">{t("quote.field.items")}</span>
+                  <span className="text-sm font-medium">
+                    {t("quote.field.items")}
+                  </span>
                   <button
                     type="button"
                     className="inline-flex min-h-[40px] w-full items-center justify-center gap-1 rounded-xl border border-slate-300 px-3 py-1.5 text-sm text-slate-700 sm:w-auto"
@@ -1468,101 +2059,150 @@ export function QuoteForm() {
                 />
                 {showItemsPicker && (
                   <div className="mt-3 rounded border border-slate-200 bg-slate-50 p-3">
-                    <p className="mb-3 text-xs text-slate-500">{t("quote.items.quantityHelp", { max: MAX_ITEM_QTY })}</p>
-                    {(["Bedroom", "Living Room", "Kitchen"] as const).map((room) => {
-                      const RoomIcon = roomIcons[room];
-                      return (
-                        <div key={room} className="mb-4 last:mb-0">
-                          <p className="mb-2 inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
-                            <RoomIcon className="h-4 w-4 text-brandBlue" />
-                            {room}
-                          </p>
-                          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                            {commonItems
-                              .filter((item) => item.room === room)
-                              .map((item) => {
-                                const qty = itemQuantities[item.id] ?? 0;
-                                const ItemIcon = item.icon;
-                                return (
-                                  <div key={item.id} className="rounded border border-slate-200 bg-white p-2.5">
-                                    <div className="flex items-center justify-between gap-2">
-                                      <div className="flex min-w-0 items-center gap-2">
-                                        <span className="inline-flex h-8 w-8 items-center justify-center rounded bg-slate-100">
-                                          <ItemIcon className="h-4 w-4 text-brandBlue" />
-                                        </span>
-                                        <span className="truncate text-sm text-slate-700">{item.label}</span>
-                                      </div>
-                                      {qty > 0 ? (
-                                        <div className="inline-flex items-center overflow-hidden rounded border border-brandBlue">
-                                          <button
-                                            type="button"
-                                            className="h-7 w-7 bg-brandBlue text-white"
-                                            onClick={() => updateItemQty(item.id, qty - 1)}
-                                          >
-                                            -
-                                          </button>
-                                          {editingItemId === item.id ? (
-                                            <input
-                                              autoFocus
-                                              type="text"
-                                              inputMode="numeric"
-                                              pattern="[0-9]*"
-                                              className="h-7 w-12 border-x border-brandBlue px-1 text-center text-xs font-semibold text-brandBlue outline-none"
-                                              value={draftItemQty}
-                                              onChange={(e) => setDraftItemQty(e.target.value.replace(/\D/g, ""))}
-                                              onBlur={() => commitItemQty(item.id)}
-                                              onKeyDown={(e) => {
-                                                if (e.key === "Enter") commitItemQty(item.id);
-                                                if (e.key === "Escape") setEditingItemId(null);
-                                              }}
-                                            />
-                                          ) : (
+                    <p className="mb-3 text-xs text-slate-500">
+                      {t("quote.items.quantityHelp", { max: MAX_ITEM_QTY })}
+                    </p>
+                    {(["Bedroom", "Living Room", "Kitchen"] as const).map(
+                      (room) => {
+                        const RoomIcon = roomIcons[room];
+                        return (
+                          <div key={room} className="mb-4 last:mb-0">
+                            <p className="mb-2 inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
+                              <RoomIcon className="h-4 w-4 text-brandBlue" />
+                              {room}
+                            </p>
+                            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                              {commonItems
+                                .filter((item) => item.room === room)
+                                .map((item) => {
+                                  const qty = itemQuantities[item.id] ?? 0;
+                                  const ItemIcon = item.icon;
+                                  return (
+                                    <div
+                                      key={item.id}
+                                      className="rounded border border-slate-200 bg-white p-2.5"
+                                    >
+                                      <div className="flex items-center justify-between gap-2">
+                                        <div className="flex min-w-0 items-center gap-2">
+                                          <span className="inline-flex h-8 w-8 items-center justify-center rounded bg-slate-100">
+                                            <ItemIcon className="h-4 w-4 text-brandBlue" />
+                                          </span>
+                                          <span className="truncate text-sm text-slate-700">
+                                            {item.label}
+                                          </span>
+                                        </div>
+                                        {qty > 0 ? (
+                                          <div className="inline-flex items-center overflow-hidden rounded border border-brandBlue">
                                             <button
                                               type="button"
-                                              className="px-2 text-xs font-semibold text-brandBlue"
-                                              onClick={() => startEditingItemQty(item.id)}
+                                              className="h-7 w-7 bg-brandBlue text-white"
+                                              onClick={() =>
+                                                updateItemQty(item.id, qty - 1)
+                                              }
                                             >
-                                              x{qty}
+                                              -
                                             </button>
-                                          )}
+                                            {editingItemId === item.id ? (
+                                              <input
+                                                autoFocus
+                                                type="text"
+                                                inputMode="numeric"
+                                                pattern="[0-9]*"
+                                                className="h-7 w-12 border-x border-brandBlue px-1 text-center text-xs font-semibold text-brandBlue outline-none"
+                                                value={draftItemQty}
+                                                onChange={(e) =>
+                                                  setDraftItemQty(
+                                                    e.target.value.replace(
+                                                      /\D/g,
+                                                      "",
+                                                    ),
+                                                  )
+                                                }
+                                                onBlur={() =>
+                                                  commitItemQty(item.id)
+                                                }
+                                                onKeyDown={(e) => {
+                                                  if (e.key === "Enter")
+                                                    commitItemQty(item.id);
+                                                  if (e.key === "Escape")
+                                                    setEditingItemId(null);
+                                                }}
+                                              />
+                                            ) : (
+                                              <button
+                                                type="button"
+                                                className="px-2 text-xs font-semibold text-brandBlue"
+                                                onClick={() =>
+                                                  startEditingItemQty(item.id)
+                                                }
+                                              >
+                                                x{qty}
+                                              </button>
+                                            )}
+                                            <button
+                                              type="button"
+                                              className="h-7 w-7 bg-brandBlue text-white"
+                                              onClick={() =>
+                                                updateItemQty(item.id, qty + 1)
+                                              }
+                                            >
+                                              +
+                                            </button>
+                                          </div>
+                                        ) : (
                                           <button
                                             type="button"
-                                            className="h-7 w-7 bg-brandBlue text-white"
-                                            onClick={() => updateItemQty(item.id, qty + 1)}
+                                            className="rounded bg-brandBlue px-3 py-1 text-xs text-white"
+                                            onClick={() =>
+                                              updateItemQty(item.id, 1)
+                                            }
                                           >
-                                            +
+                                            {t("quote.items.addShort")}
                                           </button>
-                                        </div>
-                                      ) : (
-                                        <button
-                                          type="button"
-                                          className="rounded bg-brandBlue px-3 py-1 text-xs text-white"
-                                          onClick={() => updateItemQty(item.id, 1)}
-                                        >
-                                          {t("quote.items.addShort")}
-                                        </button>
-                                      )}
+                                        )}
+                                      </div>
                                     </div>
-                                  </div>
-                                );
-                              })}
+                                  );
+                                })}
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      },
+                    )}
                   </div>
                 )}
               </div>
+              <InventoryEditor
+                value={inventory}
+                onChange={setInventory}
+                catalogue={false}
+              />
               <label className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-                <input className="mt-1 h-4 w-4 rounded border-slate-300 text-brandBlue focus:ring-brandBlue" type="checkbox" checked={form.dateFlexible} onChange={(e) => update("dateFlexible", e.target.checked)} />
+                <input
+                  className="mt-1 h-4 w-4 rounded border-slate-300 text-brandBlue focus:ring-brandBlue"
+                  type="checkbox"
+                  checked={form.dateFlexible}
+                  onChange={(e) => update("dateFlexible", e.target.checked)}
+                />
                 <span>
-                  <span className="block text-sm font-semibold text-slate-900">{t("quote.flexible.title")}</span>
-                  <span className="mt-1 block text-sm leading-6 text-slate-500">{t("quote.flexible.support")}</span>
+                  <span className="block text-sm font-semibold text-slate-900">
+                    {t("quote.flexible.title")}
+                  </span>
+                  <span className="mt-1 block text-sm leading-6 text-slate-500">
+                    {t("quote.flexible.support")}
+                  </span>
                 </span>
               </label>
               <div className="flex flex-col gap-3 sm:flex-row">
-                <button className={secondaryButtonClass} onClick={() => transitionToStep(1)}>{t("quote.back")}</button>
-                <button className={primaryButtonClass} onClick={goNext}>{t("quote.continue.contact")}</button>
+                <button
+                  className={secondaryButtonClass}
+                  onClick={() => transitionToStep(1)}
+                >
+                  {t("quote.back")}
+                </button>
+                <button className={primaryButtonClass} onClick={goNext}>
+                  {t("quote.continue.contact")}
+                </button>
               </div>
             </div>
           )}

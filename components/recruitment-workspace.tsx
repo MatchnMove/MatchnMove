@@ -425,6 +425,7 @@ export function RecruitmentWorkspace({
                 Business administration
               </p>
               {[
+                ["/admin/trust", "Trust & customer support"],
                 ["/admin/quote-flow", "Registered movers & leads"],
                 ["/admin/verification", "Mover verification"],
                 ["/admin/cleaners", "Cleaners"],

@@ -6,18 +6,32 @@ import { prisma } from "@/lib/db";
 import { LEAD_PRICING } from "@/lib/lead-pricing";
 import { serializeMoverLeadQuoteRequest } from "@/lib/mover-lead-visibility";
 import { canMoverAccessLeads } from "@/lib/mover-lead-access";
-import { calculateMoverProfileReadiness, isPhoneVerificationRequired } from "@/lib/mover-profile";
+import {
+  calculateMoverProfileReadiness,
+  isPhoneVerificationRequired,
+} from "@/lib/mover-profile";
 import { getMoverLogoUrl } from "@/lib/mover-logo";
 import { getQuoteServiceAreas, sanitiseNzServiceAreas } from "@/lib/nz-regions";
 import { getMoverLaunchTrialSetting } from "@/lib/platform-settings";
-import { getMoverCompetitionSnapshot, getMoverLeaderboard, getMoverRatingsDashboardData } from "@/lib/reviews";
+import {
+  getMoverCompetitionSnapshot,
+  getMoverLeaderboard,
+  getMoverRatingsDashboardData,
+} from "@/lib/reviews";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 function matchesServiceArea(
   serviceAreas: string[],
-  lead: { fromAddress: string; fromCity: string; fromRegion: string; toAddress: string; toCity: string; toRegion: string },
+  lead: {
+    fromAddress: string;
+    fromCity: string;
+    fromRegion: string;
+    toAddress: string;
+    toCity: string;
+    toRegion: string;
+  },
 ) {
   if (!serviceAreas.length) return false;
 
@@ -27,7 +41,11 @@ function matchesServiceArea(
   return leadRegions.some((region) => coverage.has(region));
 }
 
-function getDashboardReturnPath(searchParams?: { tab?: string; billing?: string; lead?: string }) {
+function getDashboardReturnPath(searchParams?: {
+  tab?: string;
+  billing?: string;
+  lead?: string;
+}) {
   const nextSearchParams = new URLSearchParams();
   for (const key of ["tab", "billing", "lead"] as const) {
     const value = searchParams?.[key]?.trim();
@@ -50,7 +68,11 @@ export default async function MoverDashboardPage({
     redirect(`/mover/login?mode=login&next=${encodeURIComponent(returnPath)}`);
   }
   if (isAnyAdminUser(session.user)) {
-    redirect(session.user.mfaVerified ? "/admin/recruitment" : "/admin/mfa?next=/admin/recruitment");
+    redirect(
+      session.user.mfaVerified
+        ? "/admin/recruitment"
+        : "/admin/mfa?next=/admin/recruitment",
+    );
   }
   if (session.user.role === "CLEANER") redirect("/cleaner/dashboard");
 
@@ -78,10 +100,12 @@ export default async function MoverDashboardPage({
       <section className="min-h-screen bg-slate-100 px-4 py-16">
         <div className="container-shell">
           <div className="rounded-[32px] border border-slate-200 bg-white p-8 shadow-sm">
-            <h1 className="text-3xl font-black tracking-[-0.04em] text-slate-950">No mover profile found</h1>
+            <h1 className="text-3xl font-black tracking-[-0.04em] text-slate-950">
+              No mover profile found
+            </h1>
             <p className="mt-3 max-w-xl text-base leading-7 text-slate-600">
-              Your account is signed in, but there is no mover company linked to it yet. Finish registration to unlock the
-              full dashboard.
+              Your account is signed in, but there is no mover company linked to
+              it yet. Finish registration to unlock the full dashboard.
             </p>
           </div>
         </div>
@@ -94,7 +118,11 @@ export default async function MoverDashboardPage({
     getMoverLeaderboard(mover.id),
     getMoverLaunchTrialSetting(),
   ]);
-  const competition = getMoverCompetitionSnapshot(mover.id, ratingsData.summary, leaderboard);
+  const competition = getMoverCompetitionSnapshot(
+    mover.id,
+    ratingsData.summary,
+    leaderboard,
+  );
   const moverServiceAreas = sanitiseNzServiceAreas(mover.serviceAreas);
 
   const readiness = calculateMoverProfileReadiness(mover);
@@ -104,13 +132,19 @@ export default async function MoverDashboardPage({
   const purchasedStatuses = ["PURCHASED", "CONTACTED", "WON"] as const;
   const totalLeadValue = mover.leads.reduce((sum, lead) => sum + lead.price, 0);
   const unlockedValue = mover.leads
-    .filter((lead) => purchasedStatuses.includes(lead.status as (typeof purchasedStatuses)[number]))
+    .filter((lead) =>
+      purchasedStatuses.includes(
+        lead.status as (typeof purchasedStatuses)[number],
+      ),
+    )
     .reduce((sum, lead) => sum + lead.price, 0);
 
   const dashboardData = {
     accountId: session.user.id,
     companyName: mover.companyName,
     businessDescription: mover.businessDescription ?? "",
+    operatingRegion: mover.operatingRegion ?? "",
+    movingServices: mover.movingServices,
     status: mover.status,
     email: mover.user.email,
     emailVerified: Boolean(mover.user.emailVerifiedAt),
@@ -153,12 +187,24 @@ export default async function MoverDashboardPage({
     readiness,
     canAccessLeads,
     stats: {
-      activeLeads: mover.leads.filter((lead) => activePipelineStatuses.includes(lead.status as (typeof activePipelineStatuses)[number])).length,
-      purchasedLeads: mover.leads.filter((lead) => purchasedStatuses.includes(lead.status as (typeof purchasedStatuses)[number])).length,
-      wonLeads: mover.leads.filter((lead) => wonStatuses.includes(lead.status as (typeof wonStatuses)[number])).length,
+      activeLeads: mover.leads.filter((lead) =>
+        activePipelineStatuses.includes(
+          lead.status as (typeof activePipelineStatuses)[number],
+        ),
+      ).length,
+      purchasedLeads: mover.leads.filter((lead) =>
+        purchasedStatuses.includes(
+          lead.status as (typeof purchasedStatuses)[number],
+        ),
+      ).length,
+      wonLeads: mover.leads.filter((lead) =>
+        wonStatuses.includes(lead.status as (typeof wonStatuses)[number]),
+      ).length,
       totalLeadValue,
       unlockedValue,
-      averageLeadPrice: mover.leads.length ? Math.round(totalLeadValue / mover.leads.length) : LEAD_PRICING.basePrice,
+      averageLeadPrice: mover.leads.length
+        ? Math.round(totalLeadValue / mover.leads.length)
+        : LEAD_PRICING.basePrice,
     },
     ratings: {
       ...ratingsData,

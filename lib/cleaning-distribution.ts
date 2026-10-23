@@ -1,3 +1,4 @@
+import { cleaningTargetSelect, cleaningTarget } from "@/lib/cleaning-target";
 import { CleaningLeadStatus, Prisma, UserRole } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { CLEANING_LEAD_PRICING } from "@/lib/cleaner-lead-pricing";
@@ -19,16 +20,17 @@ export type CleaningLeadNotificationContext = {
   preferredLocale: string;
   pickupServiceArea: NzServiceArea;
   createdAt: Date;
+  propertyType: string;
+  bedrooms: string;
+  preferredDate: Date | null;
 };
 
-export type CleaningLeadNotificationResult =
-  | {
-      sent?: boolean;
-      queued?: boolean;
-      emailDeliveryId?: string;
-      error?: string;
-    }
-  | void;
+export type CleaningLeadNotificationResult = {
+  sent?: boolean;
+  queued?: boolean;
+  emailDeliveryId?: string;
+  error?: string;
+} | void;
 
 /** Callback implementations must deduplicate by leadId. */
 export type CleaningLeadNotificationCallback = (
@@ -52,7 +54,9 @@ const cleanerAssignmentSelect = Prisma.validator<Prisma.CleaningLeadSelect>()({
   createdAt: true,
 });
 
-type CleanerAssignment = Prisma.CleaningLeadGetPayload<{ select: typeof cleanerAssignmentSelect }>;
+type CleanerAssignment = Prisma.CleaningLeadGetPayload<{
+  select: typeof cleanerAssignmentSelect;
+}>;
 
 async function ensureCleanerAssignment(input: {
   cleaningRequestId: string;
@@ -87,7 +91,10 @@ async function ensureCleanerAssignment(input: {
     });
     return { lead, created: true } as const;
   } catch (error) {
-    if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") {
+    if (
+      !(error instanceof Prisma.PrismaClientKnownRequestError) ||
+      error.code !== "P2002"
+    ) {
       throw error;
     }
 
@@ -120,6 +127,7 @@ async function notifyCleanerAssignment(
   },
   pickupServiceArea: NzServiceArea,
   notify: CleaningLeadNotificationCallback,
+  target: ReturnType<typeof cleaningTarget>,
 ) {
   try {
     const result = await notify({
@@ -127,11 +135,15 @@ async function notifyCleanerAssignment(
       cleaningRequestId: assignment.cleaningRequestId,
       cleanerCompanyId: cleaner.id,
       cleanerEmail: cleaner.user.email,
-      cleanerName: cleaner.contactPerson || cleaner.user.name || cleaner.companyName,
+      cleanerName:
+        cleaner.contactPerson || cleaner.user.name || cleaner.companyName,
       cleanerCompanyName: cleaner.companyName,
       preferredLocale: cleaner.user.preferredLocale,
       pickupServiceArea,
       createdAt: assignment.createdAt,
+      propertyType: target.fromPropertyType,
+      bedrooms: target.bedrooms,
+      preferredDate: target.moveDate,
     });
     const accepted = notificationWasAccepted(result);
 
@@ -164,7 +176,9 @@ async function notifyCleanerAssignment(
           cleaningLeadId: assignment.id,
           action: "cleaning_lead_notification_deferred",
           meta: {
-            error: result?.error ?? "Notification callback did not accept the message.",
+            error:
+              result?.error ??
+              "Notification callback did not accept the message.",
           },
         },
       });
@@ -176,7 +190,10 @@ async function notifyCleanerAssignment(
       error: accepted ? undefined : result?.error,
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown cleaning lead notification error.";
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Unknown cleaning lead notification error.";
     try {
       await prisma.cleaningLeadAuditLog.create({
         data: {
@@ -201,18 +218,25 @@ export async function distributeCleaningRequest(input: {
     select: {
       id: true,
       quoteRequestId: true,
+      ...cleaningTargetSelect,
       quoteRequest: {
         select: {
           fromAddress: true,
           fromCity: true,
           fromRegion: true,
+          fromPostcode: true,
+          fromPropertyType: true,
+          bedrooms: true,
+          moveDate: true,
+          dateFlexible: true,
         },
       },
     },
   });
   if (!cleaningRequest) throw new Error("Cleaning request not found.");
 
-  const pickupServiceArea = getCleaningPickupServiceArea(cleaningRequest.quoteRequest);
+  const target = cleaningTarget(cleaningRequest);
+  const pickupServiceArea = getCleaningPickupServiceArea(target);
   if (!pickupServiceArea) {
     await prisma.adminAuditLog.create({
       data: {
@@ -266,12 +290,16 @@ export async function distributeCleaningRequest(input: {
   // Existing NEW assignments are retried. The callback contract requires a
   // lead-based dedupe key, matching the existing email queue architecture.
   const notificationCandidates = input.notify
-    ? assignmentResults.filter((assignment) => assignment.lead.status === CleaningLeadStatus.NEW)
+    ? assignmentResults.filter(
+        (assignment) => assignment.lead.status === CleaningLeadStatus.NEW,
+      )
     : [];
   const notifications = input.notify
     ? await Promise.all(
         notificationCandidates.map((assignment) => {
-          const cleaner = cleaners.find((item) => item.id === assignment.lead.cleanerCompanyId);
+          const cleaner = cleaners.find(
+            (item) => item.id === assignment.lead.cleanerCompanyId,
+          );
           if (!cleaner) {
             return Promise.resolve({
               leadId: assignment.lead.id,
@@ -279,15 +307,25 @@ export async function distributeCleaningRequest(input: {
               error: "Cleaner notification context was not found.",
             });
           }
-          return notifyCleanerAssignment(assignment.lead, cleaner, pickupServiceArea, input.notify!);
+          return notifyCleanerAssignment(
+            assignment.lead,
+            cleaner,
+            pickupServiceArea,
+            input.notify!,
+            target,
+          );
         }),
       )
     : [];
 
-  const createdCount = assignmentResults.filter((assignment) => assignment.created).length;
+  const createdCount = assignmentResults.filter(
+    (assignment) => assignment.created,
+  ).length;
   await prisma.adminAuditLog.create({
     data: {
-      action: cleaners.length ? "cleaning_distribution_completed" : "cleaning_distribution_no_recipients",
+      action: cleaners.length
+        ? "cleaning_distribution_completed"
+        : "cleaning_distribution_no_recipients",
       meta: {
         cleaningRequestId: cleaningRequest.id,
         quoteRequestId: cleaningRequest.quoteRequestId,
@@ -296,8 +334,12 @@ export async function distributeCleaningRequest(input: {
         assignedCount: assignmentResults.length,
         createdCount,
         notificationAttemptCount: notifications.length,
-        notificationAcceptedCount: notifications.filter((notification) => notification.accepted).length,
-        notificationFailureCount: notifications.filter((notification) => !notification.accepted).length,
+        notificationAcceptedCount: notifications.filter(
+          (notification) => notification.accepted,
+        ).length,
+        notificationFailureCount: notifications.filter(
+          (notification) => !notification.accepted,
+        ).length,
       },
     },
   });

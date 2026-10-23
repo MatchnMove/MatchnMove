@@ -4,7 +4,7 @@ import { FormEvent, useState } from "react";
 import { ArrowRight, ShieldCheck } from "lucide-react";
 import {
   AddressAutocomplete,
-  AddressSuggestion
+  AddressSuggestion,
 } from "@/components/address-autocomplete";
 import { addressSuggestionToValue } from "@/lib/address-search";
 import { trackAnalyticsEvent } from "@/lib/analytics";
@@ -23,7 +23,7 @@ const emptyAddress: AddressState = {
   city: "",
   region: "",
   postcode: "",
-  country: "New Zealand"
+  country: "New Zealand",
 };
 
 const buildAddressState = (suggestion: AddressSuggestion): AddressState => ({
@@ -31,13 +31,15 @@ const buildAddressState = (suggestion: AddressSuggestion): AddressState => ({
   city: suggestion.city,
   region: suggestion.region,
   postcode: suggestion.postcode,
-  country: suggestion.country || "New Zealand"
+  country: suggestion.country || "New Zealand",
 });
 
 export function HeroQuoteCard() {
   const [from, setFrom] = useState<AddressState>(emptyAddress);
   const [to, setTo] = useState<AddressState>(emptyAddress);
   const [errors, setErrors] = useState<{ from?: string; to?: string }>({});
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const [started, setStarted] = useState(false);
 
   const trackStart = () => {
@@ -61,13 +63,17 @@ export function HeroQuoteCard() {
     setErrors((current) => ({ ...current, to: undefined }));
   };
 
-  const submit = (event: FormEvent<HTMLFormElement>) => {
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     trackStart();
 
     const nextErrors = {
-      from: from.address.trim() ? undefined : "Enter your pickup address to start.",
-      to: to.address.trim() ? undefined : "Enter your drop-off address to continue."
+      from: from.address.trim()
+        ? undefined
+        : "Enter your pickup address to start.",
+      to: to.address.trim()
+        ? undefined
+        : "Enter your drop-off address to continue.",
     };
 
     if (nextErrors.from || nextErrors.to) {
@@ -80,41 +86,48 @@ export function HeroQuoteCard() {
       return;
     }
 
-    const params = new URLSearchParams({
-      fromAddress: from.address.trim(),
-      fromCity: from.city,
-      fromRegion: from.region,
-      fromPostcode: from.postcode,
-      fromCountry: from.country || "New Zealand",
-      toAddress: to.address.trim(),
-      toCity: to.city,
-      toRegion: to.region,
-      toPostcode: to.postcode,
-      toCountry: to.country || "New Zealand"
-    });
-    const currentParams = new URLSearchParams(window.location.search);
-    for (const key of ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "gclid", "fbclid"]) {
-      const value = currentParams.get(key);
-      if (value) params.set(key, value);
+    setSaving(true);
+    setSaveError("");
+    try {
+      const previous = await fetch("/api/quote-draft", { cache: "no-store" });
+      if (!previous.ok) throw Error();
+      const { draft } = await previous.json();
+      const form = {
+        ...draft?.form,
+        fromAddress: from.address.trim(),
+        fromCity: from.city,
+        fromRegion: from.region,
+        fromPostcode: from.postcode,
+        fromCountry: from.country,
+        toAddress: to.address.trim(),
+        toCity: to.city,
+        toRegion: to.region,
+        toPostcode: to.postcode,
+        toCountry: to.country,
+      };
+      const saved = await fetch("/api/quote-draft", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...draft, form, step: 1 }),
+      });
+      if (!saved.ok) throw Error();
+      trackAnalyticsEvent("quote_route_complete", { source: "homepage_hero" });
+      window.location.href = "/quote";
+    } catch {
+      setSaveError(
+        "We could not carry your addresses across. Please try again, or start from the quote page.",
+      );
+      setSaving(false);
     }
-
-    trackAnalyticsEvent("quote_route_complete", {
-      source: "homepage_hero",
-      from_region: from.region || undefined,
-      to_region: to.region || undefined,
-    });
-
-    window.location.href = `/quote?${params.toString()}`;
   };
 
   return (
-    <form
-      onSubmit={submit}
-      className={styles.card}
-    >
+    <form onSubmit={submit} className={styles.card}>
       <p className={styles.eyebrow}>Let’s get you moving</p>
       <h2 className={styles.title}>Where are you moving to?</h2>
-      <p className={styles.description}>A fresh start begins with a few details.</p>
+      <p className={styles.description}>
+        A fresh start begins with a few details.
+      </p>
 
       <div className={styles.addressFields}>
         <AddressAutocomplete
@@ -163,8 +176,16 @@ export function HeroQuoteCard() {
         />
       </div>
 
-      <button type="submit" className={styles.submit}>
-        Get my free quotes
+      {saveError && (
+        <p role="alert">
+          {saveError}{" "}
+          <a href="/quote" className="underline">
+            Open quote form
+          </a>
+        </p>
+      )}
+      <button disabled={saving} type="submit" className={styles.submit}>
+        {saving ? "Saving your route..." : "Get my free quotes"}
         <ArrowRight aria-hidden="true" size={18} strokeWidth={1.8} />
       </button>
       <p className={styles.reassurance}>

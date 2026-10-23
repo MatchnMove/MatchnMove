@@ -41,7 +41,8 @@ function GoogleAnalyticsEngagementEvents() {
       (entries) => {
         for (const entry of entries) {
           if (!entry.isIntersecting) continue;
-          const sectionName = (entry.target as HTMLElement).dataset.analyticsSection;
+          const sectionName = (entry.target as HTMLElement).dataset
+            .analyticsSection;
           if (!sectionName || viewedSections.has(sectionName)) continue;
           viewedSections.add(sectionName);
           trackAnalyticsEvent("homepage_section_view", {
@@ -53,7 +54,9 @@ function GoogleAnalyticsEngagementEvents() {
       { threshold: 0.45 },
     );
 
-    document.querySelectorAll<HTMLElement>("[data-analytics-section]").forEach((section) => sectionObserver.observe(section));
+    document
+      .querySelectorAll<HTMLElement>("[data-analytics-section]")
+      .forEach((section) => sectionObserver.observe(section));
 
     const onClick = (event: MouseEvent) => {
       const target = event.target instanceof Element ? event.target : null;
@@ -64,12 +67,15 @@ function GoogleAnalyticsEngagementEvents() {
       }
 
       const href = link.getAttribute("href") || "";
-      const linkText = (link.textContent || "").replace(/\s+/g, " ").trim().slice(0, 80);
+      const linkText = (link.textContent || "")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 80);
       const eventParams = {
         link_text: linkText,
         link_url: href,
         page_path: pathname || window.location.pathname,
-        source: link.dataset.analyticsSource || undefined,
+        source: "navigation",
       };
 
       if (href.startsWith("tel:")) {
@@ -119,13 +125,16 @@ export function GoogleAnalytics({ measurementId }: { measurementId?: string }) {
 
   return (
     <>
-      <Script src={`https://www.googletagmanager.com/gtag/js?id=${measurementId}`} strategy="afterInteractive" />
+      <Script
+        src={`https://www.googletagmanager.com/gtag/js?id=${measurementId}`}
+        strategy="afterInteractive"
+      />
       <Script id="google-analytics" strategy="afterInteractive">
         {`
           window.dataLayer = window.dataLayer || [];
           function gtag(){dataLayer.push(arguments);}
           gtag('js', new Date());
-          gtag('config', '${measurementId}', { send_page_view: false });
+          gtag('config', '${measurementId}', { send_page_view: false, allow_google_signals: false, allow_ad_personalization_signals: false, page_location: window.location.origin + window.location.pathname, page_referrer: document.referrer ? new URL(document.referrer).origin : '' });
         `}
       </Script>
       <Suspense fallback={null}>

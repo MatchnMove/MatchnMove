@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
-import { buildLeadSpreadsheetRow, LEAD_SPREADSHEET_HEADERS } from "../lib/lead-spreadsheet";
+import {
+  buildLeadSpreadsheetRow,
+  LEAD_SPREADSHEET_HEADERS,
+} from "../lib/lead-spreadsheet";
 
 const row = buildLeadSpreadsheetRow({
+  movingDistributedAt: null,
+  inventory: null,
+  toBedrooms: null,
   id: "quote-test",
   submissionKey: "test-submission-key",
   name: '=HYPERLINK("bad")',
@@ -34,8 +40,19 @@ const row = buildLeadSpreadsheetRow({
 });
 
 assert.equal(row.length, LEAD_SPREADSHEET_HEADERS.length);
-assert.ok(String(row[4]).startsWith("'="), "Customer name formula was not neutralised.");
-assert.ok(String(row[5]).startsWith("'+"), "Phone formula was not neutralised.");
-assert.ok(String(row[24]).startsWith("'@"), "Items formula was not neutralised.");
+assert.ok(
+  String(row[4]).startsWith("'="),
+  "Customer name formula was not neutralised.",
+);
+assert.ok(
+  String(row[5]).startsWith("'+"),
+  "Phone formula was not neutralised.",
+);
+assert.ok(
+  String(row[24]).startsWith("'@"),
+  "Items formula was not neutralised.",
+);
 
-console.log(`Google Sheet row verified: ${row.length} columns, injection guards active.`);
+console.log(
+  `Google Sheet row verified: ${row.length} columns, injection guards active.`,
+);

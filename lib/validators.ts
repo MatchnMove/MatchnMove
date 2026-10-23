@@ -1,3 +1,6 @@
+import { MOVING_SERVICES } from "@/lib/profile-trust";
+import { cleaningDetailsSchema } from "@/lib/cleaning-request";
+import { inventorySchema } from "@/lib/inventory";
 import { z } from "zod";
 import { SUPPORTED_LOCALE_CODES } from "@/lib/i18n/config";
 import { NZ_SERVICE_AREAS, sanitiseNzServiceAreas } from "@/lib/nz-regions";
@@ -8,47 +11,71 @@ export const contactSchema = z.object({
   message: z.string().min(10).max(2000),
 });
 
-const limitedTranscriptSchema = z
-  .unknown()
-  .refine((value) => {
-    try {
-      return JSON.stringify(value).length <= 50_000;
-    } catch {
-      return false;
-    }
-  }, "Voice transcript data is too large.");
+const limitedTranscriptSchema = z.unknown().refine((value) => {
+  try {
+    return JSON.stringify(value).length <= 50_000;
+  } catch {
+    return false;
+  }
+}, "Voice transcript data is too large.");
 
-export const quoteSchema = z.object({
-  clientRequestId: z.string().trim().min(8).max(100).regex(/^[a-zA-Z0-9_-]+$/, "Invalid request identifier").optional(),
-  name: z.string().trim().min(2).max(100),
-  email: z.string().trim().toLowerCase().email().max(254),
-  phone: z.string().trim().min(7).max(30),
-  fromPropertyType: z.string().trim().min(1).max(50),
-  toPropertyType: z.string().trim().min(1).max(50),
-  bedrooms: z.string().trim().min(1).max(20),
-  fromAddress: z.string().trim().min(3).max(200),
-  fromCity: z.string().trim().min(2).max(100),
-  fromRegion: z.string().trim().min(2).max(100),
-  fromPostcode: z.string().trim().min(2).max(20),
-  fromCountry: z.string().trim().min(2).max(100),
-  toAddress: z.string().trim().min(3).max(200),
-  toCity: z.string().trim().min(2).max(100),
-  toRegion: z.string().trim().min(2).max(100),
-  toPostcode: z.string().trim().min(2).max(20),
-  toCountry: z.string().trim().min(2).max(100),
-  moveDate: z.string().max(40).optional().nullable(),
-  dateFlexible: z.boolean().default(false),
-  movingWhat: z.string().trim().max(2000).optional().nullable(),
-  cleaningSelected: z.boolean().default(false),
-  recruitmentSharingAllowed: z.boolean().default(false),
-  cleaningNotes: z.string().trim().max(2000).optional().nullable(),
-  sharingConsent: z.literal(true, {
-    errorMap: () => ({ message: "Consent is required before this request can be shared" }),
-  }),
-  locale: z.enum(SUPPORTED_LOCALE_CODES).optional().default("en-NZ"),
-  transcriptRaw: limitedTranscriptSchema.optional(),
-  transcriptFields: limitedTranscriptSchema.optional(),
-});
+export const quoteSchema = z
+  .object({
+    clientRequestId: z
+      .string()
+      .trim()
+      .min(8)
+      .max(100)
+      .regex(/^[a-zA-Z0-9_-]+$/, "Invalid request identifier")
+      .optional(),
+    name: z.string().trim().min(2).max(100),
+    email: z.string().trim().toLowerCase().email().max(254),
+    phone: z.string().trim().min(7).max(30),
+    fromPropertyType: z.string().trim().min(1).max(50),
+    toPropertyType: z.string().trim().min(1).max(50),
+    bedrooms: z.string().trim().min(1).max(20),
+    fromAddress: z.string().trim().min(3).max(200),
+    fromCity: z.string().trim().min(2).max(100),
+    fromRegion: z.string().trim().min(2).max(100),
+    fromPostcode: z.string().trim().min(2).max(20),
+    fromCountry: z.string().trim().min(2).max(100),
+    toAddress: z.string().trim().min(3).max(200),
+    toCity: z.string().trim().min(2).max(100),
+    toRegion: z.string().trim().min(2).max(100),
+    toPostcode: z.string().trim().min(2).max(20),
+    toCountry: z.string().trim().min(2).max(100),
+    moveDate: z.string().max(40).optional().nullable(),
+    dateFlexible: z.boolean().default(false),
+    movingWhat: z.string().trim().max(2000).optional().nullable(),
+    cleaningSelected: z.boolean().default(false),
+    cleaningDetails: cleaningDetailsSchema.optional(),
+    inventory: inventorySchema.optional(),
+    toBedrooms: z.string().trim().max(20).optional().nullable(),
+    recruitmentSharingAllowed: z.boolean().default(false),
+    cleaningNotes: z.string().trim().max(2000).optional().nullable(),
+    sharingConsent: z.literal(true, {
+      errorMap: () => ({
+        message: "Consent is required before this request can be shared",
+      }),
+    }),
+    locale: z.enum(SUPPORTED_LOCALE_CODES).optional().default("en-NZ"),
+    transcriptRaw: limitedTranscriptSchema.optional(),
+    transcriptFields: limitedTranscriptSchema.optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (
+      data.cleaningSelected &&
+      data.cleaningDetails?.location === "MOVE_IN" &&
+      (!data.cleaningDetails.destinationConsent ||
+        data.toPropertyType === "Unknown")
+    )
+      ctx.addIssue({
+        code: "custom",
+        path: ["cleaningDetails"],
+        message:
+          "Confirm the destination property details and permission before requesting move-in cleaning.",
+      });
+  });
 
 const passwordSchema = z
   .string()
@@ -68,9 +95,22 @@ export const cleanerLoginSchema = moverLoginSchema;
 
 export const cleanerRegisterSchema = z
   .object({
-    name: z.string().trim().min(2, "Enter your full name").max(100, "Name is too long"),
-    companyName: z.string().trim().min(2, "Enter your company name").max(160, "Company name is too long"),
-    email: z.string().trim().toLowerCase().email("Enter a valid email address").max(254),
+    name: z
+      .string()
+      .trim()
+      .min(2, "Enter your full name")
+      .max(100, "Name is too long"),
+    companyName: z
+      .string()
+      .trim()
+      .min(2, "Enter your company name")
+      .max(160, "Company name is too long"),
+    email: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .email("Enter a valid email address")
+      .max(254),
     phone: z.string().trim().regex(phonePattern, "Enter a valid phone number"),
     serviceAreas: z
       .array(z.enum(NZ_SERVICE_AREAS))
@@ -79,7 +119,9 @@ export const cleanerRegisterSchema = z
     password: passwordSchema,
     confirmPassword: z.string(),
     acceptedTerms: z.literal(true, {
-      errorMap: () => ({ message: "You must accept the terms and privacy policy" }),
+      errorMap: () => ({
+        message: "You must accept the terms and privacy policy",
+      }),
     }),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -88,18 +130,47 @@ export const cleanerRegisterSchema = z
   });
 
 export const cleanerProfileSchema = z.object({
-  companyName: z.string().trim().min(2, "Enter your company name").max(160, "Company name is too long"),
-  contactPerson: z.string().trim().min(2, "Enter a contact name").max(100, "Contact name is too long"),
+  companyName: z
+    .string()
+    .trim()
+    .min(2, "Enter your company name")
+    .max(160, "Company name is too long"),
+  contactPerson: z
+    .string()
+    .trim()
+    .min(2, "Enter a contact name")
+    .max(100, "Contact name is too long"),
   phone: z.string().trim().regex(phonePattern, "Enter a valid phone number"),
-  nzbn: z.string().trim().regex(nzbnPattern, "NZBN must be 13 digits").optional().or(z.literal("")).transform((value) => value || null),
+  nzbn: z
+    .string()
+    .trim()
+    .regex(nzbnPattern, "NZBN must be 13 digits")
+    .optional()
+    .or(z.literal(""))
+    .transform((value) => value || null),
   yearsOperating: z
     .union([z.number(), z.string()])
-    .transform((value) => (typeof value === "number" ? value : value.trim() === "" ? null : Number(value)))
-    .refine((value) => value === null || (Number.isInteger(value) && value >= 0 && value <= 200), "Years operating must be between 0 and 200"),
-  serviceAreas: z
-    .array(z.enum(NZ_SERVICE_AREAS))
-    .max(NZ_SERVICE_AREAS.length),
-  businessDescription: z.string().trim().max(1000, "Business description must be 1,000 characters or less").optional().or(z.literal("")).transform((value) => value || null),
+    .transform((value) =>
+      typeof value === "number"
+        ? value
+        : value.trim() === ""
+          ? null
+          : Number(value),
+    )
+    .refine(
+      (value) =>
+        value === null ||
+        (Number.isInteger(value) && value >= 0 && value <= 200),
+      "Years operating must be between 0 and 200",
+    ),
+  serviceAreas: z.array(z.enum(NZ_SERVICE_AREAS)).max(NZ_SERVICE_AREAS.length),
+  businessDescription: z
+    .string()
+    .trim()
+    .max(1000, "Business description must be 1,000 characters or less")
+    .optional()
+    .or(z.literal(""))
+    .transform((value) => value || null),
 });
 
 export const cleanerLeadStatusUpdateSchema = z.object({
@@ -112,7 +183,10 @@ export const localePreferenceSchema = z.object({
 
 export const moverSignInCodeSchema = z.object({
   email: z.string().trim().toLowerCase().email("Enter a valid email address"),
-  code: z.string().trim().regex(/^\d{6}$/, "Enter the 6-digit sign-in code"),
+  code: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, "Enter the 6-digit sign-in code"),
 });
 
 export const cleanerSignInCodeSchema = moverSignInCodeSchema;
@@ -126,7 +200,9 @@ export const moverRegisterSchema = z
     password: passwordSchema,
     confirmPassword: z.string(),
     acceptedTerms: z.literal(true, {
-      errorMap: () => ({ message: "You must accept the terms and privacy policy" }),
+      errorMap: () => ({
+        message: "You must accept the terms and privacy policy",
+      }),
     }),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -165,10 +241,19 @@ export const moverChangePasswordSchema = z
   });
 
 export const moverDeleteAccountSchema = z.object({
-  currentPassword: z.string().min(1, "Enter your current password").max(200, "Password is too long"),
-  confirmation: z.string().trim().min(1, "Enter the confirmation phrase").max(1000, "Confirmation phrase is too long"),
+  currentPassword: z
+    .string()
+    .min(1, "Enter your current password")
+    .max(200, "Password is too long"),
+  confirmation: z
+    .string()
+    .trim()
+    .min(1, "Enter the confirmation phrase")
+    .max(1000, "Confirmation phrase is too long"),
   acknowledged: z.literal(true, {
-    errorMap: () => ({ message: "Confirm that you understand this action is permanent" }),
+    errorMap: () => ({
+      message: "Confirm that you understand this action is permanent",
+    }),
   }),
 });
 
@@ -176,93 +261,135 @@ export const moverResendVerificationSchema = z.object({
   email: z.string().trim().toLowerCase().email("Enter a valid email address"),
 });
 
-export const moverProfileSchema = z.object({
-  contactPerson: z.string().trim().min(2, "Enter a contact name").max(80, "Contact name is too long"),
-  phone: z
-    .string()
-    .trim()
-    .regex(phonePattern, "Enter a valid phone number")
-    .transform((value) => value.replace(/\s+/g, " ")),
-  nzbn: z
-    .string()
-    .trim()
-    .regex(nzbnPattern, "NZBN must be 13 digits")
-    .optional()
-    .or(z.literal(""))
-    .transform((value) => value || null),
-  yearsOperating: z
-    .union([z.number(), z.string()])
-    .transform((value) => (typeof value === "number" ? value : value.trim() === "" ? null : Number(value)))
-    .refine((value) => value === null || (Number.isInteger(value) && value >= 0 && value <= 200), "Years operating must be between 0 and 200"),
-  serviceAreas: z
-    .array(z.enum(NZ_SERVICE_AREAS))
-    .min(1, "Choose at least one coverage region")
-    .max(NZ_SERVICE_AREAS.length, "Too many coverage regions selected"),
-  businessDescription: z
-    .string()
-    .max(800, "Business description must be 800 characters or less")
-    .optional()
-    .or(z.literal(""))
-    .transform((value) => {
-      if (!value) return null;
+export const moverProfileSchema = z
+  .object({
+    operatingRegion: z.enum(NZ_SERVICE_AREAS).optional().or(z.literal("")),
+    movingServices: z
+      .array(z.enum(MOVING_SERVICES))
+      .max(MOVING_SERVICES.length)
+      .optional(),
+    contactPerson: z
+      .string()
+      .trim()
+      .min(2, "Enter a contact name")
+      .max(80, "Contact name is too long"),
+    phone: z
+      .string()
+      .trim()
+      .regex(phonePattern, "Enter a valid phone number")
+      .transform((value) => value.replace(/\s+/g, " ")),
+    nzbn: z
+      .string()
+      .trim()
+      .regex(nzbnPattern, "NZBN must be 13 digits")
+      .optional()
+      .or(z.literal(""))
+      .transform((value) => value || null),
+    yearsOperating: z
+      .union([z.number(), z.string()])
+      .transform((value) =>
+        typeof value === "number"
+          ? value
+          : value.trim() === ""
+            ? null
+            : Number(value),
+      )
+      .refine(
+        (value) =>
+          value === null ||
+          (Number.isInteger(value) && value >= 0 && value <= 200),
+        "Years operating must be between 0 and 200",
+      ),
+    serviceAreas: z
+      .array(z.enum(NZ_SERVICE_AREAS))
+      .min(1, "Choose at least one coverage region")
+      .max(NZ_SERVICE_AREAS.length, "Too many coverage regions selected"),
+    businessDescription: z
+      .string()
+      .max(800, "Business description must be 800 characters or less")
+      .optional()
+      .or(z.literal(""))
+      .transform((value) => {
+        if (!value) return null;
 
-      const normalized = value
-        .replace(/\r\n/g, "\n")
-        .split("\n")
-        .map((line) => line.replace(/[ \t]+$/g, ""))
-        .join("\n")
-        .replace(/\n[ \t]+\n/g, "\n\n")
-        .trim();
+        const normalized = value
+          .replace(/\r\n/g, "\n")
+          .split("\n")
+          .map((line) => line.replace(/[ \t]+$/g, ""))
+          .join("\n")
+          .replace(/\n[ \t]+\n/g, "\n\n")
+          .trim();
 
-      return normalized.length ? normalized : null;
-    }),
-  authorizedRepresentativeName: z
-    .string()
-    .trim()
-    .max(100, "Representative name is too long")
-    .optional()
-    .or(z.literal(""))
-    .transform((value) => value || null),
-  authorizedRepresentativeRole: z
-    .string()
-    .trim()
-    .max(100, "Representative role is too long")
-    .optional()
-    .or(z.literal(""))
-    .transform((value) => value || null),
-  authorityConfirmed: z.boolean().optional().default(false),
-}).superRefine((data, context) => {
-  const hasAuthorityDetails = Boolean(data.authorizedRepresentativeName || data.authorizedRepresentativeRole || data.authorityConfirmed);
-  if (!hasAuthorityDetails) return;
+        return normalized.length ? normalized : null;
+      }),
+    authorizedRepresentativeName: z
+      .string()
+      .trim()
+      .max(100, "Representative name is too long")
+      .optional()
+      .or(z.literal(""))
+      .transform((value) => value || null),
+    authorizedRepresentativeRole: z
+      .string()
+      .trim()
+      .max(100, "Representative role is too long")
+      .optional()
+      .or(z.literal(""))
+      .transform((value) => value || null),
+    authorityConfirmed: z.boolean().optional().default(false),
+  })
+  .superRefine((data, context) => {
+    const hasAuthorityDetails = Boolean(
+      data.authorizedRepresentativeName ||
+        data.authorizedRepresentativeRole ||
+        data.authorityConfirmed,
+    );
+    if (!hasAuthorityDetails) return;
 
-  if (!data.authorizedRepresentativeName || data.authorizedRepresentativeName.length < 2) {
-    context.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["authorizedRepresentativeName"],
-      message: "Enter the authorised representative's name",
-    });
-  }
-  if (!data.authorizedRepresentativeRole || data.authorizedRepresentativeRole.length < 2) {
-    context.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["authorizedRepresentativeRole"],
-      message: "Enter the representative's role",
-    });
-  }
-  if (!data.authorityConfirmed) {
-    context.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["authorityConfirmed"],
-      message: "Confirm that you are authorised to submit and maintain these business details",
-    });
-  }
-});
+    if (
+      !data.authorizedRepresentativeName ||
+      data.authorizedRepresentativeName.length < 2
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["authorizedRepresentativeName"],
+        message: "Enter the authorised representative's name",
+      });
+    }
+    if (
+      !data.authorizedRepresentativeRole ||
+      data.authorizedRepresentativeRole.length < 2
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["authorizedRepresentativeRole"],
+        message: "Enter the representative's role",
+      });
+    }
+    if (!data.authorityConfirmed) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["authorityConfirmed"],
+        message:
+          "Confirm that you are authorised to submit and maintain these business details",
+      });
+    }
+  });
 
 export const moverLogoSchema = z.object({
-  logoUrl: z.string().trim().min(1, "A logo is required").max(400_000, "Logo data is too large"),
+  logoUrl: z
+    .string()
+    .trim()
+    .min(1, "A logo is required")
+    .max(400_000, "Logo data is too large"),
 });
 
-export const moverDocumentTypeSchema = z.enum(["INSURANCE", "NZBN_PROOF", "LICENCE", "OTHER"]);
+export const moverDocumentTypeSchema = z.enum([
+  "INSURANCE",
+  "NZBN_PROOF",
+  "LICENCE",
+  "OTHER",
+]);
 
 export const moverDocumentUploadSchema = z
   .object({
@@ -304,7 +431,10 @@ export const moverDocumentUploadSchema = z
   });
 
 export const phoneVerificationCodeSchema = z.object({
-  code: z.string().trim().regex(/^\d{6}$/, "Enter the 6-digit verification code"),
+  code: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, "Enter the 6-digit verification code"),
 });
 
 const optionalReviewTextSchema = z
@@ -321,11 +451,15 @@ export const adminDocumentReviewSchema = z
     note: optionalReviewTextSchema,
   })
   .superRefine((data, context) => {
-    if (data.status !== "PENDING_REVIEW" && (!data.note || data.note.length < 10)) {
+    if (
+      data.status !== "PENDING_REVIEW" &&
+      (!data.note || data.note.length < 10)
+    ) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["note"],
-        message: "Record at least 10 characters describing the evidence checked or rejection reason",
+        message:
+          "Record at least 10 characters describing the evidence checked or rejection reason",
       });
     }
   });
@@ -357,7 +491,8 @@ export const adminNzbnReviewSchema = z
       context.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["note"],
-        message: "Record at least 10 characters describing the register evidence checked or rejection reason",
+        message:
+          "Record at least 10 characters describing the register evidence checked or rejection reason",
       });
     }
   });
@@ -370,14 +505,21 @@ const optionalRatingSchema = z
     if (value === undefined || value === null || value === "") return null;
     return typeof value === "number" ? value : Number(value);
   })
-  .refine((value) => value === null || (Number.isInteger(value) && value >= 1 && value <= 5), "Ratings must be between 1 and 5");
+  .refine(
+    (value) =>
+      value === null || (Number.isInteger(value) && value >= 1 && value <= 5),
+    "Ratings must be between 1 and 5",
+  );
 
 export const reviewSubmissionSchema = z.object({
   token: z.string().trim().min(1, "Missing review token"),
   overallRating: z
     .union([z.number(), z.string()])
     .transform((value) => (typeof value === "number" ? value : Number(value)))
-    .refine((value) => Number.isInteger(value) && value >= 1 && value <= 5, "Overall rating must be between 1 and 5"),
+    .refine(
+      (value) => Number.isInteger(value) && value >= 1 && value <= 5,
+      "Overall rating must be between 1 and 5",
+    ),
   writtenReview: z
     .string()
     .max(2000, "Review must be 2000 characters or less")
@@ -417,7 +559,9 @@ export const reviewSubmissionSchema = z.object({
       if (value === undefined || value === null || value === "") return true;
       if (typeof value === "boolean") return value;
 
-      return !["false", "0", "anonymous", "hide", "hidden", "no"].includes(value.trim().toLowerCase());
+      return !["false", "0", "anonymous", "hide", "hidden", "no"].includes(
+        value.trim().toLowerCase(),
+      );
     }),
 });
 
@@ -430,16 +574,23 @@ export function sanitiseServiceAreas(serviceAreas: string[]) {
 }
 
 export function sanitiseFileName(fileName: string) {
-  return fileName.replace(/[\\/:"*?<>|]+/g, "-").replace(/\s+/g, " ").trim();
+  return fileName
+    .replace(/[\\/:"*?<>|]+/g, "-")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 export function parseDataUrl(dataUrl: string) {
-  const match = dataUrl.match(/^data:([a-zA-Z0-9.+-]+\/[a-zA-Z0-9.+-]+);base64,([a-zA-Z0-9+/=]+)$/);
+  const match = dataUrl.match(
+    /^data:([a-zA-Z0-9.+-]+\/[a-zA-Z0-9.+-]+);base64,([a-zA-Z0-9+/=]+)$/,
+  );
   if (!match) return null;
 
   const mimeType = match[1];
   const base64 = match[2];
-  const fileSize = Math.floor((base64.length * 3) / 4) - (base64.endsWith("==") ? 2 : base64.endsWith("=") ? 1 : 0);
+  const fileSize =
+    Math.floor((base64.length * 3) / 4) -
+    (base64.endsWith("==") ? 2 : base64.endsWith("=") ? 1 : 0);
 
   return { mimeType, base64, fileSize };
 }

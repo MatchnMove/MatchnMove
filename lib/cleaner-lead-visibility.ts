@@ -1,3 +1,8 @@
+import {
+  cleaningTargetSelect,
+  cleaningTarget,
+  type CleaningTargetData,
+} from "@/lib/cleaning-target";
 import { Prisma } from "@prisma/client";
 import { CLEANING_LEAD_PRICING } from "@/lib/cleaner-lead-pricing";
 import { matchNzServiceArea } from "@/lib/nz-regions";
@@ -5,45 +10,46 @@ import { matchNzServiceArea } from "@/lib/nz-regions";
 /**
  * Keep the database projection beside the serializer so every cleaner-facing
  * endpoint starts from the same deliberately small set of moving-request data.
- * Destination, inventory, and transcript fields are not fetched.
+ * Only the consented property snapshot and legacy pickup fallback are fetched; moving destinations, inventory and transcripts are excluded.
  */
-export const cleaningLeadForCleanerSelect = Prisma.validator<Prisma.CleaningLeadSelect>()({
-  id: true,
-  status: true,
-  createdAt: true,
-  updatedAt: true,
-  viewedAt: true,
-  purchasedAt: true,
-  purchase: {
-    select: {
-      id: true,
-      amount: true,
-      currency: true,
-      purchasedAt: true,
+export const cleaningLeadForCleanerSelect =
+  Prisma.validator<Prisma.CleaningLeadSelect>()({
+    id: true,
+    status: true,
+    createdAt: true,
+    updatedAt: true,
+    viewedAt: true,
+    purchasedAt: true,
+    purchase: {
+      select: {
+        id: true,
+        amount: true,
+        currency: true,
+        purchasedAt: true,
+      },
     },
-  },
-  cleaningRequest: {
-    select: {
-      location: true,
-      notes: true,
-      quoteRequest: {
-        select: {
-          name: true,
-          email: true,
-          phone: true,
-          bedrooms: true,
-          fromAddress: true,
-          fromCity: true,
-          fromRegion: true,
-          fromPostcode: true,
-          fromPropertyType: true,
-          moveDate: true,
-          dateFlexible: true,
+    cleaningRequest: {
+      select: {
+        ...cleaningTargetSelect,
+        notes: true,
+        quoteRequest: {
+          select: {
+            name: true,
+            email: true,
+            phone: true,
+            bedrooms: true,
+            fromAddress: true,
+            fromCity: true,
+            fromRegion: true,
+            fromPostcode: true,
+            fromPropertyType: true,
+            moveDate: true,
+            dateFlexible: true,
+          },
         },
       },
     },
-  },
-});
+  });
 
 type CleaningLeadQuoteRequest = {
   name: string;
@@ -72,31 +78,45 @@ type CleaningLeadVisibilityInput = {
     currency: string;
     purchasedAt: Date;
   } | null;
-  cleaningRequest: {
+  cleaningRequest: CleaningTargetData & {
     location: string;
     notes: string | null;
     quoteRequest: CleaningLeadQuoteRequest;
   };
 };
 
-const streetAddressPattern = /(?:^|\s)(?:unit|flat|apartment|suite|level)\b|\d|(?:^|\s)(?:street|st|road|rd|avenue|ave|lane|drive|dr|place|pl|crescent|cres|terrace|highway|parade|quay|close|grove|rise|mews|esplanade)\b/i;
+const streetAddressPattern =
+  /(?:^|\s)(?:unit|flat|apartment|suite|level)\b|\d|(?:^|\s)(?:street|st|road|rd|avenue|ave|lane|drive|dr|place|pl|crescent|cres|terrace|highway|parade|quay|close|grove|rise|mews|esplanade)\b/i;
 
 export function getCleaningGeneralLocation(
-  quoteRequest: Pick<CleaningLeadQuoteRequest, "fromAddress" | "fromCity" | "fromRegion">,
+  quoteRequest: Pick<
+    CleaningLeadQuoteRequest,
+    "fromAddress" | "fromCity" | "fromRegion"
+  >,
 ) {
   const rawCity = quoteRequest.fromCity.trim();
   const rawAddress = quoteRequest.fromAddress.trim();
-  const region = matchNzServiceArea(quoteRequest.fromRegion)
-    ?? matchNzServiceArea(rawCity)
-    ?? matchNzServiceArea(rawAddress);
-  const cityIsAddress = !rawCity
-    || rawCity.localeCompare("Not provided", undefined, { sensitivity: "base" }) === 0
-    || rawCity.localeCompare(rawAddress, undefined, { sensitivity: "base" }) === 0
-    || streetAddressPattern.test(rawCity);
+  const region =
+    matchNzServiceArea(quoteRequest.fromRegion) ??
+    matchNzServiceArea(rawCity) ??
+    matchNzServiceArea(rawAddress);
+  const cityIsAddress =
+    !rawCity ||
+    rawCity.localeCompare("Not provided", undefined, {
+      sensitivity: "base",
+    }) === 0 ||
+    rawCity.localeCompare(rawAddress, undefined, { sensitivity: "base" }) ===
+      0 ||
+    streetAddressPattern.test(rawCity) ||
+    !/^[\p{L} .'-]{2,80}$/u.test(rawCity);
   const city = cityIsAddress ? "" : rawCity;
 
   if (!city) return region ?? "Location available after opening";
-  if (!region || city.localeCompare(region, undefined, { sensitivity: "base" }) === 0) return city;
+  if (
+    !region ||
+    city.localeCompare(region, undefined, { sensitivity: "base" }) === 0
+  )
+    return city;
   return `${city}, ${region}`;
 }
 
@@ -104,21 +124,25 @@ export function getCleaningGeneralLocation(
  * The persisted purchase is the access entitlement. Status alone must never
  * reveal customer contact details because it can be changed independently.
  */
-export function isCleaningLeadUnlocked(lead: Pick<CleaningLeadVisibilityInput, "purchase">) {
+export function isCleaningLeadUnlocked(
+  lead: Pick<CleaningLeadVisibilityInput, "purchase">,
+) {
   return Boolean(lead.purchase);
 }
 
 /**
- * This serializer deliberately accepts only pickup/cleaning fields. Destination,
+ * This serializer deliberately accepts only the selected cleaning property. The other address,
  * moving inventory, and transcript data cannot accidentally enter its output.
  */
 export function serializeCleaningLeadForCleaner(
   lead: CleaningLeadVisibilityInput,
   options: { revealCustomerDetails?: boolean } = {},
 ) {
-  const quote = lead.cleaningRequest.quoteRequest;
+  const contact = lead.cleaningRequest.quoteRequest;
+  const quote = cleaningTarget(lead.cleaningRequest);
   const unlocked = isCleaningLeadUnlocked(lead);
-  const customerDetailsAvailable = unlocked && options.revealCustomerDetails !== false;
+  const customerDetailsAvailable =
+    unlocked && options.revealCustomerDetails !== false;
   const price = lead.purchase?.amount ?? CLEANING_LEAD_PRICING.fixedPrice;
   const currency = lead.purchase?.currency ?? CLEANING_LEAD_PRICING.currency;
 
@@ -131,16 +155,34 @@ export function serializeCleaningLeadForCleaner(
     createdAt: lead.createdAt.toISOString(),
     updatedAt: (lead.updatedAt ?? lead.createdAt).toISOString(),
     viewedAt: lead.viewedAt?.toISOString() ?? null,
-    purchasedAt: lead.purchase?.purchasedAt.toISOString() ?? lead.purchasedAt?.toISOString() ?? null,
+    purchasedAt:
+      lead.purchase?.purchasedAt.toISOString() ??
+      lead.purchasedAt?.toISOString() ??
+      null,
     cleaning: {
       location: lead.cleaningRequest.location,
+      services: lead.cleaningRequest.services ?? [],
+      preferredDate: lead.cleaningRequest.preferredDate?.toISOString() ?? null,
+      timeWindow: lead.cleaningRequest.timeWindow ?? "FLEXIBLE",
+      propertyEmpty: lead.cleaningRequest.propertyEmpty ?? "UNSURE",
+      moverTiming: lead.cleaningRequest.moverTiming ?? "UNSURE",
+      carpetRooms: lead.cleaningRequest.carpetRooms ?? null,
+      accessNotes: customerDetailsAvailable
+        ? (lead.cleaningRequest.accessNotes ?? null)
+        : null,
       // Free-form customer notes are not a safe locked-preview field: people
       // routinely include their phone number, email address, or street address
       // in them. Keep them behind the same persisted purchase entitlement as
       // the direct contact details.
       notes: customerDetailsAvailable ? lead.cleaningRequest.notes : null,
-      propertyType: quote.fromPropertyType,
-      bedrooms: quote.bedrooms,
+      propertyType: ["House", "Apartment", "Storage"].includes(
+        quote.fromPropertyType,
+      )
+        ? quote.fromPropertyType
+        : "Not supplied",
+      bedrooms: /^\d{1,2}\+?$/.test(quote.bedrooms)
+        ? quote.bedrooms
+        : "Not supplied",
       generalLocation: getCleaningGeneralLocation(quote),
       moveDate: quote.moveDate?.toISOString() ?? null,
       dateFlexible: quote.dateFlexible,
@@ -148,9 +190,9 @@ export function serializeCleaningLeadForCleaner(
     customerAccessSuspended: unlocked && !customerDetailsAvailable,
     customer: customerDetailsAvailable
       ? {
-          name: quote.name,
-          email: quote.email,
-          phone: quote.phone,
+          name: contact.name,
+          email: contact.email,
+          phone: contact.phone,
           address: quote.fromAddress,
           city: quote.fromCity,
           region: quote.fromRegion,
@@ -160,4 +202,6 @@ export function serializeCleaningLeadForCleaner(
   };
 }
 
-export type SerializedCleaningLead = ReturnType<typeof serializeCleaningLeadForCleaner>;
+export type SerializedCleaningLead = ReturnType<
+  typeof serializeCleaningLeadForCleaner
+>;

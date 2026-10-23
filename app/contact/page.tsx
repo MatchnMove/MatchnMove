@@ -13,9 +13,15 @@ type ContactForm = {
 };
 
 export default function ContactPage() {
-  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">(
+    "idle",
+  );
   const [statusMessage, setStatusMessage] = useState("");
-  const [form, setForm] = useState<ContactForm>({ name: "", email: "", message: "" });
+  const [form, setForm] = useState<ContactForm>({
+    name: "",
+    email: "",
+    message: "",
+  });
 
   useEffect(() => {
     const subject = new URLSearchParams(window.location.search).get("subject");
@@ -24,7 +30,9 @@ export default function ContactPage() {
     const timer = window.setTimeout(() => {
       setForm((current) => ({
         ...current,
-        message: current.message || `${subject}\n\nHi Match 'n Move team,\n\nI would like to update this request with:`,
+        message:
+          current.message ||
+          `${subject}\n\nHi Match 'n Move team,\n\nI would like to update this request with:`,
       }));
     }, 0);
 
@@ -49,7 +57,11 @@ export default function ContactPage() {
 
       if (!response.ok) {
         setStatus("error");
-        setStatusMessage(payload?.error?.formErrors?.[0] ?? payload?.error ?? "Please check your details and try again.");
+        setStatusMessage(
+          payload?.error?.formErrors?.[0] ??
+            payload?.error ??
+            "Please check your details and try again.",
+        );
         trackAnalyticsEvent("contact_form_submit_error", {
           source: "contact_page",
           status_code: response.status,
@@ -57,18 +69,8 @@ export default function ContactPage() {
         return;
       }
 
-      if (!payload?.emailSent) {
-        setStatus("error");
-        setStatusMessage("Your message was saved, but the email notification is not configured yet.");
-        trackAnalyticsEvent("contact_form_submit_error", {
-          source: "contact_page",
-          status_code: "email_not_configured",
-        });
-        return;
-      }
-
       setStatus("sent");
-      setStatusMessage("Message sent successfully.");
+      setStatusMessage("Your message has been received.");
       trackAnalyticsEvent("contact_form_submit_success", {
         source: "contact_page",
       });
@@ -102,7 +104,9 @@ export default function ContactPage() {
               Contact us
             </h1>
             <p className="mx-auto mt-5 max-w-2xl text-sm leading-7 text-slate-200 sm:text-base">
-              Questions about quotes, mover partnerships, or how Match &apos;n Move works? Reach out and we&apos;ll point you in the right direction quickly.
+              Questions about quotes, mover partnerships, or how Match &apos;n
+              Move works? Reach out and we&apos;ll point you in the right
+              direction quickly.
             </p>
           </div>
 
@@ -110,7 +114,9 @@ export default function ContactPage() {
             <div className="min-w-0 w-full overflow-hidden rounded-[24px] border border-white/15 bg-white/[0.08] p-4 shadow-[0_28px_70px_-42px_rgba(15,23,42,0.75)] backdrop-blur-xl sm:rounded-[30px] sm:p-7">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-100/80">Get in touch</p>
+                  <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-100/80">
+                    Get in touch
+                  </p>
                   <h2 className="mt-3 text-[clamp(1.7rem,8vw,3.25rem)] font-black leading-[1] tracking-[-0.03em] text-white sm:leading-[0.95] sm:tracking-[-0.05em]">
                     Send us a message
                   </h2>
@@ -122,7 +128,10 @@ export default function ContactPage() {
 
               <form className="mt-6 grid gap-4" onSubmit={submitContactMessage}>
                 <div>
-                  <label htmlFor="contact-name" className="mb-2 block text-sm font-semibold text-slate-100">
+                  <label
+                    htmlFor="contact-name"
+                    className="mb-2 block text-sm font-semibold text-slate-100"
+                  >
                     Name
                   </label>
                   <input
@@ -137,7 +146,10 @@ export default function ContactPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="contact-email" className="mb-2 block text-sm font-semibold text-slate-100">
+                  <label
+                    htmlFor="contact-email"
+                    className="mb-2 block text-sm font-semibold text-slate-100"
+                  >
                     Email
                   </label>
                   <input
@@ -147,12 +159,17 @@ export default function ContactPage() {
                     className="w-full rounded-2xl border border-white/12 bg-white/95 px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-300 focus:ring-4 focus:ring-sky-200/40"
                     placeholder="you@example.com"
                     value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    onChange={(e) =>
+                      setForm({ ...form, email: e.target.value })
+                    }
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="contact-message" className="mb-2 block text-sm font-semibold text-slate-100">
+                  <label
+                    htmlFor="contact-message"
+                    className="mb-2 block text-sm font-semibold text-slate-100"
+                  >
                     Message
                   </label>
                   <textarea
@@ -163,7 +180,9 @@ export default function ContactPage() {
                     className="w-full resize-y rounded-2xl border border-white/12 bg-white/95 px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-300 focus:ring-4 focus:ring-sky-200/40"
                     placeholder="Tell us what you need help with"
                     value={form.message}
-                    onChange={(e) => setForm({ ...form, message: e.target.value })}
+                    onChange={(e) =>
+                      setForm({ ...form, message: e.target.value })
+                    }
                   />
                 </div>
                 <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -174,11 +193,16 @@ export default function ContactPage() {
                   >
                     {status === "sending" ? "Sending..." : "Send message"}
                   </button>
-                  <p className="text-sm leading-6 text-slate-200/80">We usually reply within 1 business day.</p>
+                  <p className="text-sm leading-6 text-slate-200/80">
+                    Tell us what you need help with and include your request
+                    reference if you have one.
+                  </p>
                 </div>
 
                 {statusMessage ? (
-                  <p className={`text-sm font-semibold ${status === "error" ? "text-orange-100" : "text-emerald-200"}`}>
+                  <p
+                    className={`text-sm font-semibold ${status === "error" ? "text-orange-100" : "text-emerald-200"}`}
+                  >
                     {statusMessage}
                   </p>
                 ) : null}
@@ -187,7 +211,9 @@ export default function ContactPage() {
 
             <div className="min-w-0 flex flex-col gap-5">
               <div className="min-w-0 overflow-hidden rounded-[24px] border border-white/15 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(241,245,249,0.92))] p-4 text-slate-900 shadow-[0_28px_70px_-42px_rgba(15,23,42,0.75)] backdrop-blur-xl sm:rounded-[30px] sm:p-7">
-                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">Contact information</p>
+                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">
+                  Contact information
+                </p>
                 <h2 className="mt-3 text-[clamp(1.7rem,8vw,3rem)] font-black leading-[1] tracking-[-0.03em] text-slate-950 sm:leading-[0.95] sm:tracking-[-0.05em]">
                   Talk to the Match &apos;n Move team
                 </h2>
@@ -201,9 +227,15 @@ export default function ContactPage() {
                       <Phone className="h-5 w-5" />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-400">Call us</p>
-                      <p className="mt-1 text-lg font-semibold text-slate-950">+64 21 958 000</p>
-                      <p className="mt-1 text-sm leading-6 text-slate-500">For urgent quote or partnership questions.</p>
+                      <p className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-400">
+                        Call us
+                      </p>
+                      <p className="mt-1 text-lg font-semibold text-slate-950">
+                        +64 21 958 000
+                      </p>
+                      <p className="mt-1 text-sm leading-6 text-slate-500">
+                        For urgent quote or partnership questions.
+                      </p>
                     </div>
                   </Link>
 
@@ -215,30 +247,51 @@ export default function ContactPage() {
                       <Mail className="h-5 w-5" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-400">Email</p>
-                      <p className="mt-1 break-all text-lg font-semibold text-slate-950">{SITE_EMAILS.contact}</p>
-                      <p className="mt-1 text-sm leading-6 text-slate-500">Best for general help, updates, and follow-up.</p>
+                      <p className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-400">
+                        Email
+                      </p>
+                      <p className="mt-1 break-all text-lg font-semibold text-slate-950">
+                        {SITE_EMAILS.contact}
+                      </p>
+                      <p className="mt-1 text-sm leading-6 text-slate-500">
+                        Best for general help, updates, and follow-up.
+                      </p>
                     </div>
                   </Link>
-
                 </div>
               </div>
 
               <div className="rounded-[24px] border border-white/12 bg-[linear-gradient(145deg,rgba(15,23,42,0.9),rgba(21,38,69,0.95))] p-4 text-white shadow-[0_24px_54px_-30px_rgba(15,23,42,0.75)] sm:rounded-[28px] sm:p-5">
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-200">Why Match &apos;n Move</p>
-                <h3 className="mt-3 text-2xl font-black leading-tight tracking-[-0.04em]">Built to connect the right move with the right mover.</h3>
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-200">
+                  Why Match &apos;n Move
+                </p>
+                <h3 className="mt-3 text-2xl font-black leading-tight tracking-[-0.04em]">
+                  Built to connect the right move with the right mover.
+                </h3>
                 <div className="mt-5 grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
                   <div className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3">
-                    <p className="text-sm font-semibold text-white">Fast quote matching</p>
-                    <p className="mt-1 text-sm leading-6 text-slate-300">One request, multiple mover options.</p>
+                    <p className="text-sm font-semibold text-white">
+                      Fast quote matching
+                    </p>
+                    <p className="mt-1 text-sm leading-6 text-slate-300">
+                      One request, multiple mover options.
+                    </p>
                   </div>
                   <div className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3">
-                    <p className="text-sm font-semibold text-white">Verified mover network</p>
-                    <p className="mt-1 text-sm leading-6 text-slate-300">A cleaner pipeline for trusted companies.</p>
+                    <p className="text-sm font-semibold text-white">
+                      Verified mover network
+                    </p>
+                    <p className="mt-1 text-sm leading-6 text-slate-300">
+                      A cleaner pipeline for trusted companies.
+                    </p>
                   </div>
                   <div className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3">
-                    <p className="text-sm font-semibold text-white">People-first support</p>
-                    <p className="mt-1 text-sm leading-6 text-slate-300">Help for both customers and moving teams.</p>
+                    <p className="text-sm font-semibold text-white">
+                      People-first support
+                    </p>
+                    <p className="mt-1 text-sm leading-6 text-slate-300">
+                      Help for both customers and moving teams.
+                    </p>
                   </div>
                 </div>
               </div>

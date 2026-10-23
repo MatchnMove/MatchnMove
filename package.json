@@ -26,7 +26,8 @@
     "movers:cleanup-test-data": "node scripts/cleanup-test-movers.mjs",
     "seed:demo-movers": "node scripts/seed-demo-movers.mjs",
     "seed:shared-load": "node scripts/seed-shared-load-data.mjs",
-    "load:test": "node scripts/load-scenario.mjs"
+    "load:test": "node scripts/load-scenario.mjs",
+    "test:trust:db": "tsx --test tests/trust-database.test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1063.0",

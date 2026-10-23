@@ -1,6 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, FileCheck2, ShieldCheck, Scale, Users } from "lucide-react";
+import {
+  ArrowRight,
+  FileCheck2,
+  ShieldCheck,
+  Scale,
+  Users,
+} from "lucide-react";
 import { MobileSectionJump } from "@/components/mobile-section-jump";
 import { SiteShell } from "@/components/site-shell";
 import { createPageMetadata } from "@/lib/seo";
@@ -21,27 +27,23 @@ const principles = [
   {
     icon: ShieldCheck,
     title: "Controlled information sharing",
-    copy:
-      "Information submitted through Match 'n Move is shared only with selected service providers relevant to the services the customer requested."
+    copy: "Information submitted through Match 'n Move is shared only with selected service providers relevant to the services the customer requested.",
   },
   {
     icon: Scale,
     title: "Clear marketplace boundaries",
-    copy:
-      "Match 'n Move acts as an introduction and lead-distribution platform. Responsibility for services delivered remains with the moving or cleaning company engaged by the customer."
+    copy: "Match 'n Move acts as an introduction and lead-distribution platform. Responsibility for services delivered remains with the moving or cleaning company engaged by the customer.",
   },
   {
     icon: FileCheck2,
     title: "Lead protection standards",
-    copy:
-      "Listed moving and cleaning businesses must not redistribute, resell, or otherwise misuse leads received through the platform."
+    copy: "Listed moving and cleaning businesses must not redistribute, resell, or otherwise misuse leads received through the platform.",
   },
   {
     icon: Users,
     title: "Partner accountability",
-    copy:
-      "Relocation partners are expected to respond within a reasonable timeframe and to uphold standards that reflect well on the Match 'n Move network."
-  }
+    copy: "Relocation partners are expected to respond within a reasonable timeframe and to uphold standards that reflect well on the Match 'n Move network.",
+  },
 ] as const;
 
 const sections = [
@@ -49,59 +51,59 @@ const sections = [
     id: "service",
     title: "1. Service scope",
     body: [
-      "Match 'n Move introduces furniture removal companies to people and businesses seeking relocation services and, where a customer opts in, cleaning companies to people seeking move-out cleaning.",
-      "A customer can request moving quotes without requesting cleaning. Cleaning quote requests are free for customers and carry no obligation to book."
-    ]
+      "Match 'n Move introduces furniture removal companies to people and businesses seeking relocation services and, where a customer opts in, cleaning companies to people seeking move-out or move-in cleaning.",
+      "A customer can request moving quotes without requesting cleaning. Cleaning quote requests are free for customers and carry no obligation to book.",
+    ],
   },
   {
     id: "sharing",
     title: "2. Information handling",
     body: [
       "Information supplied through the website will be forwarded only to selected providers relevant to the services the customer requested.",
-      "A cleaning company receives a privacy-limited preview. Customer contact details and the full pickup address are released only when that assigned company opens the cleaning lead. Destination details, detailed moving inventory, and mover-specific information are not included in the cleaning lead.",
+      "A cleaning company receives a privacy-limited preview. Customer contact details and the selected cleaning property address are released only when that assigned company opens the cleaning lead. The customer chooses pickup for move-out cleaning or explicitly authorises the destination for move-in cleaning. The other property address, detailed moving inventory, and mover-specific information are not included in the cleaning lead.",
       "Under no circumstances will that information be distributed to any unrelated third party outside the Match 'n Move service network.",
-      "Match 'n Move will take reasonable steps to protect the information supplied by users."
-    ]
+      "Match 'n Move will take reasonable steps to protect the information supplied by users.",
+    ],
   },
   {
     id: "lead-use",
     title: "3. Lead use restrictions",
     body: [
       "No moving or cleaning business listed on Match 'n Move may redistribute, resell, transfer, or otherwise disclose any lead received through the website to an unauthorised third party.",
-      "If a provider is found to have misused lead information, Match 'n Move may suspend or remove that business from the platform and may recover associated losses, costs, or charges as applicable."
-    ]
+      "If a provider is found to have misused lead information, Match 'n Move may suspend or remove that business from the platform and may recover associated losses, costs, or charges as applicable.",
+    ],
   },
   {
     id: "liability",
     title: "4. Liability and third-party services",
     body: [
       "Match 'n Move is an introduction platform and is not the moving or cleaning contractor. The selected provider is responsible for its quote, labour, advice, pricing, materials, and service delivery.",
-      "Match 'n Move will not be responsible for loss of or damage to goods, furniture, or property arising from a service provider introduced through the platform, to the extent permitted by law."
-    ]
+      "Match 'n Move will not be responsible for loss of or damage to goods, furniture, or property arising from a service provider introduced through the platform, to the extent permitted by law.",
+    ],
   },
   {
     id: "partners",
     title: "5. Partner selection and removal",
     body: [
       "Match 'n Move reserves the right to screen, activate, suspend, or remove any relocation partner, moving company, or cleaning company at its discretion.",
-      "We may terminate the services of any listed business if its conduct, service quality, or business practices bring the name or reputation of Match 'n Move into disrepute."
-    ]
+      "We may terminate the services of any listed business if its conduct, service quality, or business practices bring the name or reputation of Match 'n Move into disrepute.",
+    ],
   },
   {
     id: "responses",
     title: "6. Response expectations",
     body: [
       "Moving companies appointed by Match 'n Move undertake to respond to quote requests within a reasonable period. The recommended response time is 24 hours.",
-      "Match 'n Move cannot be held responsible for delayed responses or for a failure by a listed moving company to respond."
-    ]
+      "Match 'n Move cannot be held responsible for delayed responses or for a failure by a listed moving company to respond.",
+    ],
   },
   {
     id: "feedback",
     title: "7. Customer feedback",
     body: [
       "Clients who experience delays or receive no response are encouraged to inform Match 'n Move so the matter can be reviewed.",
-      `Positive feedback is also welcomed and appreciated. Feedback may be sent to ${SITE_EMAILS.feedback}.`
-    ]
+      `Positive feedback is also welcomed and appreciated. Feedback may be sent to ${SITE_EMAILS.feedback}.`,
+    ],
   },
   {
     id: "cleaner-billing",
@@ -109,9 +111,9 @@ const sections = [
     body: [
       "A cleaning company may inspect an assigned lead preview at no charge. The interface displays the applicable fee before the company confirms that it wants to open the lead.",
       `Opening a cleaning lead creates one fixed ${formatCleaningLeadPrice()} ${CLEANING_LEAD_PRICING.currency} charge for that cleaning company and reveals the protected contact details. The charge applies once per assigned lead even if the page is refreshed or the request is retried, and remains payable whether the resulting job is won or lost.`,
-      "Cleaning lead charges are collected into a calendar-month invoice. Invoice totals and any separately itemised tax treatment will follow the invoice issued by Match 'n Move; no additional success fee applies when a cleaning job is won."
-    ]
-  }
+      "Cleaning lead charges are collected into a calendar-month invoice. Invoice totals and any separately itemised tax treatment will follow the invoice issued by Match 'n Move; no additional success fee applies when a cleaning job is won.",
+    ],
+  },
 ] as const;
 
 const onThisPageLinkClassName =
@@ -138,20 +140,26 @@ export default function TermsPage() {
                   Disclaimer and conditions of service.
                 </h1>
                 <p className="mt-5 max-w-2xl text-sm leading-7 text-slate-200 sm:text-base">
-                  These terms explain how Match &apos;n Move handles introductions between customers and moving or cleaning
-                  companies, how submitted information is shared, and where responsibility sits once a provider is engaged.
+                  These terms explain how Match &apos;n Move handles
+                  introductions between customers and moving or cleaning
+                  companies, how submitted information is shared, and where
+                  responsibility sits once a provider is engaged.
                 </p>
               </div>
 
               <div className="rounded-[26px] border border-white/10 bg-white/[0.08] p-5 backdrop-blur">
-                <p className="text-xs uppercase tracking-[0.18em] text-sky-100/75">Document status</p>
-                <p className="mt-3 text-3xl font-black tracking-[-0.05em] text-white">Current</p>
+                <p className="text-xs uppercase tracking-[0.18em] text-sky-100/75">
+                  Document status
+                </p>
+                <p className="mt-3 text-3xl font-black tracking-[-0.05em] text-white">
+                  Current
+                </p>
                 <p className="mt-2 text-sm leading-6 text-slate-300">
                   Last updated: September 8, 2026.
                 </p>
                 <p className="mt-4 text-sm leading-6 text-slate-300">
-                  This page applies to users submitting quote requests or interacting with Match &apos;n Move through the
-                  website.
+                  This page applies to users submitting quote requests or
+                  interacting with Match &apos;n Move through the website.
                 </p>
               </div>
             </div>
@@ -169,8 +177,12 @@ export default function TermsPage() {
                   <div className="inline-flex rounded-2xl bg-sky-50 p-3 text-sky-700">
                     <Icon className="h-5 w-5" />
                   </div>
-                  <h2 className="mt-4 text-xl font-bold tracking-[-0.03em] text-slate-950">{item.title}</h2>
-                  <p className="mt-3 text-sm leading-7 text-slate-600">{item.copy}</p>
+                  <h2 className="mt-4 text-xl font-bold tracking-[-0.03em] text-slate-950">
+                    {item.title}
+                  </h2>
+                  <p className="mt-3 text-sm leading-7 text-slate-600">
+                    {item.copy}
+                  </p>
                 </article>
               );
             })}
@@ -180,11 +192,16 @@ export default function TermsPage() {
             id="terms-on-this-page"
             className="mt-8 rounded-[28px] border border-slate-200 bg-[linear-gradient(145deg,#0f172a,#17324f)] p-6 text-white shadow-[0_28px_74px_-44px_rgba(15,23,42,0.72)] lg:hidden"
           >
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-100/75">On this page</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-100/75">
+              On this page
+            </p>
             <ul className="mt-4 space-y-3">
               {sections.map((section) => (
                 <li key={section.id}>
-                  <a className={onThisPageLinkClassName} href={`#${section.id}`}>
+                  <a
+                    className={onThisPageLinkClassName}
+                    href={`#${section.id}`}
+                  >
                     <span className="absolute inset-y-2 left-2 w-12 rounded-full bg-[radial-gradient(circle,rgba(56,189,248,0.3),transparent_72%)] opacity-70 transition duration-300 group-hover:opacity-100" />
                     <span className="relative inline-flex h-9 min-w-9 items-center justify-center rounded-full border border-white/10 bg-white/10 px-2 text-xs font-semibold tracking-[0.08em] text-sky-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.14)]">
                       {section.title.split(".")[0]}
@@ -212,7 +229,10 @@ export default function TermsPage() {
                   </h3>
                   <div className="mt-5 space-y-4">
                     {section.body.map((paragraph) => (
-                      <p key={paragraph} className="text-sm leading-7 text-slate-600 sm:text-base">
+                      <p
+                        key={paragraph}
+                        className="text-sm leading-7 text-slate-600 sm:text-base"
+                      >
                         {paragraph}
                       </p>
                     ))}
@@ -223,11 +243,16 @@ export default function TermsPage() {
 
             <aside className="hidden space-y-4 lg:sticky lg:top-6 lg:block">
               <div className="rounded-[28px] border border-slate-200 bg-[linear-gradient(145deg,#0f172a,#17324f)] p-6 text-white shadow-[0_28px_74px_-44px_rgba(15,23,42,0.72)]">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-100/75">On this page</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-100/75">
+                  On this page
+                </p>
                 <ul className="mt-4 space-y-3">
                   {sections.map((section) => (
                     <li key={section.id}>
-                      <a className={onThisPageLinkClassName} href={`#${section.id}`}>
+                      <a
+                        className={onThisPageLinkClassName}
+                        href={`#${section.id}`}
+                      >
                         <span className="absolute inset-y-2 left-2 w-12 rounded-full bg-[radial-gradient(circle,rgba(56,189,248,0.3),transparent_72%)] opacity-70 transition duration-300 group-hover:opacity-100" />
                         <span className="relative inline-flex h-9 min-w-9 items-center justify-center rounded-full border border-white/10 bg-white/10 px-2 text-xs font-semibold tracking-[0.08em] text-sky-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.14)]">
                           {section.title.split(".")[0]}
@@ -242,8 +267,12 @@ export default function TermsPage() {
               </div>
 
               <div className="rounded-[28px] border border-slate-200 bg-white/95 p-6 shadow-[0_20px_48px_-36px_rgba(15,23,42,0.24)]">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">Feedback</p>
-                <h3 className="mt-3 text-2xl font-black tracking-[-0.04em] text-slate-950">Need to report a delay or concern?</h3>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">
+                  Feedback
+                </p>
+                <h3 className="mt-3 text-2xl font-black tracking-[-0.04em] text-slate-950">
+                  Need to report a delay or concern?
+                </h3>
                 <p className="mt-3 text-sm leading-7 text-slate-600">
                   Send feedback to{" "}
                   <Link
@@ -267,7 +296,9 @@ export default function TermsPage() {
 
           <div className="mt-8 lg:hidden">
             <div className="rounded-[28px] border border-slate-200 bg-white/95 p-6 shadow-[0_20px_48px_-36px_rgba(15,23,42,0.24)]">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">Feedback</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">
+                Feedback
+              </p>
               <h3 className="mt-3 text-2xl font-black tracking-[-0.04em] text-slate-950">
                 Need to report a delay or concern?
               </h3>
@@ -292,7 +323,10 @@ export default function TermsPage() {
           </div>
         </div>
 
-        <MobileSectionJump targetId="terms-on-this-page" label="Back to On this page" />
+        <MobileSectionJump
+          targetId="terms-on-this-page"
+          label="Back to On this page"
+        />
       </section>
     </SiteShell>
   );

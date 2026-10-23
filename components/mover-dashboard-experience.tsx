@@ -28,7 +28,10 @@ import {
   X,
 } from "lucide-react";
 import { MoverRatingsPanel } from "@/components/mover-ratings-panel";
-import { MoverProfileSettings, type MoverProfileState } from "@/components/mover-profile-settings";
+import {
+  MoverProfileSettings,
+  type MoverProfileState,
+} from "@/components/mover-profile-settings";
 import { MoverSecurityPanel } from "@/components/mover-security-panel";
 import { MoverLeadTrendsCard } from "@/components/mover-lead-trends-card";
 import { LanguageSelector } from "@/components/language-selector";
@@ -41,6 +44,8 @@ type DashboardMover = {
   accountId: string;
   companyName: string;
   businessDescription: string;
+  operatingRegion?: string;
+  movingServices?: string[];
   status: string;
   email: string;
   emailVerified: boolean;
@@ -171,9 +176,19 @@ const tabs = [
   { id: "overview", label: "Overview", shortLabel: "Home", icon: LayoutGrid },
   { id: "leads", label: "Lead board", shortLabel: "Leads", icon: RadioTower },
   { id: "ratings", label: "Ratings", shortLabel: "Rate", icon: Star },
-  { id: "profile", label: "Profile", shortLabel: "Profile", icon: BriefcaseBusiness },
+  {
+    id: "profile",
+    label: "Profile",
+    shortLabel: "Profile",
+    icon: BriefcaseBusiness,
+  },
   { id: "payments", label: "Billing", shortLabel: "Bill", icon: CreditCard },
-  { id: "security", label: "Security", shortLabel: "Secure", icon: ShieldCheck },
+  {
+    id: "security",
+    label: "Security",
+    shortLabel: "Secure",
+    icon: ShieldCheck,
+  },
 ] as const;
 
 type DashboardTab = (typeof tabs)[number]["id"];
@@ -200,7 +215,11 @@ const statusTone: Record<string, string> = {
   EXPIRED: "bg-rose-100 text-rose-800",
 };
 
-const money = new Intl.NumberFormat("en-NZ", { style: "currency", currency: "NZD", maximumFractionDigits: 0 });
+const money = new Intl.NumberFormat("en-NZ", {
+  style: "currency",
+  currency: "NZD",
+  maximumFractionDigits: 0,
+});
 const relative = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
 const hourMs = 60 * 60 * 1000;
 
@@ -211,7 +230,12 @@ type BillingResponse = {
     expMonth: number;
     expYear: number;
   } | null;
-  paymentHealth: "active" | "no_payment_method" | "payment_failed" | "action_required" | "billing_unavailable";
+  paymentHealth:
+    | "active"
+    | "no_payment_method"
+    | "payment_failed"
+    | "action_required"
+    | "billing_unavailable";
   transactions: Array<{
     id: string;
     date: string;
@@ -255,12 +279,19 @@ function formatCurrency(cents: number) {
 }
 
 function formatRelativeDate(value: string) {
-  const diffHours = Math.round((new Date(value).getTime() - Date.now()) / (1000 * 60 * 60));
+  const diffHours = Math.round(
+    (new Date(value).getTime() - Date.now()) / (1000 * 60 * 60),
+  );
   if (Math.abs(diffHours) < 24) return relative.format(diffHours, "hour");
   return relative.format(Math.round(diffHours / 24), "day");
 }
 
-function formatLeadAddress(address: string | null, city: string, region: string, postcode: string | null) {
+function formatLeadAddress(
+  address: string | null,
+  city: string,
+  region: string,
+  postcode: string | null,
+) {
   return [address, city, region, postcode].filter(Boolean).join(", ");
 }
 
@@ -269,11 +300,15 @@ const unlockedLeadStatuses = ["PURCHASED", "CONTACTED", "WON"] as const;
 const wonLeadStatuses = ["WON"] as const;
 
 function isUnlockedStatus(status: string) {
-  return unlockedLeadStatuses.includes(status as (typeof unlockedLeadStatuses)[number]);
+  return unlockedLeadStatuses.includes(
+    status as (typeof unlockedLeadStatuses)[number],
+  );
 }
 
 function isActiveLeadStatus(status: string) {
-  return activePipelineStatuses.includes(status as (typeof activePipelineStatuses)[number]);
+  return activePipelineStatuses.includes(
+    status as (typeof activePipelineStatuses)[number],
+  );
 }
 
 type LeadExpiryState = {
@@ -283,46 +318,88 @@ type LeadExpiryState = {
   hoursRemaining: number | null;
 };
 
-function getLeadExpiryState(lead: DashboardMover["leads"][number], nowMs: number): LeadExpiryState {
+function getLeadExpiryState(
+  lead: DashboardMover["leads"][number],
+  nowMs: number,
+): LeadExpiryState {
   if (isUnlockedStatus(lead.status)) {
-    return { labelKey: "moverDashboard.opened", metaKey: "moverDashboard.leadSecured", tone: "good", hoursRemaining: null };
+    return {
+      labelKey: "moverDashboard.opened",
+      metaKey: "moverDashboard.leadSecured",
+      tone: "good",
+      hoursRemaining: null,
+    };
   }
 
   if (lead.status === "EXPIRED" || lead.expiredAt) {
-    return { labelKey: "moverDashboard.expired", metaKey: "moverDashboard.mayBeRedistributed", tone: "expired", hoursRemaining: 0 };
+    return {
+      labelKey: "moverDashboard.expired",
+      metaKey: "moverDashboard.mayBeRedistributed",
+      tone: "expired",
+      hoursRemaining: 0,
+    };
   }
 
   if (!lead.expiresAt) {
-    return { labelKey: "moverDashboard.noTimer", metaKey: "moverDashboard.legacyLead", tone: "neutral", hoursRemaining: null };
+    return {
+      labelKey: "moverDashboard.noTimer",
+      metaKey: "moverDashboard.legacyLead",
+      tone: "neutral",
+      hoursRemaining: null,
+    };
   }
 
   const diffMs = new Date(lead.expiresAt).getTime() - nowMs;
   if (diffMs <= 0) {
-    return { labelKey: "moverDashboard.expired", metaKey: "moverDashboard.mayBeRedistributed", tone: "expired", hoursRemaining: 0 };
+    return {
+      labelKey: "moverDashboard.expired",
+      metaKey: "moverDashboard.mayBeRedistributed",
+      tone: "expired",
+      hoursRemaining: 0,
+    };
   }
 
   const hoursRemaining = Math.ceil(diffMs / hourMs);
   return {
     labelKey: "moverDashboard.hoursLeft",
-    metaKey: hoursRemaining <= 24 ? "moverDashboard.redistributesSoon" : "moverDashboard.unlockWindow",
+    metaKey:
+      hoursRemaining <= 24
+        ? "moverDashboard.redistributesSoon"
+        : "moverDashboard.unlockWindow",
     tone: hoursRemaining <= 24 ? "warning" : "neutral",
     hoursRemaining,
   };
 }
 
 function canOpenLead(lead: DashboardMover["leads"][number], nowMs: number) {
-  return isActiveLeadStatus(lead.status) && getLeadExpiryState(lead, nowMs).tone !== "expired";
+  return (
+    isActiveLeadStatus(lead.status) &&
+    getLeadExpiryState(lead, nowMs).tone !== "expired"
+  );
 }
 
 function getLeadStats(profile: DashboardMover) {
   return {
-    activeLeads: profile.leads.filter((lead) => activePipelineStatuses.includes(lead.status as (typeof activePipelineStatuses)[number])).length,
-    purchasedLeads: profile.leads.filter((lead) => isUnlockedStatus(lead.status)).length,
-    wonLeads: profile.leads.filter((lead) => wonLeadStatuses.includes(lead.status as (typeof wonLeadStatuses)[number])).length,
+    activeLeads: profile.leads.filter((lead) =>
+      activePipelineStatuses.includes(
+        lead.status as (typeof activePipelineStatuses)[number],
+      ),
+    ).length,
+    purchasedLeads: profile.leads.filter((lead) =>
+      isUnlockedStatus(lead.status),
+    ).length,
+    wonLeads: profile.leads.filter((lead) =>
+      wonLeadStatuses.includes(lead.status as (typeof wonLeadStatuses)[number]),
+    ).length,
     totalLeadValue: profile.leads.reduce((sum, lead) => sum + lead.price, 0),
-    unlockedValue: profile.leads.filter((lead) => isUnlockedStatus(lead.status)).reduce((sum, lead) => sum + lead.price, 0),
+    unlockedValue: profile.leads
+      .filter((lead) => isUnlockedStatus(lead.status))
+      .reduce((sum, lead) => sum + lead.price, 0),
     averageLeadPrice: profile.leads.length
-      ? Math.round(profile.leads.reduce((sum, lead) => sum + lead.price, 0) / profile.leads.length)
+      ? Math.round(
+          profile.leads.reduce((sum, lead) => sum + lead.price, 0) /
+            profile.leads.length,
+        )
       : profile.baseLeadPrice,
   };
 }
@@ -341,29 +418,47 @@ export function MoverDashboardExperience({
   const { t } = useLanguage();
   const [profile, setProfile] = useState(mover);
   const [activeTab, setActiveTab] = useState<DashboardTab>(
-    tabs.some((tab) => tab.id === initialTab) ? (initialTab as DashboardTab) : "overview",
+    tabs.some((tab) => tab.id === initialTab)
+      ? (initialTab as DashboardTab)
+      : "overview",
   );
-  const [profileFocusSection, setProfileFocusSection] = useState<"profile" | "documents" | null>(null);
-  const [laneFilter, setLaneFilter] = useState<"all" | "hot" | "open" | "won">("all");
+  const [profileFocusSection, setProfileFocusSection] = useState<
+    "profile" | "documents" | null
+  >(null);
+  const [laneFilter, setLaneFilter] = useState<"all" | "hot" | "open" | "won">(
+    "all",
+  );
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(
-    initialLeadId && mover.leads.some((lead) => lead.id === initialLeadId) ? initialLeadId : mover.leads[0]?.id ?? null,
+    initialLeadId && mover.leads.some((lead) => lead.id === initialLeadId)
+      ? initialLeadId
+      : (mover.leads[0]?.id ?? null),
   );
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [leadActionMessage, setLeadActionMessage] = useState<string | null>(null);
+  const [leadActionMessage, setLeadActionMessage] = useState<string | null>(
+    null,
+  );
   const [leadActionError, setLeadActionError] = useState<string | null>(null);
   const [busyLeadId, setBusyLeadId] = useState<string | null>(null);
   const [logoutLoading, setLogoutLoading] = useState(false);
   const [nowMs, setNowMs] = useState(() => Date.now());
   const attemptedLeadViews = useRef(new Set<string>());
 
-  const filteredLeads = profile.status === "ACTIVE" ? profile.leads.filter((lead) => {
-    if (laneFilter === "hot") return ["NEW", "NOTIFIED", "VIEWED"].includes(lead.status);
-    if (laneFilter === "open") return ["PURCHASED", "CONTACTED"].includes(lead.status);
-    if (laneFilter === "won") return lead.status === "WON";
-    return true;
-  }) : [];
+  const filteredLeads =
+    profile.status === "ACTIVE"
+      ? profile.leads.filter((lead) => {
+          if (laneFilter === "hot")
+            return ["NEW", "NOTIFIED", "VIEWED"].includes(lead.status);
+          if (laneFilter === "open")
+            return ["PURCHASED", "CONTACTED"].includes(lead.status);
+          if (laneFilter === "won") return lead.status === "WON";
+          return true;
+        })
+      : [];
 
-  const selectedLead = filteredLeads.find((lead) => lead.id === selectedLeadId) ?? filteredLeads[0] ?? null;
+  const selectedLead =
+    filteredLeads.find((lead) => lead.id === selectedLeadId) ??
+    filteredLeads[0] ??
+    null;
   const selectedLeadIdForView = selectedLead?.id ?? null;
   const selectedLeadStatusForView = selectedLead?.status ?? null;
   const routeFitCount = profile.leads.filter((lead) => lead.routeMatch).length;
@@ -394,7 +489,9 @@ export function MoverDashboardExperience({
         if (cancelled) return;
 
         if (!session?.authenticated) {
-          const next = encodeURIComponent(window.location.pathname + window.location.search);
+          const next = encodeURIComponent(
+            window.location.pathname + window.location.search,
+          );
           window.location.replace(`/mover/login?mode=login&next=${next}`);
           return;
         }
@@ -454,7 +551,9 @@ export function MoverDashboardExperience({
           method: "POST",
           credentials: "same-origin",
         });
-        const data = (await response.json().catch(() => null)) as { status?: string } | null;
+        const data = (await response.json().catch(() => null)) as {
+          status?: string;
+        } | null;
         if (!response.ok || cancelled) {
           if (!cancelled) attemptedViews.delete(leadId);
           return;
@@ -465,7 +564,11 @@ export function MoverDashboardExperience({
             ...current,
             leads: current.leads.map((lead) =>
               lead.id === leadId
-                ? { ...lead, status: "VIEWED", lastAction: "lead_viewed_in_dashboard" }
+                ? {
+                    ...lead,
+                    status: "VIEWED",
+                    lastAction: "lead_viewed_in_dashboard",
+                  }
                 : lead,
             ),
           }));
@@ -546,7 +649,10 @@ export function MoverDashboardExperience({
                   status: "PURCHASED",
                   purchasedAt: data?.unlockedAt ?? new Date().toISOString(),
                   paymentStatus: data?.paymentStatus ?? "PENDING",
-                  lastAction: data?.paymentStatus === "WAIVED" ? "lead_unlocked_launch_trial" : "lead_unlocked_for_invoice",
+                  lastAction:
+                    data?.paymentStatus === "WAIVED"
+                      ? "lead_unlocked_launch_trial"
+                      : "lead_unlocked_for_invoice",
                   quoteRequest: data?.quoteRequest ?? lead.quoteRequest,
                 }
               : lead,
@@ -573,7 +679,10 @@ export function MoverDashboardExperience({
     }
   }
 
-  async function updateLeadStatus(leadId: string, status: "CONTACTED" | "WON" | "LOST" | "ARCHIVED") {
+  async function updateLeadStatus(
+    leadId: string,
+    status: "CONTACTED" | "WON" | "LOST" | "ARCHIVED",
+  ) {
     setBusyLeadId(leadId);
     setLeadActionError(null);
     setLeadActionMessage(null);
@@ -585,9 +694,11 @@ export function MoverDashboardExperience({
         body: JSON.stringify({ status }),
       });
 
-      const data = (await response.json().catch(() => null)) as
-        | { error?: string; reviewInviteSent?: boolean; reviewInviteSkippedReason?: string | null }
-        | null;
+      const data = (await response.json().catch(() => null)) as {
+        error?: string;
+        reviewInviteSent?: boolean;
+        reviewInviteSkippedReason?: string | null;
+      } | null;
 
       if (!response.ok) {
         setLeadActionError(data?.error ?? t("moverDashboard.couldNotUpdate"));
@@ -618,10 +729,12 @@ export function MoverDashboardExperience({
         setLeadActionMessage(
           data?.reviewInviteSent
             ? t("moverDashboard.jobWonReviewSent")
-            : data?.reviewInviteSkippedReason ?? t("moverDashboard.jobWon"),
+            : (data?.reviewInviteSkippedReason ?? t("moverDashboard.jobWon")),
         );
       } else {
-        setLeadActionMessage(t("moverDashboard.leadUpdated", { status: t(`status.${status}`) }));
+        setLeadActionMessage(
+          t("moverDashboard.leadUpdated", { status: t(`status.${status}`) }),
+        );
       }
     } finally {
       setBusyLeadId(null);
@@ -643,7 +756,11 @@ export function MoverDashboardExperience({
         />
 
         {isMobileMenuOpen ? (
-          <div className="fixed inset-0 z-40 bg-slate-950/30 xl:hidden" aria-hidden="true" onClick={() => setIsMobileMenuOpen(false)} />
+          <div
+            className="fixed inset-0 z-40 bg-slate-950/30 xl:hidden"
+            aria-hidden="true"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
         ) : null}
 
         <div className="grid gap-4 xl:grid-cols-[290px_minmax(0,1fr)]">
@@ -658,51 +775,149 @@ export function MoverDashboardExperience({
           </aside>
 
           <main className="space-y-3 sm:space-y-4">
-            <MoverAppInstallCard accountId={profile.accountId} isTestAccount={profile.status === "TEST"} />
+            <MoverAppInstallCard
+              accountId={profile.accountId}
+              isTestAccount={profile.status === "TEST"}
+            />
             {profile.status === "TEST" ? (
               <div className="rounded-[24px] border border-sky-200 bg-sky-50 p-4 text-sky-950 shadow-sm sm:rounded-[30px] sm:p-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-700">{t("moverDashboard.testAccount")}</p>
-                <p className="mt-2 text-lg font-black">{t("moverDashboard.testAccountTitle")}</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-700">
+                  {t("moverDashboard.testAccount")}
+                </p>
+                <p className="mt-2 text-lg font-black">
+                  {t("moverDashboard.testAccountTitle")}
+                </p>
                 <p className="mt-2 text-sm leading-6 text-sky-900">
                   {t("moverDashboard.testAccountCopy")}
                 </p>
               </div>
             ) : profile.status !== "ACTIVE" ? (
               <div className="rounded-[24px] border border-rose-200 bg-rose-50 p-4 text-rose-900 shadow-sm sm:rounded-[30px] sm:p-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-rose-700">{t("moverDashboard.accountSuspended")}</p>
-                <p className="mt-2 text-lg font-black">{t("moverDashboard.accountSuspendedTitle")}</p>
-                <p className="mt-2 text-sm leading-6 text-rose-800">{t("moverDashboard.accountSuspendedCopy")}</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-rose-700">
+                  {t("moverDashboard.accountSuspended")}
+                </p>
+                <p className="mt-2 text-lg font-black">
+                  {t("moverDashboard.accountSuspendedTitle")}
+                </p>
+                <p className="mt-2 text-sm leading-6 text-rose-800">
+                  {t("moverDashboard.accountSuspendedCopy")}
+                </p>
               </div>
             ) : null}
-            {!profile.readiness.isLive ? <VerificationBanner mover={profile} onOpenDestination={openDashboardDestination} /> : null}
+            {!profile.readiness.isLive ? (
+              <VerificationBanner
+                mover={profile}
+                onOpenDestination={openDashboardDestination}
+              />
+            ) : null}
 
             {activeTab !== "payments" ? (
-              <div className={cx("grid grid-cols-2 gap-2 sm:gap-3", profile.readiness.isLive ? "sm:grid-cols-3" : "xl:grid-cols-4")}>
-                <TopCard icon={BellRing} label={t("moverDashboard.newDemand")} value={String(profile.stats.activeLeads)} meta={t("moverDashboard.needsResponse")} />
+              <div
+                className={cx(
+                  "grid grid-cols-2 gap-2 sm:gap-3",
+                  profile.readiness.isLive
+                    ? "sm:grid-cols-3"
+                    : "xl:grid-cols-4",
+                )}
+              >
+                <TopCard
+                  icon={BellRing}
+                  label={t("moverDashboard.newDemand")}
+                  value={String(profile.stats.activeLeads)}
+                  meta={t("moverDashboard.needsResponse")}
+                />
                 <TopCard
                   icon={BadgeDollarSign}
-                  label={profile.launchTrial.enabled ? t("moverDashboard.leadTrial") : t("moverDashboard.averageLeadPrice")}
-                  value={profile.launchTrial.enabled ? "$0" : formatCurrency(profile.stats.averageLeadPrice)}
-                  meta={profile.launchTrial.enabled ? t("moverDashboard.noChargeWhileActive") : t("moverDashboard.billedMonthEnd")}
+                  label={
+                    profile.launchTrial.enabled
+                      ? t("moverDashboard.leadTrial")
+                      : t("moverDashboard.averageLeadPrice")
+                  }
+                  value={
+                    profile.launchTrial.enabled
+                      ? "$0"
+                      : formatCurrency(profile.stats.averageLeadPrice)
+                  }
+                  meta={
+                    profile.launchTrial.enabled
+                      ? t("moverDashboard.noChargeWhileActive")
+                      : t("moverDashboard.billedMonthEnd")
+                  }
                 />
-                <TopCard icon={Target} label={t("moverDashboard.wins")} value={String(profile.stats.wonLeads)} meta={t("moverDashboard.trackedJobs")} />
+                <TopCard
+                  icon={Target}
+                  label={t("moverDashboard.wins")}
+                  value={String(profile.stats.wonLeads)}
+                  meta={t("moverDashboard.trackedJobs")}
+                />
                 {!profile.readiness.isLive ? (
                   <TopCard
                     icon={ShieldCheck}
                     label={t("moverDashboard.verification")}
-                    value={t("moverDashboard.left", { count: profile.readiness.missingCount })}
+                    value={t("moverDashboard.left", {
+                      count: profile.readiness.missingCount,
+                    })}
                     meta={t("moverDashboard.requiredBeforeLeadAccess")}
                   />
                 ) : null}
               </div>
             ) : null}
 
-            {activeTab === "overview" ? <OverviewPanel mover={profile} routeFitCount={routeFitCount} onOpenTab={openTab} onOpenDestination={openDashboardDestination} /> : null}
-            {activeTab === "leads" ? <LeadsPanel filteredLeads={filteredLeads} laneFilter={laneFilter} onLaneFilterChange={setLaneFilter} selectedLead={selectedLead} selectedLeadId={selectedLeadId} onSelectLead={setSelectedLeadId} onUnlockLead={unlockLead} onUpdateLeadStatus={updateLeadStatus} busyLeadId={busyLeadId} actionMessage={leadActionMessage} actionError={leadActionError} nowMs={nowMs} canAccessLeads={profile.canAccessLeads} launchTrial={profile.launchTrial} onOpenDestination={openDashboardDestination} /> : null}
-            {activeTab === "ratings" ? <MoverRatingsPanel ratings={profile.ratings} /> : null}
-            {activeTab === "profile" ? <ProfilePanel mover={profile} focusSection={profileFocusSection} onFocusHandled={() => setProfileFocusSection(null)} onOpenSecurity={() => openDashboardDestination("security")} onProfileChange={(nextProfile) => setProfile((current) => ({ ...current, ...nextProfile, documentsCount: nextProfile.documents.length, profileCompletion: nextProfile.readiness.completion }))} /> : null}
-            {activeTab === "payments" ? <PaymentsPanel billingState={billingState} /> : null}
-            {activeTab === "security" ? <MoverSecurityPanel mover={profile} onOpenDestination={openDashboardDestination} /> : null}
+            {activeTab === "overview" ? (
+              <OverviewPanel
+                mover={profile}
+                routeFitCount={routeFitCount}
+                onOpenTab={openTab}
+                onOpenDestination={openDashboardDestination}
+              />
+            ) : null}
+            {activeTab === "leads" ? (
+              <LeadsPanel
+                filteredLeads={filteredLeads}
+                laneFilter={laneFilter}
+                onLaneFilterChange={setLaneFilter}
+                selectedLead={selectedLead}
+                selectedLeadId={selectedLeadId}
+                onSelectLead={setSelectedLeadId}
+                onUnlockLead={unlockLead}
+                onUpdateLeadStatus={updateLeadStatus}
+                busyLeadId={busyLeadId}
+                actionMessage={leadActionMessage}
+                actionError={leadActionError}
+                nowMs={nowMs}
+                canAccessLeads={profile.canAccessLeads}
+                launchTrial={profile.launchTrial}
+                onOpenDestination={openDashboardDestination}
+              />
+            ) : null}
+            {activeTab === "ratings" ? (
+              <MoverRatingsPanel ratings={profile.ratings} />
+            ) : null}
+            {activeTab === "profile" ? (
+              <ProfilePanel
+                mover={profile}
+                focusSection={profileFocusSection}
+                onFocusHandled={() => setProfileFocusSection(null)}
+                onOpenSecurity={() => openDashboardDestination("security")}
+                onProfileChange={(nextProfile) =>
+                  setProfile((current) => ({
+                    ...current,
+                    ...nextProfile,
+                    documentsCount: nextProfile.documents.length,
+                    profileCompletion: nextProfile.readiness.completion,
+                  }))
+                }
+              />
+            ) : null}
+            {activeTab === "payments" ? (
+              <PaymentsPanel billingState={billingState} />
+            ) : null}
+            {activeTab === "security" ? (
+              <MoverSecurityPanel
+                mover={profile}
+                onOpenDestination={openDashboardDestination}
+              />
+            ) : null}
           </main>
         </div>
       </div>
@@ -740,40 +955,71 @@ function MobileHeader({
       >
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <p className="truncate text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-200">{mover.companyName}</p>
+            <p className="truncate text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-200">
+              {mover.companyName}
+            </p>
             <div className="mt-1 flex items-center gap-2">
-              <h1 className="text-lg font-black tracking-[-0.04em] text-white">{t(dashboardTabKeys[activeTab.id])}</h1>
+              <h1 className="text-lg font-black tracking-[-0.04em] text-white">
+                {t(dashboardTabKeys[activeTab.id])}
+              </h1>
               <span className="rounded-full bg-emerald-400/15 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-200">
-                {mover.readiness.isLive ? t("moverDashboard.profileLive") : t("moverDashboard.verifyProfile")}
+                {mover.readiness.isLive
+                  ? t("moverDashboard.profileLive")
+                  : t("moverDashboard.verifyProfile")}
               </span>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
             <LanguageSelector compact />
-          <button
-            type="button"
-            aria-expanded={isMenuOpen}
-            aria-label={isMenuOpen ? t("moverDashboard.closeMenu") : t("moverDashboard.openMenu")}
-            onClick={onMenuToggle}
-            className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/10 text-white transition hover:bg-white/15"
-          >
-            {isMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
-          </button>
+            <button
+              type="button"
+              aria-expanded={isMenuOpen}
+              aria-label={
+                isMenuOpen
+                  ? t("moverDashboard.closeMenu")
+                  : t("moverDashboard.openMenu")
+              }
+              onClick={onMenuToggle}
+              className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/10 text-white transition hover:bg-white/15"
+            >
+              {isMenuOpen ? (
+                <X className="h-4 w-4" />
+              ) : (
+                <Menu className="h-4 w-4" />
+              )}
+            </button>
           </div>
         </div>
 
         <div className="mt-3 grid grid-cols-3 gap-2">
-          <MobileMetaPill label={t("moverDashboard.hotLeads")} value={String(mover.stats.activeLeads)} />
-          <MobileMetaPill label={t("moverDashboard.routeFit")} value={String(routeFitCount)} />
-          <MobileMetaPill label={t("moverDashboard.verify")} value={mover.readiness.isLive ? t("moverDashboard.live") : t("moverDashboard.left", { count: mover.readiness.missingCount })} />
+          <MobileMetaPill
+            label={t("moverDashboard.hotLeads")}
+            value={String(mover.stats.activeLeads)}
+          />
+          <MobileMetaPill
+            label={t("moverDashboard.routeFit")}
+            value={String(routeFitCount)}
+          />
+          <MobileMetaPill
+            label={t("moverDashboard.verify")}
+            value={
+              mover.readiness.isLive
+                ? t("moverDashboard.live")
+                : t("moverDashboard.left", {
+                    count: mover.readiness.missingCount,
+                  })
+            }
+          />
         </div>
       </div>
 
       <div
         className={cx(
           "fixed inset-x-3 top-[calc(1rem+env(safe-area-inset-top))] z-50 rounded-[28px] border border-slate-200 bg-[linear-gradient(180deg,#07192a,#102844)] p-4 text-white shadow-[0_30px_70px_-36px_rgba(15,23,42,0.92)] transition-all xl:hidden",
-          isMenuOpen ? "pointer-events-auto translate-y-0 opacity-100" : "pointer-events-none -translate-y-2 opacity-0",
+          isMenuOpen
+            ? "pointer-events-auto translate-y-0 opacity-100"
+            : "pointer-events-none -translate-y-2 opacity-0",
         )}
       >
         <div className="flex items-start justify-between gap-3">
@@ -782,12 +1028,14 @@ function MobileHeader({
               <Sparkles className="h-3.5 w-3.5" />
               {t("moverDashboard.moverHub")}
             </div>
-            <p className="mt-3 text-xl font-black tracking-[-0.04em] text-white">{mover.companyName}</p>
+            <p className="mt-3 text-xl font-black tracking-[-0.04em] text-white">
+              {mover.companyName}
+            </p>
             <p className="mt-1 text-sm text-slate-300">{mover.contactPerson}</p>
           </div>
           <button
             type="button"
-             aria-label={t("moverDashboard.closeMenu")}
+            aria-label={t("moverDashboard.closeMenu")}
             onClick={onMenuToggle}
             className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10 text-white"
           >
@@ -805,7 +1053,9 @@ function MobileHeader({
                 onClick={() => onOpenTab(tab.id)}
                 className={cx(
                   "flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left text-sm font-semibold transition",
-                  activeTab.id === tab.id ? "bg-white text-slate-950" : "bg-white/[0.06] text-slate-100",
+                  activeTab.id === tab.id
+                    ? "bg-white text-slate-950"
+                    : "bg-white/[0.06] text-slate-100",
                 )}
               >
                 <span className="flex items-center gap-3">
@@ -821,26 +1071,66 @@ function MobileHeader({
         <LanguageSelector className="mt-4 w-full" />
 
         <div className="mt-4 grid grid-cols-3 gap-2">
-           <SidebarStat label={t("moverDashboard.hotLeads")} value={String(mover.stats.activeLeads)} />
-           <SidebarStat label={t("moverDashboard.verify")} value={mover.readiness.isLive ? t("moverDashboard.live") : t("moverDashboard.left", { count: mover.readiness.missingCount })} />
-           <SidebarStat label={mover.launchTrial.enabled ? t("moverDashboard.leadTrial") : t("moverDashboard.averageLeadPrice")} value={mover.launchTrial.enabled ? "$0" : formatCurrency(mover.stats.averageLeadPrice)} />
+          <SidebarStat
+            label={t("moverDashboard.hotLeads")}
+            value={String(mover.stats.activeLeads)}
+          />
+          <SidebarStat
+            label={t("moverDashboard.verify")}
+            value={
+              mover.readiness.isLive
+                ? t("moverDashboard.live")
+                : t("moverDashboard.left", {
+                    count: mover.readiness.missingCount,
+                  })
+            }
+          />
+          <SidebarStat
+            label={
+              mover.launchTrial.enabled
+                ? t("moverDashboard.leadTrial")
+                : t("moverDashboard.averageLeadPrice")
+            }
+            value={
+              mover.launchTrial.enabled
+                ? "$0"
+                : formatCurrency(mover.stats.averageLeadPrice)
+            }
+          />
         </div>
 
         <div className="mt-4 grid gap-2">
-          <Link href="/mover/pricing" className="flex items-center justify-between rounded-2xl bg-white/[0.08] px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/[0.14]">
+          <Link
+            href="/mover/pricing"
+            className="flex items-center justify-between rounded-2xl bg-white/[0.08] px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/[0.14]"
+          >
             {t("moverDashboard.pricingRules")}
             <ArrowRight className="h-4 w-4" />
           </Link>
-          <button type="button" onClick={() => onOpenTab("leads")} className="flex w-full items-center justify-between rounded-2xl bg-white/[0.08] px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/[0.14]">
+          <button
+            type="button"
+            onClick={() => onOpenTab("leads")}
+            className="flex w-full items-center justify-between rounded-2xl bg-white/[0.08] px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/[0.14]"
+          >
             {t("moverDashboard.workLeads")}
             <ArrowRight className="h-4 w-4" />
           </button>
-          <button type="button" onClick={() => onOpenTab("profile")} className="flex w-full items-center justify-between rounded-2xl bg-white/[0.08] px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/[0.14]">
+          <button
+            type="button"
+            onClick={() => onOpenTab("profile")}
+            className="flex w-full items-center justify-between rounded-2xl bg-white/[0.08] px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/[0.14]"
+          >
             {t("moverDashboard.updateProfile")}
             <ArrowRight className="h-4 w-4" />
           </button>
-          <button type="button" onClick={() => onOpenTab("security")} className="flex w-full items-center justify-between rounded-2xl bg-white/[0.08] px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/[0.14]">
-            {mover.readiness.isLive ? "Review verification" : "Get profile live"}
+          <button
+            type="button"
+            onClick={() => onOpenTab("security")}
+            className="flex w-full items-center justify-between rounded-2xl bg-white/[0.08] px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/[0.14]"
+          >
+            {mover.readiness.isLive
+              ? "Review verification"
+              : "Get profile live"}
             <ArrowRight className="h-4 w-4" />
           </button>
           <QuickLogoutButton loading={logoutLoading} onClick={onLogout} />
@@ -853,8 +1143,12 @@ function MobileHeader({
 function MobileMetaPill({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl border border-white/8 bg-white/[0.08] px-3 py-2">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-100/90">{label}</p>
-      <p className="mt-1 text-sm font-black tracking-[-0.03em] text-white">{value}</p>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-100/90">
+        {label}
+      </p>
+      <p className="mt-1 text-sm font-black tracking-[-0.03em] text-white">
+        {value}
+      </p>
     </div>
   );
 }
@@ -879,13 +1173,17 @@ function DesktopSidebar({
         <div className="flex items-center justify-between gap-3">
           <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-100">
             <Sparkles className="h-3.5 w-3.5" />
-              {t("moverDashboard.moverHub")}
+            {t("moverDashboard.moverHub")}
           </span>
           <span className="rounded-full bg-emerald-400/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-200">
-             {mover.readiness.isLive ? t("moverDashboard.profileLive") : t("moverDashboard.verifyProfile")}
+            {mover.readiness.isLive
+              ? t("moverDashboard.profileLive")
+              : t("moverDashboard.verifyProfile")}
           </span>
         </div>
-        <p className="mt-4 text-2xl font-black tracking-[-0.05em] text-white">{mover.companyName}</p>
+        <p className="mt-4 text-2xl font-black tracking-[-0.05em] text-white">
+          {mover.companyName}
+        </p>
         <p className="mt-1 text-sm text-slate-300">{mover.contactPerson}</p>
         <LanguageSelector className="mt-4 w-full" />
       </div>
@@ -900,7 +1198,9 @@ function DesktopSidebar({
               onClick={() => onOpenTab(tab.id)}
               className={cx(
                 "flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left text-sm font-semibold transition",
-                activeTab === tab.id ? "bg-white text-slate-950" : "bg-white/[0.05] text-slate-200 hover:bg-white/[0.1]",
+                activeTab === tab.id
+                  ? "bg-white text-slate-950"
+                  : "bg-white/[0.05] text-slate-200 hover:bg-white/[0.1]",
               )}
             >
               <span className="flex items-center gap-3">
@@ -914,28 +1214,70 @@ function DesktopSidebar({
       </nav>
 
       <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
-          <SidebarStat label={t("moverDashboard.hotLeads")} value={String(mover.stats.activeLeads)} />
-          <SidebarStat label={t("moverDashboard.verify")} value={mover.readiness.isLive ? t("moverDashboard.live") : t("moverDashboard.left", { count: mover.readiness.missingCount })} />
-          <SidebarStat label={mover.launchTrial.enabled ? t("moverDashboard.leadTrial") : t("moverDashboard.averageLeadPrice")} value={mover.launchTrial.enabled ? "$0" : formatCurrency(mover.stats.averageLeadPrice)} />
+        <SidebarStat
+          label={t("moverDashboard.hotLeads")}
+          value={String(mover.stats.activeLeads)}
+        />
+        <SidebarStat
+          label={t("moverDashboard.verify")}
+          value={
+            mover.readiness.isLive
+              ? t("moverDashboard.live")
+              : t("moverDashboard.left", {
+                  count: mover.readiness.missingCount,
+                })
+          }
+        />
+        <SidebarStat
+          label={
+            mover.launchTrial.enabled
+              ? t("moverDashboard.leadTrial")
+              : t("moverDashboard.averageLeadPrice")
+          }
+          value={
+            mover.launchTrial.enabled
+              ? "$0"
+              : formatCurrency(mover.stats.averageLeadPrice)
+          }
+        />
       </div>
 
       <div className="rounded-[26px] border border-white/10 bg-white/[0.06] p-4 xl:mt-auto">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-100">{t("moverDashboard.fastActions")}</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-100">
+          {t("moverDashboard.fastActions")}
+        </p>
         <div className="mt-3 space-y-2">
-          <Link href="/mover/pricing" className="flex items-center justify-between rounded-2xl bg-white/[0.08] px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/[0.14]">
+          <Link
+            href="/mover/pricing"
+            className="flex items-center justify-between rounded-2xl bg-white/[0.08] px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/[0.14]"
+          >
             {t("moverDashboard.pricingRules")}
             <ArrowRight className="h-4 w-4" />
           </Link>
-          <button type="button" onClick={() => onOpenTab("leads")} className="flex w-full items-center justify-between rounded-2xl bg-white/[0.08] px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/[0.14]">
+          <button
+            type="button"
+            onClick={() => onOpenTab("leads")}
+            className="flex w-full items-center justify-between rounded-2xl bg-white/[0.08] px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/[0.14]"
+          >
             {t("moverDashboard.workLeads")}
             <ArrowRight className="h-4 w-4" />
           </button>
-          <button type="button" onClick={() => onOpenTab("profile")} className="flex w-full items-center justify-between rounded-2xl bg-white/[0.08] px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/[0.14]">
+          <button
+            type="button"
+            onClick={() => onOpenTab("profile")}
+            className="flex w-full items-center justify-between rounded-2xl bg-white/[0.08] px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/[0.14]"
+          >
             {t("moverDashboard.updateProfile")}
             <ArrowRight className="h-4 w-4" />
           </button>
-          <button type="button" onClick={() => onOpenTab("security")} className="flex w-full items-center justify-between rounded-2xl bg-white/[0.08] px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/[0.14]">
-            {mover.readiness.isLive ? t("moverDashboard.reviewVerification") : t("moverDashboard.getProfileLive")}
+          <button
+            type="button"
+            onClick={() => onOpenTab("security")}
+            className="flex w-full items-center justify-between rounded-2xl bg-white/[0.08] px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/[0.14]"
+          >
+            {mover.readiness.isLive
+              ? t("moverDashboard.reviewVerification")
+              : t("moverDashboard.getProfileLive")}
             <ArrowRight className="h-4 w-4" />
           </button>
           <QuickLogoutButton loading={logoutLoading} onClick={onLogout} />
@@ -945,7 +1287,13 @@ function DesktopSidebar({
   );
 }
 
-function QuickLogoutButton({ loading, onClick }: { loading: boolean; onClick: () => void }) {
+function QuickLogoutButton({
+  loading,
+  onClick,
+}: {
+  loading: boolean;
+  onClick: () => void;
+}) {
   const { t } = useLanguage();
   return (
     <button
@@ -954,8 +1302,14 @@ function QuickLogoutButton({ loading, onClick }: { loading: boolean; onClick: ()
       disabled={loading}
       className="flex w-full items-center justify-between rounded-2xl border border-rose-300/15 bg-rose-400/10 px-4 py-3 text-sm font-semibold text-rose-100 transition hover:bg-rose-400/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-200 disabled:cursor-not-allowed disabled:opacity-60"
     >
-       <span>{loading ? t("moverDashboard.signingOut") : t("dashboard.logout")}</span>
-      {loading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
+      <span>
+        {loading ? t("moverDashboard.signingOut") : t("dashboard.logout")}
+      </span>
+      {loading ? (
+        <LoaderCircle className="h-4 w-4 animate-spin" />
+      ) : (
+        <LogOut className="h-4 w-4" />
+      )}
     </button>
   );
 }
@@ -987,7 +1341,9 @@ function MobileNavigation({
               onClick={() => onOpenTab(tab.id)}
               className={cx(
                 "flex min-w-[5.5rem] shrink-0 flex-col items-center justify-center gap-1 border-r border-slate-200 px-3 py-3 text-[11px] font-semibold transition",
-                isActive ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-slate-100 hover:text-slate-900",
+                isActive
+                  ? "bg-slate-900 text-white"
+                  : "text-slate-500 hover:bg-slate-100 hover:text-slate-900",
               )}
             >
               <Icon className="h-4 w-4" />
@@ -1000,7 +1356,13 @@ function MobileNavigation({
   );
 }
 
-function VerificationBanner({ mover, onOpenDestination }: { mover: DashboardMover; onOpenDestination: (destination: DashboardDestination) => void }) {
+function VerificationBanner({
+  mover,
+  onOpenDestination,
+}: {
+  mover: DashboardMover;
+  onOpenDestination: (destination: DashboardDestination) => void;
+}) {
   const { t } = useLanguage();
   const nextStep = mover.readiness.nextStep;
   const primaryDestination = nextStep?.destination ?? "security";
@@ -1026,14 +1388,24 @@ function VerificationBanner({ mover, onOpenDestination }: { mover: DashboardMove
           <div
             className={cx(
               "inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] sm:text-xs",
-              mover.readiness.isLive ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800",
+              mover.readiness.isLive
+                ? "bg-emerald-100 text-emerald-800"
+                : "bg-amber-100 text-amber-800",
             )}
           >
-            {mover.readiness.isLive ? <CheckCircle2 className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
-            {mover.readiness.isLive ? t("moverDashboard.profileLive") : t("moverDashboard.verificationRequired")}
+            {mover.readiness.isLive ? (
+              <CheckCircle2 className="h-4 w-4" />
+            ) : (
+              <AlertTriangle className="h-4 w-4" />
+            )}
+            {mover.readiness.isLive
+              ? t("moverDashboard.profileLive")
+              : t("moverDashboard.verificationRequired")}
           </div>
           <h2 className="mt-3 text-xl font-black tracking-[-0.05em] text-slate-950 sm:text-2xl">
-            {mover.readiness.isLive ? t("moverDashboard.yourProfileLive") : t("moverDashboard.getVerified")}
+            {mover.readiness.isLive
+              ? t("moverDashboard.yourProfileLive")
+              : t("moverDashboard.getVerified")}
           </h2>
           <p className="mt-2 text-sm leading-6 text-slate-700">
             {mover.readiness.isLive
@@ -1045,10 +1417,16 @@ function VerificationBanner({ mover, onOpenDestination }: { mover: DashboardMove
         <div className="flex flex-col gap-2 sm:flex-row xl:flex-col 2xl:flex-row">
           <button
             type="button"
-            onClick={() => onOpenDestination(mover.readiness.isLive ? "security" : primaryDestination)}
+            onClick={() =>
+              onOpenDestination(
+                mover.readiness.isLive ? "security" : primaryDestination,
+              )
+            }
             className={cx(
               "inline-flex min-h-[48px] items-center justify-center gap-2 rounded-2xl px-4 py-2 text-sm font-semibold text-white transition hover:translate-y-[-1px]",
-              mover.readiness.isLive ? "bg-emerald-700 hover:bg-emerald-800" : "bg-slate-900 hover:bg-slate-800",
+              mover.readiness.isLive
+                ? "bg-emerald-700 hover:bg-emerald-800"
+                : "bg-slate-900 hover:bg-slate-800",
             )}
           >
             {primaryLabel}
@@ -1068,9 +1446,26 @@ function VerificationBanner({ mover, onOpenDestination }: { mover: DashboardMove
 
       <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-7">
         {mover.readiness.checks.map((check) => (
-          <div key={check.key} className={cx("rounded-[18px] border px-3 py-3", check.complete ? "border-emerald-200 bg-emerald-50" : "border-slate-200 bg-white")}>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">{check.title}</p>
-            <p className={cx("mt-1 text-sm font-black", check.complete ? "text-emerald-800" : "text-slate-950")}>{check.complete ? t("moverDashboard.done") : check.label}</p>
+          <div
+            key={check.key}
+            className={cx(
+              "rounded-[18px] border px-3 py-3",
+              check.complete
+                ? "border-emerald-200 bg-emerald-50"
+                : "border-slate-200 bg-white",
+            )}
+          >
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+              {check.title}
+            </p>
+            <p
+              className={cx(
+                "mt-1 text-sm font-black",
+                check.complete ? "text-emerald-800" : "text-slate-950",
+              )}
+            >
+              {check.complete ? t("moverDashboard.done") : check.label}
+            </p>
           </div>
         ))}
       </div>
@@ -1096,30 +1491,96 @@ function OverviewPanel({
         <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm sm:rounded-[30px] sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700 sm:text-sm">{t("moverDashboard.today")}</p>
-              <h2 className="mt-1 text-2xl font-black tracking-[-0.05em] text-slate-950 sm:text-3xl">{t("moverDashboard.dispatchBoard")}</h2>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700 sm:text-sm">
+                {t("moverDashboard.today")}
+              </p>
+              <h2 className="mt-1 text-2xl font-black tracking-[-0.05em] text-slate-950 sm:text-3xl">
+                {t("moverDashboard.dispatchBoard")}
+              </h2>
             </div>
-            <button type="button" className="rounded-2xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 sm:px-4" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
+            <button
+              type="button"
+              className="rounded-2xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 sm:px-4"
+              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+            >
               {t("moverDashboard.refreshView")}
             </button>
           </div>
           <div className="mt-3 grid grid-cols-2 gap-2 sm:mt-4 sm:gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <ActionTile title={t("moverDashboard.routeMatches")} value={`${routeFitCount}`} meta={t("moverDashboard.goodFit")} />
-            <ActionTile title={t("moverDashboard.unlocked")} value={`${mover.stats.purchasedLeads}`} meta={t("moverDashboard.activeJobs")} />
-          <ActionTile title={t("moverDashboard.coverageRegions")} value={`${mover.serviceAreas.length}`} meta={t("moverDashboard.nzRegionsSelected")} />
-            <ActionTile title={t("moverDashboard.docs")} value={`${mover.documentsCount}`} meta={t("moverDashboard.onFile")} />
+            <ActionTile
+              title={t("moverDashboard.routeMatches")}
+              value={`${routeFitCount}`}
+              meta={t("moverDashboard.goodFit")}
+            />
+            <ActionTile
+              title={t("moverDashboard.unlocked")}
+              value={`${mover.stats.purchasedLeads}`}
+              meta={t("moverDashboard.activeJobs")}
+            />
+            <ActionTile
+              title={t("moverDashboard.coverageRegions")}
+              value={`${mover.serviceAreas.length}`}
+              meta={t("moverDashboard.nzRegionsSelected")}
+            />
+            <ActionTile
+              title={t("moverDashboard.docs")}
+              value={`${mover.documentsCount}`}
+              meta={t("moverDashboard.onFile")}
+            />
           </div>
           <div className="mt-3 grid gap-2 sm:mt-4 sm:gap-3 lg:grid-cols-3">
-            <JumpCard title={t("moverDashboard.leadBoard")} action={t("moverDashboard.openLeads")} onClickLabel={t("moverDashboard.go")} onClick={() => onOpenTab("leads")} />
-            <JumpCard title={t("moverDashboard.security")} action={mover.readiness.isLive ? t("moverDashboard.reviewChecks") : t("moverDashboard.getProfileLive")} onClickLabel={t("moverDashboard.open")} onClick={() => onOpenDestination("security")} />
-            <JumpCard title={t("moverDashboard.profile")} action={mover.readiness.isLive ? t("moverDashboard.keepCurrent") : t("moverDashboard.finishRequiredDetails")} onClickLabel={t("moverDashboard.edit")} onClick={() => onOpenDestination("profile")} />
+            <JumpCard
+              title={t("moverDashboard.leadBoard")}
+              action={t("moverDashboard.openLeads")}
+              onClickLabel={t("moverDashboard.go")}
+              onClick={() => onOpenTab("leads")}
+            />
+            <JumpCard
+              title={t("moverDashboard.security")}
+              action={
+                mover.readiness.isLive
+                  ? t("moverDashboard.reviewChecks")
+                  : t("moverDashboard.getProfileLive")
+              }
+              onClickLabel={t("moverDashboard.open")}
+              onClick={() => onOpenDestination("security")}
+            />
+            <JumpCard
+              title={t("moverDashboard.profile")}
+              action={
+                mover.readiness.isLive
+                  ? t("moverDashboard.keepCurrent")
+                  : t("moverDashboard.finishRequiredDetails")
+              }
+              onClickLabel={t("moverDashboard.edit")}
+              onClick={() => onOpenDestination("profile")}
+            />
           </div>
         </div>
 
         <div className="grid gap-3 sm:gap-4 sm:grid-cols-3 2xl:grid-cols-1">
-          <CompactCard icon={MapPinned} title={t("moverDashboard.coverage")} value={`${routeFitCount}/${mover.leads.length || 0}`} meta={t("moverDashboard.fitLeads")} />
-          <CompactCard icon={Clock3} title={t("moverDashboard.phone")} value={mover.phone} meta={t("moverDashboard.leadCallbackLine")} />
-          <CompactCard icon={CheckCircle2} title={t("moverDashboard.email")} value={mover.emailVerified ? t("moverDashboard.verified") : t("moverDashboard.pending")} meta={mover.email} />
+          <CompactCard
+            icon={MapPinned}
+            title={t("moverDashboard.coverage")}
+            value={`${routeFitCount}/${mover.leads.length || 0}`}
+            meta={t("moverDashboard.fitLeads")}
+          />
+          <CompactCard
+            icon={Clock3}
+            title={t("moverDashboard.phone")}
+            value={mover.phone}
+            meta={t("moverDashboard.leadCallbackLine")}
+          />
+          <CompactCard
+            icon={CheckCircle2}
+            title={t("moverDashboard.email")}
+            value={
+              mover.emailVerified
+                ? t("moverDashboard.verified")
+                : t("moverDashboard.pending")
+            }
+            meta={mover.email}
+          />
         </div>
       </div>
 
@@ -1136,7 +1597,10 @@ type LeadsPanelProps = {
   selectedLeadId: string | null;
   onSelectLead: (value: string) => void;
   onUnlockLead: (leadId: string) => Promise<boolean>;
-  onUpdateLeadStatus: (leadId: string, status: "CONTACTED" | "WON" | "LOST" | "ARCHIVED") => void;
+  onUpdateLeadStatus: (
+    leadId: string,
+    status: "CONTACTED" | "WON" | "LOST" | "ARCHIVED",
+  ) => void;
   busyLeadId: string | null;
   actionMessage: string | null;
   actionError: string | null;
@@ -1184,7 +1648,8 @@ function LeadsPanel({
       if (!panel) return;
 
       const rect = panel.getBoundingClientRect();
-      const isFullyVisible = rect.top >= 16 && rect.bottom <= window.innerHeight - 16;
+      const isFullyVisible =
+        rect.top >= 16 && rect.bottom <= window.innerHeight - 16;
       if (!isFullyVisible) {
         panel.scrollIntoView({ behavior: "smooth", block: "start" });
       }
@@ -1196,111 +1661,260 @@ function LeadsPanel({
     if (!didUnlock) return;
 
     window.requestAnimationFrame(() => {
-      detailPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      detailPanelRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
     });
   }
 
-  const selectedLeadExpiry = selectedLead ? getLeadExpiryState(selectedLead, nowMs) : null;
+  const selectedLeadExpiry = selectedLead
+    ? getLeadExpiryState(selectedLead, nowMs)
+    : null;
 
   return (
     <div className="grid gap-3 sm:gap-4 2xl:grid-cols-[minmax(320px,0.9fr)_minmax(0,1.1fr)]">
       <div className="order-2 rounded-[24px] border border-slate-200 bg-white p-3 shadow-sm sm:rounded-[30px] sm:p-4 2xl:order-1">
         <div className="flex flex-wrap gap-2">
           {filters.map((filter) => (
-            <button key={filter.id} type="button" onClick={() => onLaneFilterChange(filter.id)} className={cx("rounded-full px-3 py-2 text-sm font-semibold transition sm:px-4", laneFilter === filter.id ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200")}>
+            <button
+              key={filter.id}
+              type="button"
+              onClick={() => onLaneFilterChange(filter.id)}
+              className={cx(
+                "rounded-full px-3 py-2 text-sm font-semibold transition sm:px-4",
+                laneFilter === filter.id
+                  ? "bg-slate-900 text-white"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200",
+              )}
+            >
               {filter.label}
             </button>
           ))}
         </div>
         <div className="mt-3 space-y-2 sm:mt-4 sm:space-y-3">
-          {filteredLeads.length ? filteredLeads.map((lead) => {
-            const expiry = getLeadExpiryState(lead, nowMs);
-            return (
-              <button key={lead.id} type="button" onClick={() => focusSelectedLead(lead.id)} className={cx("w-full rounded-[20px] border p-3 text-left transition sm:rounded-[24px] sm:p-4", selectedLeadId === lead.id ? "border-slate-900 bg-slate-50" : "border-slate-200 hover:border-slate-300 hover:bg-slate-50")}>
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className={cx("rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] sm:text-[11px]", statusTone[lead.status] ?? "bg-slate-100 text-slate-700")}>{t(`status.${lead.status}`)}</span>
-                  <span className="text-[11px] font-semibold text-slate-500 sm:text-xs">{formatRelativeDate(lead.createdAt)}</span>
-                </div>
-                <p className="mt-2 text-sm font-bold text-slate-950 sm:mt-3 sm:text-base">{lead.quoteRequest.fromCity} to {lead.quoteRequest.toCity}</p>
-                <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-semibold text-slate-500 sm:text-xs">
-                  <span>{lead.quoteRequest.bedrooms}</span>
-                  <span>{lead.paymentStatus === "WAIVED" ? t("moverDashboard.trialWaived") : launchTrial.enabled && canOpenLead(lead, nowMs) ? t("moverDashboard.trialFree") : formatCurrency(lead.price)}</span>
-                  <span>{lead.routeMatch ? t("moverDashboard.match") : t("moverDashboard.checkRoute")}</span>
-                  <span className={cx("inline-flex items-center gap-1 rounded-full px-2 py-1", expiry.tone === "expired" ? "bg-rose-100 text-rose-700" : expiry.tone === "warning" ? "bg-amber-100 text-amber-800" : expiry.tone === "good" ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600")}>
-                    <Clock3 className="h-3 w-3" />
-                    {t(expiry.labelKey, { count: expiry.hoursRemaining ?? 0 })}
-                  </span>
-                </div>
-              </button>
-            );
-          }) : <EmptyCard title={t("moverDashboard.noLeadsFilter")} />}
+          {filteredLeads.length ? (
+            filteredLeads.map((lead) => {
+              const expiry = getLeadExpiryState(lead, nowMs);
+              return (
+                <button
+                  key={lead.id}
+                  type="button"
+                  onClick={() => focusSelectedLead(lead.id)}
+                  className={cx(
+                    "w-full rounded-[20px] border p-3 text-left transition sm:rounded-[24px] sm:p-4",
+                    selectedLeadId === lead.id
+                      ? "border-slate-900 bg-slate-50"
+                      : "border-slate-200 hover:border-slate-300 hover:bg-slate-50",
+                  )}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span
+                      className={cx(
+                        "rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] sm:text-[11px]",
+                        statusTone[lead.status] ??
+                          "bg-slate-100 text-slate-700",
+                      )}
+                    >
+                      {t(`status.${lead.status}`)}
+                    </span>
+                    <span className="text-[11px] font-semibold text-slate-500 sm:text-xs">
+                      {formatRelativeDate(lead.createdAt)}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm font-bold text-slate-950 sm:mt-3 sm:text-base">
+                    {lead.quoteRequest.fromCity} to {lead.quoteRequest.toCity}
+                  </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-semibold text-slate-500 sm:text-xs">
+                    <span>{lead.quoteRequest.bedrooms}</span>
+                    <span>
+                      {lead.paymentStatus === "WAIVED"
+                        ? t("moverDashboard.trialWaived")
+                        : launchTrial.enabled && canOpenLead(lead, nowMs)
+                          ? t("moverDashboard.trialFree")
+                          : formatCurrency(lead.price)}
+                    </span>
+                    <span>
+                      {lead.routeMatch
+                        ? t("moverDashboard.match")
+                        : t("moverDashboard.checkRoute")}
+                    </span>
+                    <span
+                      className={cx(
+                        "inline-flex items-center gap-1 rounded-full px-2 py-1",
+                        expiry.tone === "expired"
+                          ? "bg-rose-100 text-rose-700"
+                          : expiry.tone === "warning"
+                            ? "bg-amber-100 text-amber-800"
+                            : expiry.tone === "good"
+                              ? "bg-emerald-100 text-emerald-700"
+                              : "bg-slate-100 text-slate-600",
+                      )}
+                    >
+                      <Clock3 className="h-3 w-3" />
+                      {t(expiry.labelKey, {
+                        count: expiry.hoursRemaining ?? 0,
+                      })}
+                    </span>
+                  </div>
+                </button>
+              );
+            })
+          ) : (
+            <EmptyCard title={t("moverDashboard.noLeadsFilter")} />
+          )}
         </div>
       </div>
 
-      <div ref={detailPanelRef} className="order-1 rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm sm:rounded-[30px] sm:p-5 2xl:order-2">
+      <div
+        ref={detailPanelRef}
+        className="order-1 rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm sm:rounded-[30px] sm:p-5 2xl:order-2"
+      >
         {selectedLead ? (
           <>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700 sm:text-sm">{t("moverDashboard.selectedLead")}</p>
-                <h2 className="mt-1 text-2xl font-black tracking-[-0.05em] text-slate-950 sm:text-3xl">{selectedLead.quoteRequest.fromCity} to {selectedLead.quoteRequest.toCity}</h2>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700 sm:text-sm">
+                  {t("moverDashboard.selectedLead")}
+                </p>
+                <h2 className="mt-1 text-2xl font-black tracking-[-0.05em] text-slate-950 sm:text-3xl">
+                  {selectedLead.quoteRequest.fromCity} to{" "}
+                  {selectedLead.quoteRequest.toCity}
+                </h2>
               </div>
-              <span className={cx("rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] sm:text-xs", statusTone[selectedLead.status] ?? "bg-slate-100 text-slate-700")}>{t(`status.${selectedLead.status}`)}</span>
+              <span
+                className={cx(
+                  "rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] sm:text-xs",
+                  statusTone[selectedLead.status] ??
+                    "bg-slate-100 text-slate-700",
+                )}
+              >
+                {t(`status.${selectedLead.status}`)}
+              </span>
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2 sm:mt-4 sm:gap-3 md:grid-cols-2 xl:grid-cols-4">
-              <ActionTile title={t("moverDashboard.moveSize")} value={selectedLead.quoteRequest.bedrooms} meta={t("moverDashboard.homeSize")} />
-              <ActionTile title={t("moverDashboard.moveDate")} value={selectedLead.quoteRequest.moveDateLabel} meta={selectedLead.quoteRequest.dateFlexible ? t("moverDashboard.flexible") : t("moverDashboard.fixed")} />
-              <ActionTile title={t("moverDashboard.property")} value={selectedLead.quoteRequest.fromPropertyType} meta={t("moverDashboard.to", { value: selectedLead.quoteRequest.toPropertyType })} />
               <ActionTile
-                title={launchTrial.enabled || selectedLead.paymentStatus === "WAIVED" ? t("moverDashboard.leadAccess") : t("moverDashboard.leadPrice")}
-                value={selectedLead.paymentStatus === "WAIVED" || (launchTrial.enabled && canOpenLead(selectedLead, nowMs)) ? "$0" : formatCurrency(selectedLead.price)}
+                title={t("moverDashboard.moveSize")}
+                value={selectedLead.quoteRequest.bedrooms}
+                meta={t("moverDashboard.homeSize")}
+              />
+              <ActionTile
+                title={t("moverDashboard.moveDate")}
+                value={selectedLead.quoteRequest.moveDateLabel}
+                meta={
+                  selectedLead.quoteRequest.dateFlexible
+                    ? t("moverDashboard.flexible")
+                    : t("moverDashboard.fixed")
+                }
+              />
+              <ActionTile
+                title={t("moverDashboard.property")}
+                value={selectedLead.quoteRequest.fromPropertyType}
+                meta={t("moverDashboard.to", {
+                  value: selectedLead.quoteRequest.toPropertyType,
+                })}
+              />
+              <ActionTile
+                title={
+                  launchTrial.enabled || selectedLead.paymentStatus === "WAIVED"
+                    ? t("moverDashboard.leadAccess")
+                    : t("moverDashboard.leadPrice")
+                }
+                value={
+                  selectedLead.paymentStatus === "WAIVED" ||
+                  (launchTrial.enabled && canOpenLead(selectedLead, nowMs))
+                    ? "$0"
+                    : formatCurrency(selectedLead.price)
+                }
                 meta={
                   selectedLead.paymentStatus === "WAIVED"
-                     ? t("moverDashboard.standardPrice", { price: formatCurrency(selectedLead.price) })
+                    ? t("moverDashboard.standardPrice", {
+                        price: formatCurrency(selectedLead.price),
+                      })
                     : launchTrial.enabled && canOpenLead(selectedLead, nowMs)
-                       ? t("moverDashboard.standardPrice", { price: formatCurrency(selectedLead.price) })
+                      ? t("moverDashboard.standardPrice", {
+                          price: formatCurrency(selectedLead.price),
+                        })
                       : selectedLead.paymentStatus === "SUCCEEDED"
-                         ? t("moverDashboard.paid")
-                         : t("moverDashboard.invoiceLater")
+                        ? t("moverDashboard.paid")
+                        : t("moverDashboard.invoiceLater")
                 }
               />
             </div>
             <div className="mt-3 grid gap-2 sm:mt-4 sm:gap-3 md:grid-cols-3">
-              <StatusChip label={t("moverDashboard.coverage")} value={selectedLead.routeMatch ? t("moverDashboard.goodFit") : t("moverDashboard.manualReview")} good={selectedLead.routeMatch} />
-              <StatusChip label={t("moverDashboard.lastActivity")} value={selectedLead.lastAction ? selectedLead.lastAction.replaceAll("_", " ") : t("moverDashboard.noEventsYet")} good={false} />
-              {selectedLeadExpiry ? <ExpiryStatusChip state={selectedLeadExpiry} /> : null}
+              <StatusChip
+                label={t("moverDashboard.coverage")}
+                value={
+                  selectedLead.routeMatch
+                    ? t("moverDashboard.goodFit")
+                    : t("moverDashboard.manualReview")
+                }
+                good={selectedLead.routeMatch}
+              />
+              <StatusChip
+                label={t("moverDashboard.lastActivity")}
+                value={
+                  selectedLead.lastAction
+                    ? selectedLead.lastAction.replaceAll("_", " ")
+                    : t("moverDashboard.noEventsYet")
+                }
+                good={false}
+              />
+              {selectedLeadExpiry ? (
+                <ExpiryStatusChip state={selectedLeadExpiry} />
+              ) : null}
             </div>
             <div className="mt-4 flex flex-col gap-2 sm:mt-5 sm:gap-3 sm:flex-row">
               {isUnlockedStatus(selectedLead.status) && canAccessLeads ? (
-                <div className="flex min-h-[48px] flex-1 items-center justify-center rounded-2xl bg-emerald-50 px-4 text-sm font-semibold text-emerald-700 sm:min-h-[52px] sm:px-5">{t("moverDashboard.leadOpen")}</div>
+                <div className="flex min-h-[48px] flex-1 items-center justify-center rounded-2xl bg-emerald-50 px-4 text-sm font-semibold text-emerald-700 sm:min-h-[52px] sm:px-5">
+                  {t("moverDashboard.leadOpen")}
+                </div>
               ) : !canOpenLead(selectedLead, nowMs) ? (
                 <div className="flex min-h-[48px] flex-1 items-center justify-center rounded-2xl bg-rose-50 px-4 text-sm font-semibold text-rose-700 sm:min-h-[52px] sm:px-5">
-                  {selectedLeadExpiry?.tone === "expired" ? t("moverDashboard.leadExpired") : t("moverDashboard.leadUnavailable")}
+                  {selectedLeadExpiry?.tone === "expired"
+                    ? t("moverDashboard.leadExpired")
+                    : t("moverDashboard.leadUnavailable")}
                 </div>
               ) : !canAccessLeads ? (
                 <div className="flex-1 rounded-[20px] border border-amber-200 bg-amber-50 p-3 sm:rounded-[24px] sm:p-4">
-                   <p className="text-sm font-semibold text-amber-900">{t("moverDashboard.verificationBeforeOpening")}</p>
+                  <p className="text-sm font-semibold text-amber-900">
+                    {t("moverDashboard.verificationBeforeOpening")}
+                  </p>
                   <p className="mt-1 text-sm leading-6 text-amber-800">
-                     {t("moverDashboard.verificationReturn")}
+                    {t("moverDashboard.verificationReturn")}
                   </p>
                   <button
                     type="button"
                     onClick={() => onOpenDestination("security")}
                     className="mt-3 inline-flex min-h-[44px] items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:translate-y-[-1px]"
                   >
-                     {t("moverDashboard.completeVerification")}
+                    {t("moverDashboard.completeVerification")}
                     <ArrowRight className="h-4 w-4" />
                   </button>
                 </div>
               ) : (
                 <div className="flex-1">
-                  <button type="button" disabled={busyLeadId === selectedLead.id} onClick={() => void handleUnlockLead(selectedLead.id)} className="inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl bg-accentOrange px-4 text-sm font-semibold text-white transition hover:translate-y-[-1px] hover:bg-orange-500 disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-[52px] sm:px-5">
-                     {busyLeadId === selectedLead.id ? t("moverDashboard.openingLead") : launchTrial.enabled ? t("moverDashboard.openLeadFree") : t("moverDashboard.openLeadNow")}
+                  <button
+                    type="button"
+                    disabled={busyLeadId === selectedLead.id}
+                    onClick={() => void handleUnlockLead(selectedLead.id)}
+                    className="inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl bg-accentOrange px-4 text-sm font-semibold text-white transition hover:translate-y-[-1px] hover:bg-orange-500 disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-[52px] sm:px-5"
+                  >
+                    {busyLeadId === selectedLead.id
+                      ? t("moverDashboard.openingLead")
+                      : launchTrial.enabled
+                        ? t("moverDashboard.openLeadFree")
+                        : t("moverDashboard.openLeadNow")}
                     <ArrowRight className="h-4 w-4" />
                   </button>
                 </div>
               )}
-               <Link href="/mover/pricing" className="inline-flex min-h-[48px] items-center justify-center rounded-2xl border border-slate-300 px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 sm:min-h-[52px] sm:px-5">{t("moverDashboard.pricing")}</Link>
+              <Link
+                href="/mover/pricing"
+                className="inline-flex min-h-[48px] items-center justify-center rounded-2xl border border-slate-300 px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 sm:min-h-[52px] sm:px-5"
+              >
+                {t("moverDashboard.pricing")}
+              </Link>
             </div>
             {actionError ? (
               <div className="mt-4 rounded-[18px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
@@ -1315,40 +1929,113 @@ function LeadsPanel({
             {isUnlockedStatus(selectedLead.status) && canAccessLeads ? (
               <div className="mt-4 grid gap-3 sm:mt-5 sm:gap-4 xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
                 <div className="rounded-[20px] border border-emerald-200 bg-emerald-50 p-4 sm:rounded-[24px] sm:p-5">
-                   <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-700 sm:text-sm">{t("moverDashboard.customerDetails")}</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-700 sm:text-sm">
+                    {t("moverDashboard.customerDetails")}
+                  </p>
                   <div className="mt-3 space-y-3">
-                     <StatusChip label={t("moverDashboard.customer")} value={selectedLead.quoteRequest.name ?? t("moverDashboard.unavailable")} good />
-                     <StatusChip label={t("moverDashboard.phone")} value={selectedLead.quoteRequest.phone ?? t("moverDashboard.unavailable")} good />
-                     <StatusChip label={t("moverDashboard.email")} value={selectedLead.quoteRequest.email ?? t("moverDashboard.unavailable")} good />
+                    <StatusChip
+                      label={t("moverDashboard.customer")}
+                      value={
+                        selectedLead.quoteRequest.name ??
+                        t("moverDashboard.unavailable")
+                      }
+                      good
+                    />
+                    <StatusChip
+                      label={t("moverDashboard.phone")}
+                      value={
+                        selectedLead.quoteRequest.phone ??
+                        t("moverDashboard.unavailable")
+                      }
+                      good
+                    />
+                    <StatusChip
+                      label={t("moverDashboard.email")}
+                      value={
+                        selectedLead.quoteRequest.email ??
+                        t("moverDashboard.unavailable")
+                      }
+                      good
+                    />
                   </div>
                 </div>
 
                 <div className="rounded-[20px] border border-slate-200 bg-slate-50 p-4 sm:rounded-[24px] sm:p-5">
-                   <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700 sm:text-sm">{t("moverDashboard.moveDetails")}</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700 sm:text-sm">
+                    {t("moverDashboard.moveDetails")}
+                  </p>
                   <div className="mt-3 grid gap-3 md:grid-cols-2">
-                     <StatusChip label={t("moverDashboard.moving")} value={selectedLead.quoteRequest.movingWhat ?? t("moverDashboard.generalHouseholdMove")} />
-                     <StatusChip label={t("moverDashboard.openedOn")} value={selectedLead.purchasedAt ? new Intl.DateTimeFormat("en-NZ", { dateStyle: "medium" }).format(new Date(selectedLead.purchasedAt)) : t("moverDashboard.availableNow")} />
-                     <StatusChip label={t("moverDashboard.pickup")} value={formatLeadAddress(selectedLead.quoteRequest.fromAddress, selectedLead.quoteRequest.fromCity, selectedLead.quoteRequest.fromRegion, selectedLead.quoteRequest.fromPostcode)} />
-                     <StatusChip label={t("moverDashboard.dropoff")} value={formatLeadAddress(selectedLead.quoteRequest.toAddress, selectedLead.quoteRequest.toCity, selectedLead.quoteRequest.toRegion, selectedLead.quoteRequest.toPostcode)} />
+                    <StatusChip
+                      label={t("moverDashboard.moving")}
+                      value={
+                        selectedLead.quoteRequest.movingWhat ??
+                        t("moverDashboard.generalHouseholdMove")
+                      }
+                    />
+                    <StatusChip
+                      label={t("moverDashboard.openedOn")}
+                      value={
+                        selectedLead.purchasedAt
+                          ? new Intl.DateTimeFormat("en-NZ", {
+                              dateStyle: "medium",
+                            }).format(new Date(selectedLead.purchasedAt))
+                          : t("moverDashboard.availableNow")
+                      }
+                    />
+                    <StatusChip
+                      label={t("moverDashboard.pickup")}
+                      value={formatLeadAddress(
+                        selectedLead.quoteRequest.fromAddress,
+                        selectedLead.quoteRequest.fromCity,
+                        selectedLead.quoteRequest.fromRegion,
+                        selectedLead.quoteRequest.fromPostcode,
+                      )}
+                    />
+                    <StatusChip
+                      label={t("moverDashboard.dropoff")}
+                      value={formatLeadAddress(
+                        selectedLead.quoteRequest.toAddress,
+                        selectedLead.quoteRequest.toCity,
+                        selectedLead.quoteRequest.toRegion,
+                        selectedLead.quoteRequest.toPostcode,
+                      )}
+                    />
                   </div>
                 </div>
               </div>
             ) : null}
             {isUnlockedStatus(selectedLead.status) && canAccessLeads ? (
               <div className="mt-4 rounded-[20px] border border-slate-200 bg-slate-50 p-4 sm:mt-5 sm:rounded-[24px] sm:p-5">
-                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700 sm:text-sm">{t("moverDashboard.moveProgress")}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700 sm:text-sm">
+                  {t("moverDashboard.moveProgress")}
+                </p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {[
-                     { id: "CONTACTED", label: t("moverDashboard.markContacted") },
-                     { id: "WON", label: t("moverDashboard.markWonReview") },
-                     { id: "LOST", label: t("moverDashboard.markLost") },
-                     { id: "ARCHIVED", label: t("moverDashboard.archive") },
+                    {
+                      id: "CONTACTED",
+                      label: t("moverDashboard.markContacted"),
+                    },
+                    { id: "WON", label: t("moverDashboard.markWonReview") },
+                    { id: "LOST", label: t("moverDashboard.markLost") },
+                    { id: "ARCHIVED", label: t("moverDashboard.archive") },
                   ].map((action) => (
                     <button
                       key={action.id}
                       type="button"
-                      disabled={busyLeadId === selectedLead.id || selectedLead.status === action.id}
-                      onClick={() => onUpdateLeadStatus(selectedLead.id, action.id as "CONTACTED" | "WON" | "LOST" | "ARCHIVED")}
+                      disabled={
+                        busyLeadId === selectedLead.id ||
+                        selectedLead.status === action.id
+                      }
+                      onClick={() =>
+                        onUpdateLeadStatus(
+                          selectedLead.id,
+                          action.id as
+                            | "CONTACTED"
+                            | "WON"
+                            | "LOST"
+                            | "ARCHIVED",
+                        )
+                      }
                       className={cx(
                         "rounded-full px-4 py-2 text-sm font-semibold transition",
                         selectedLead.status === action.id
@@ -1357,14 +2044,19 @@ function LeadsPanel({
                         busyLeadId === selectedLead.id ? "opacity-60" : "",
                       )}
                     >
-                      {busyLeadId === selectedLead.id && selectedLead.status !== action.id ? t("moverDashboard.updating") : action.label}
+                      {busyLeadId === selectedLead.id &&
+                      selectedLead.status !== action.id
+                        ? t("moverDashboard.updating")
+                        : action.label}
                     </button>
                   ))}
                 </div>
               </div>
             ) : null}
           </>
-        ) : <EmptyCard title={t("moverDashboard.pickLead")} />}
+        ) : (
+          <EmptyCard title={t("moverDashboard.pickLead")} />
+        )}
       </div>
     </div>
   );
@@ -1383,7 +2075,15 @@ function ProfilePanel({
   onFocusHandled?: () => void;
   onOpenSecurity?: () => void;
 }) {
-  return <MoverProfileSettings profile={mover} onProfileChange={onProfileChange} focusSection={focusSection} onFocusHandled={onFocusHandled} onOpenSecurity={onOpenSecurity} />;
+  return (
+    <MoverProfileSettings
+      profile={mover}
+      onProfileChange={onProfileChange}
+      focusSection={focusSection}
+      onFocusHandled={onFocusHandled}
+      onOpenSecurity={onOpenSecurity}
+    />
+  );
 }
 
 function PaymentsPanel({ billingState }: { billingState?: string }) {
@@ -1401,7 +2101,9 @@ function PaymentsPanel({ billingState }: { billingState?: string }) {
 
     (async () => {
       const response = await fetch("/api/mover/billing", { cache: "no-store" });
-      const data = (await response.json().catch(() => null)) as BillingResponse & { error?: string } | null;
+      const data = (await response.json().catch(() => null)) as
+        | (BillingResponse & { error?: string })
+        | null;
 
       if (!active) return;
 
@@ -1426,10 +2128,16 @@ function PaymentsPanel({ billingState }: { billingState?: string }) {
     setActionError(null);
 
     try {
-      const response = await fetch("/api/mover/billing/payment-method-session", {
-        method: "POST",
-      });
-      const data = (await response.json().catch(() => null)) as { error?: string; url?: string } | null;
+      const response = await fetch(
+        "/api/mover/billing/payment-method-session",
+        {
+          method: "POST",
+        },
+      );
+      const data = (await response.json().catch(() => null)) as {
+        error?: string;
+        url?: string;
+      } | null;
       if (!response.ok || !data?.url) {
         setActionError(data?.error ?? t("moverDashboard.billingSetupError"));
         return;
@@ -1457,31 +2165,56 @@ function PaymentsPanel({ billingState }: { billingState?: string }) {
       <div className="rounded-[24px] border border-rose-200 bg-white p-5 shadow-sm sm:rounded-[30px] sm:p-6">
         <div className="flex items-center gap-3 text-rose-700">
           <AlertTriangle className="h-5 w-5" />
-          <p className="font-semibold">{error ?? t("moverDashboard.billingLoadError")}</p>
+          <p className="font-semibold">
+            {error ?? t("moverDashboard.billingLoadError")}
+          </p>
         </div>
       </div>
     );
   }
 
-  const statusMessage =
-    billing.launchTrial.enabled
-       ? t("moverDashboard.trialActiveStatus")
-      : billing.paymentHealth === "active"
-       ? t("moverDashboard.billingActiveStatus")
+  const statusMessage = billing.launchTrial.enabled
+    ? t("moverDashboard.trialActiveStatus")
+    : billing.paymentHealth === "active"
+      ? t("moverDashboard.billingActiveStatus")
       : billing.paymentHealth === "action_required"
-         ? t("moverDashboard.billingActionRequired")
-      : billing.paymentHealth === "payment_failed"
-         ? t("moverDashboard.billingPaymentFailed")
-        : billing.paymentHealth === "no_payment_method"
-           ? t("moverDashboard.billingNoMethod")
-           : t("moverDashboard.billingUnavailable");
+        ? t("moverDashboard.billingActionRequired")
+        : billing.paymentHealth === "payment_failed"
+          ? t("moverDashboard.billingPaymentFailed")
+          : billing.paymentHealth === "no_payment_method"
+            ? t("moverDashboard.billingNoMethod")
+            : t("moverDashboard.billingUnavailable");
 
   return (
     <div className="space-y-3 sm:space-y-4">
-      {(billingState === "updated" || billing.paymentHealth === "payment_failed" || billing.paymentHealth === "action_required" || actionError) ? (
-        <div className={cx("rounded-[22px] border p-3 shadow-sm sm:rounded-[28px] sm:p-4", actionError ? "border-rose-200 bg-rose-50" : billing.paymentHealth === "active" ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50")}>
-          <p className={cx("text-sm font-semibold", actionError ? "text-rose-700" : billing.paymentHealth === "active" ? "text-emerald-700" : "text-amber-800")}>
-             {actionError ?? (billingState === "updated" ? t("moverDashboard.paymentMethodUpdated") : statusMessage)}
+      {billingState === "updated" ||
+      billing.paymentHealth === "payment_failed" ||
+      billing.paymentHealth === "action_required" ||
+      actionError ? (
+        <div
+          className={cx(
+            "rounded-[22px] border p-3 shadow-sm sm:rounded-[28px] sm:p-4",
+            actionError
+              ? "border-rose-200 bg-rose-50"
+              : billing.paymentHealth === "active"
+                ? "border-emerald-200 bg-emerald-50"
+                : "border-amber-200 bg-amber-50",
+          )}
+        >
+          <p
+            className={cx(
+              "text-sm font-semibold",
+              actionError
+                ? "text-rose-700"
+                : billing.paymentHealth === "active"
+                  ? "text-emerald-700"
+                  : "text-amber-800",
+            )}
+          >
+            {actionError ??
+              (billingState === "updated"
+                ? t("moverDashboard.paymentMethodUpdated")
+                : statusMessage)}
           </p>
         </div>
       ) : null}
@@ -1490,8 +2223,12 @@ function PaymentsPanel({ billingState }: { billingState?: string }) {
         <section className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm sm:rounded-[30px] sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700 sm:text-sm">{t("moverDashboard.billingMethod")}</p>
-              <h2 className="mt-1 text-xl font-black tracking-[-0.05em] text-slate-950 sm:text-2xl">{t("moverDashboard.cardOnFile")}</h2>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700 sm:text-sm">
+                {t("moverDashboard.billingMethod")}
+              </p>
+              <h2 className="mt-1 text-xl font-black tracking-[-0.05em] text-slate-950 sm:text-2xl">
+                {t("moverDashboard.cardOnFile")}
+              </h2>
             </div>
             <button
               type="button"
@@ -1499,23 +2236,43 @@ function PaymentsPanel({ billingState }: { billingState?: string }) {
               disabled={paymentMethodBusy || !billing.stripeEnabled}
               className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:translate-y-[-1px] disabled:opacity-60"
             >
-              {paymentMethodBusy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <WalletCards className="h-4 w-4" />}
-              {!billing.paymentMethod ? t("moverDashboard.addCard") : t("moverDashboard.updateCard")}
+              {paymentMethodBusy ? (
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+              ) : (
+                <WalletCards className="h-4 w-4" />
+              )}
+              {!billing.paymentMethod
+                ? t("moverDashboard.addCard")
+                : t("moverDashboard.updateCard")}
             </button>
           </div>
 
           <div className="mt-3 rounded-[20px] border border-slate-200 bg-slate-50 p-3 sm:mt-4 sm:rounded-[24px] sm:p-4">
             {billing.paymentMethod ? (
               <div className="grid gap-2 sm:grid-cols-3 sm:gap-3">
-                <StatusChip label={t("moverDashboard.brand")} value={billing.paymentMethod.brand.toUpperCase()} good />
-                <StatusChip label={t("moverDashboard.card")} value={`**** ${billing.paymentMethod.last4}`} good />
-                <StatusChip label={t("moverDashboard.expires")} value={`${billing.paymentMethod.expMonth}/${billing.paymentMethod.expYear}`} good />
+                <StatusChip
+                  label={t("moverDashboard.brand")}
+                  value={billing.paymentMethod.brand.toUpperCase()}
+                  good
+                />
+                <StatusChip
+                  label={t("moverDashboard.card")}
+                  value={`**** ${billing.paymentMethod.last4}`}
+                  good
+                />
+                <StatusChip
+                  label={t("moverDashboard.expires")}
+                  value={`${billing.paymentMethod.expMonth}/${billing.paymentMethod.expYear}`}
+                  good
+                />
               </div>
             ) : (
               <div className="flex items-start gap-3">
                 <AlertTriangle className="mt-0.5 h-5 w-5 text-amber-600" />
                 <div>
-                  <p className="font-semibold text-slate-900">{t("moverDashboard.noCard")}</p>
+                  <p className="font-semibold text-slate-900">
+                    {t("moverDashboard.noCard")}
+                  </p>
                   <p className="mt-1 text-sm text-slate-600">
                     {billing.launchTrial.enabled
                       ? t("moverDashboard.trialNoCard")
@@ -1528,18 +2285,40 @@ function PaymentsPanel({ billingState }: { billingState?: string }) {
         </section>
 
         <section className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm sm:rounded-[30px] sm:p-5">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700 sm:text-sm">{billing.launchTrial.enabled ? t("moverDashboard.launchTrialStatus") : t("moverDashboard.invoiceStatus")}</p>
-          <div className={cx("mt-3 rounded-[20px] border p-3 sm:mt-4 sm:rounded-[24px] sm:p-4", billing.paymentHealth === "active" ? "border-emerald-200 bg-emerald-50" : billing.paymentHealth === "billing_unavailable" || billing.paymentHealth === "no_payment_method" ? "border-slate-200 bg-slate-50" : "border-amber-200 bg-amber-50")}>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700 sm:text-sm">
+            {billing.launchTrial.enabled
+              ? t("moverDashboard.launchTrialStatus")
+              : t("moverDashboard.invoiceStatus")}
+          </p>
+          <div
+            className={cx(
+              "mt-3 rounded-[20px] border p-3 sm:mt-4 sm:rounded-[24px] sm:p-4",
+              billing.paymentHealth === "active"
+                ? "border-emerald-200 bg-emerald-50"
+                : billing.paymentHealth === "billing_unavailable" ||
+                    billing.paymentHealth === "no_payment_method"
+                  ? "border-slate-200 bg-slate-50"
+                  : "border-amber-200 bg-amber-50",
+            )}
+          >
             <p className="font-semibold text-slate-900">{statusMessage}</p>
-            {billing.paymentHealth !== "active" && billing.paymentHealth !== "billing_unavailable" && billing.paymentHealth !== "no_payment_method" ? (
+            {billing.paymentHealth !== "active" &&
+            billing.paymentHealth !== "billing_unavailable" &&
+            billing.paymentHealth !== "no_payment_method" ? (
               <button
                 type="button"
                 onClick={openPaymentMethodFlow}
                 disabled={paymentMethodBusy}
                 className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:translate-y-[-1px] disabled:opacity-60"
               >
-                {paymentMethodBusy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
-                {billing.paymentMethod ? t("moverDashboard.replaceCard") : t("moverDashboard.addCardArticle")}
+                {paymentMethodBusy ? (
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                ) : (
+                  <CreditCard className="h-4 w-4" />
+                )}
+                {billing.paymentMethod
+                  ? t("moverDashboard.replaceCard")
+                  : t("moverDashboard.addCardArticle")}
               </button>
             ) : null}
           </div>
@@ -1549,62 +2328,122 @@ function PaymentsPanel({ billingState }: { billingState?: string }) {
       <section className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm sm:rounded-[30px] sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700 sm:text-sm">{t("moverDashboard.chargeHistory")}</p>
-            <h2 className="mt-1 text-xl font-black tracking-[-0.05em] text-slate-950 sm:text-2xl">{t("moverDashboard.leadCharges")}</h2>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700 sm:text-sm">
+              {t("moverDashboard.chargeHistory")}
+            </p>
+            <h2 className="mt-1 text-xl font-black tracking-[-0.05em] text-slate-950 sm:text-2xl">
+              {t("moverDashboard.leadCharges")}
+            </h2>
           </div>
         </div>
 
         {billing.transactions.length ? (
           <>
-          <div className="mt-3 space-y-2 md:hidden">
-            {billing.transactions.map((transaction) => (
-              <div key={transaction.id} className="rounded-[20px] border border-slate-200 bg-slate-50 p-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900">{transaction.leadReference}</p>
-                    <p className="mt-1 text-xs text-slate-500">{new Intl.DateTimeFormat("en-NZ", { dateStyle: "medium" }).format(new Date(transaction.date))}</p>
+            <div className="mt-3 space-y-2 md:hidden">
+              {billing.transactions.map((transaction) => (
+                <div
+                  key={transaction.id}
+                  className="rounded-[20px] border border-slate-200 bg-slate-50 p-3"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">
+                        {transaction.leadReference}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {new Intl.DateTimeFormat("en-NZ", {
+                          dateStyle: "medium",
+                        }).format(new Date(transaction.date))}
+                      </p>
+                    </div>
+                    <span
+                      className={cx(
+                        "rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em]",
+                        transaction.status === "paid" ||
+                          transaction.status === "trial"
+                          ? "bg-emerald-100 text-emerald-700"
+                          : transaction.status === "issue"
+                            ? "bg-rose-100 text-rose-700"
+                            : transaction.status === "refunded"
+                              ? "bg-slate-200 text-slate-700"
+                              : "bg-amber-100 text-amber-800",
+                      )}
+                    >
+                      {t(`moverDashboard.${transaction.status}`, {
+                        status: transaction.status,
+                      })}
+                    </span>
                   </div>
-                  <span className={cx("rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em]", transaction.status === "paid" || transaction.status === "trial" ? "bg-emerald-100 text-emerald-700" : transaction.status === "issue" ? "bg-rose-100 text-rose-700" : transaction.status === "refunded" ? "bg-slate-200 text-slate-700" : "bg-amber-100 text-amber-800")}>
-                    {t(`moverDashboard.${transaction.status}`, { status: transaction.status })}
-                  </span>
+                  <p className="mt-3 text-lg font-black tracking-[-0.04em] text-slate-950">
+                    {formatCurrency(transaction.amount)}
+                  </p>
+                  <p className="mt-1 text-sm text-slate-600">
+                    {transaction.description}
+                  </p>
                 </div>
-                <p className="mt-3 text-lg font-black tracking-[-0.04em] text-slate-950">{formatCurrency(transaction.amount)}</p>
-                <p className="mt-1 text-sm text-slate-600">{transaction.description}</p>
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 hidden overflow-x-auto md:block">
-            <table className="min-w-full text-left text-sm">
-              <thead className="text-xs uppercase tracking-[0.16em] text-slate-500">
-                <tr>
-                  <th className="pb-3 pr-4">{t("moverDashboard.date")}</th>
-                  <th className="pb-3 pr-4">{t("moverDashboard.amount")}</th>
-                  <th className="pb-3 pr-4">{t("moverDashboard.status")}</th>
-                  <th className="pb-3 pr-4">{t("moverDashboard.lead")}</th>
-                  <th className="pb-3">{t("moverDashboard.description")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {billing.transactions.map((transaction) => (
-                  <tr key={transaction.id} className="border-t border-slate-200">
-                    <td className="py-3 pr-4 text-slate-700">{new Intl.DateTimeFormat("en-NZ", { dateStyle: "medium" }).format(new Date(transaction.date))}</td>
-                    <td className="py-3 pr-4 font-semibold text-slate-900">{formatCurrency(transaction.amount)}</td>
-                    <td className="py-3 pr-4">
-                      <span className={cx("rounded-full px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.16em]", transaction.status === "paid" || transaction.status === "trial" ? "bg-emerald-100 text-emerald-700" : transaction.status === "issue" ? "bg-rose-100 text-rose-700" : transaction.status === "refunded" ? "bg-slate-200 text-slate-700" : "bg-amber-100 text-amber-800")}>
-                        {t(`moverDashboard.${transaction.status}`, { status: transaction.status })}
-                      </span>
-                    </td>
-                    <td className="py-3 pr-4 text-slate-700">{transaction.leadReference}</td>
-                    <td className="py-3 text-slate-700">{transaction.description}</td>
+              ))}
+            </div>
+            <div className="mt-4 hidden overflow-x-auto md:block">
+              <table className="min-w-full text-left text-sm">
+                <thead className="text-xs uppercase tracking-[0.16em] text-slate-500">
+                  <tr>
+                    <th className="pb-3 pr-4">{t("moverDashboard.date")}</th>
+                    <th className="pb-3 pr-4">{t("moverDashboard.amount")}</th>
+                    <th className="pb-3 pr-4">{t("moverDashboard.status")}</th>
+                    <th className="pb-3 pr-4">{t("moverDashboard.lead")}</th>
+                    <th className="pb-3">{t("moverDashboard.description")}</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {billing.transactions.map((transaction) => (
+                    <tr
+                      key={transaction.id}
+                      className="border-t border-slate-200"
+                    >
+                      <td className="py-3 pr-4 text-slate-700">
+                        {new Intl.DateTimeFormat("en-NZ", {
+                          dateStyle: "medium",
+                        }).format(new Date(transaction.date))}
+                      </td>
+                      <td className="py-3 pr-4 font-semibold text-slate-900">
+                        {formatCurrency(transaction.amount)}
+                      </td>
+                      <td className="py-3 pr-4">
+                        <span
+                          className={cx(
+                            "rounded-full px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.16em]",
+                            transaction.status === "paid" ||
+                              transaction.status === "trial"
+                              ? "bg-emerald-100 text-emerald-700"
+                              : transaction.status === "issue"
+                                ? "bg-rose-100 text-rose-700"
+                                : transaction.status === "refunded"
+                                  ? "bg-slate-200 text-slate-700"
+                                  : "bg-amber-100 text-amber-800",
+                          )}
+                        >
+                          {t(`moverDashboard.${transaction.status}`, {
+                            status: transaction.status,
+                          })}
+                        </span>
+                      </td>
+                      <td className="py-3 pr-4 text-slate-700">
+                        {transaction.leadReference}
+                      </td>
+                      <td className="py-3 text-slate-700">
+                        {transaction.description}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </>
         ) : (
           <div className="mt-3 rounded-[20px] border border-dashed border-slate-300 bg-slate-50 px-4 py-7 text-center sm:mt-4 sm:rounded-[24px] sm:py-8">
-            <p className="font-semibold text-slate-900">{t("moverDashboard.noCharges")}</p>
+            <p className="font-semibold text-slate-900">
+              {t("moverDashboard.noCharges")}
+            </p>
             <p className="mt-2 text-sm text-slate-500">
               {billing.launchTrial.enabled
                 ? t("moverDashboard.trialChargesEmpty")
@@ -1619,22 +2458,42 @@ function PaymentsPanel({ billingState }: { billingState?: string }) {
           <div className="flex items-center gap-2">
             <ReceiptText className="h-5 w-5 text-slate-700" />
             <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700 sm:text-sm">{t("moverDashboard.invoicesReceipts")}</p>
-                <h2 className="mt-1 text-xl font-black tracking-[-0.05em] text-slate-950 sm:text-2xl">{t("moverDashboard.invoicesReceipts")}</h2>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700 sm:text-sm">
+                {t("moverDashboard.invoicesReceipts")}
+              </p>
+              <h2 className="mt-1 text-xl font-black tracking-[-0.05em] text-slate-950 sm:text-2xl">
+                {t("moverDashboard.invoicesReceipts")}
+              </h2>
             </div>
           </div>
           <div className="mt-3 space-y-2 sm:mt-4 sm:space-y-3">
             {billing.receipts.length ? (
               billing.receipts.map((receipt) => (
-                <div key={receipt.paymentId} className="flex flex-col gap-3 rounded-[20px] border border-slate-200 bg-slate-50 p-3 sm:rounded-[24px] sm:p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div
+                  key={receipt.paymentId}
+                  className="flex flex-col gap-3 rounded-[20px] border border-slate-200 bg-slate-50 p-3 sm:rounded-[24px] sm:p-4 sm:flex-row sm:items-center sm:justify-between"
+                >
                   <div>
-                    <p className="font-semibold text-slate-900">{receipt.number ?? t("moverDashboard.stripeReceipt")}</p>
+                    <p className="font-semibold text-slate-900">
+                      {receipt.number ?? t("moverDashboard.stripeReceipt")}
+                    </p>
                     <p className="mt-1 text-sm text-slate-500">
-                      {new Intl.DateTimeFormat("en-NZ", { dateStyle: "medium" }).format(new Date(receipt.date))} | {formatCurrency(receipt.totalAmount)} | GST {receipt.gstAmount === null ? t("moverDashboard.notItemised") : formatCurrency(receipt.gstAmount)}
+                      {new Intl.DateTimeFormat("en-NZ", {
+                        dateStyle: "medium",
+                      }).format(new Date(receipt.date))}{" "}
+                      | {formatCurrency(receipt.totalAmount)} | GST{" "}
+                      {receipt.gstAmount === null
+                        ? t("moverDashboard.notItemised")
+                        : formatCurrency(receipt.gstAmount)}
                     </p>
                   </div>
                   {receipt.downloadUrl ? (
-                    <a href={receipt.downloadUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-2xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-white">
+                    <a
+                      href={receipt.downloadUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-2 rounded-2xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-white"
+                    >
                       {t("moverDashboard.viewReceipt")}
                     </a>
                   ) : null}
@@ -1642,8 +2501,12 @@ function PaymentsPanel({ billingState }: { billingState?: string }) {
               ))
             ) : (
               <div className="rounded-[20px] border border-dashed border-slate-300 bg-slate-50 px-4 py-7 text-center sm:rounded-[24px] sm:py-8">
-                <p className="font-semibold text-slate-900">{t("moverDashboard.noDocuments")}</p>
-                <p className="mt-2 text-sm text-slate-500">{t("moverDashboard.documentsEmpty")}</p>
+                <p className="font-semibold text-slate-900">
+                  {t("moverDashboard.noDocuments")}
+                </p>
+                <p className="mt-2 text-sm text-slate-500">
+                  {t("moverDashboard.documentsEmpty")}
+                </p>
               </div>
             )}
           </div>
@@ -1651,20 +2514,52 @@ function PaymentsPanel({ billingState }: { billingState?: string }) {
 
         <div className="space-y-3 sm:space-y-4">
           <section className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm sm:rounded-[30px] sm:p-5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700 sm:text-sm">{t("moverDashboard.pricingSummary")}</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700 sm:text-sm">
+              {t("moverDashboard.pricingSummary")}
+            </p>
             <div className="mt-3 grid gap-2 sm:mt-4 sm:gap-3">
-              <StatusChip label={billing.launchTrial.enabled ? t("moverDashboard.currentLeadAccess") : t("moverDashboard.baseLeadPrice")} value={billing.launchTrial.enabled ? "$0" : formatCurrency(billing.pricingSummary.baseLeadPrice)} good />
-              {billing.launchTrial.enabled ? <StatusChip label={t("moverDashboard.standardBaseLeadPrice")} value={formatCurrency(billing.pricingSummary.baseLeadPrice)} /> : null}
-              <StatusChip label={t("moverDashboard.pricingFactors")} value={billing.pricingSummary.factors.join(", ")} />
-              <StatusChip label={t("moverDashboard.billingNote")} value={billing.pricingSummary.note} good />
+              <StatusChip
+                label={
+                  billing.launchTrial.enabled
+                    ? t("moverDashboard.currentLeadAccess")
+                    : t("moverDashboard.baseLeadPrice")
+                }
+                value={
+                  billing.launchTrial.enabled
+                    ? "$0"
+                    : formatCurrency(billing.pricingSummary.baseLeadPrice)
+                }
+                good
+              />
+              {billing.launchTrial.enabled ? (
+                <StatusChip
+                  label={t("moverDashboard.standardBaseLeadPrice")}
+                  value={formatCurrency(billing.pricingSummary.baseLeadPrice)}
+                />
+              ) : null}
+              <StatusChip
+                label={t("moverDashboard.pricingFactors")}
+                value={billing.pricingSummary.factors.join(", ")}
+              />
+              <StatusChip
+                label={t("moverDashboard.billingNote")}
+                value={billing.pricingSummary.note}
+                good
+              />
             </div>
           </section>
 
           <section className="rounded-[24px] border border-slate-200 bg-[linear-gradient(180deg,#081a2b,#102845)] p-4 text-white shadow-sm sm:rounded-[30px] sm:p-5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-200 sm:text-sm">{t("moverDashboard.howBillingWorks")}</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-200 sm:text-sm">
+              {t("moverDashboard.howBillingWorks")}
+            </p>
             <div className="mt-3 space-y-2 sm:mt-4 sm:space-y-3">
               {billing.howItWorks.map((step, index) => (
-                <FlowRow key={step} number={String(index + 1).padStart(2, "0")} title={step} />
+                <FlowRow
+                  key={step}
+                  number={String(index + 1).padStart(2, "0")}
+                  title={step}
+                />
               ))}
             </div>
           </section>
@@ -1673,16 +2568,26 @@ function PaymentsPanel({ billingState }: { billingState?: string }) {
             <div className="flex items-center gap-2">
               <CircleHelp className="h-5 w-5 text-slate-700" />
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700 sm:text-sm">{t("moverDashboard.billingHelp")}</p>
-                <h2 className="mt-1 text-lg font-black tracking-[-0.04em] text-slate-950 sm:text-xl">{t("moverDashboard.needHelp")}</h2>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700 sm:text-sm">
+                  {t("moverDashboard.billingHelp")}
+                </p>
+                <h2 className="mt-1 text-lg font-black tracking-[-0.04em] text-slate-950 sm:text-xl">
+                  {t("moverDashboard.needHelp")}
+                </h2>
               </div>
             </div>
             <div className="mt-3 space-y-2 sm:mt-4">
-              <a href={`mailto:${billing.support.email}`} className="flex items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+              <a
+                href={`mailto:${billing.support.email}`}
+                className="flex items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
                 {t("moverDashboard.emailBillingSupport")}
                 <ArrowRight className="h-4 w-4" />
               </a>
-              <Link href={billing.support.billingFaqUrl} className="flex items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+              <Link
+                href={billing.support.billingFaqUrl}
+                className="flex items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
                 {t("moverDashboard.billingFaq")}
                 <ArrowRight className="h-4 w-4" />
               </Link>
@@ -1695,23 +2600,122 @@ function PaymentsPanel({ billingState }: { billingState?: string }) {
 }
 
 function SidebarStat({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-2xl bg-white/[0.06] px-3 py-2.5 sm:px-4 sm:py-3"><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-100 sm:text-[11px]">{label}</p><p className="mt-1 text-sm font-black text-white sm:mt-2 sm:text-lg">{value}</p></div>;
+  return (
+    <div className="rounded-2xl bg-white/[0.06] px-3 py-2.5 sm:px-4 sm:py-3">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-100 sm:text-[11px]">
+        {label}
+      </p>
+      <p className="mt-1 text-sm font-black text-white sm:mt-2 sm:text-lg">
+        {value}
+      </p>
+    </div>
+  );
 }
 
-function TopCard({ icon: Icon, label, value, meta }: { icon: typeof BellRing; label: string; value: string; meta: string }) {
-  return <div className="rounded-[22px] border border-slate-200 bg-white p-3 shadow-sm sm:rounded-[28px] sm:p-4"><div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500 sm:text-xs">{label}</p><p className="mt-2 text-xl font-black tracking-[-0.05em] text-slate-950 sm:mt-3 sm:text-3xl">{value}</p></div><div className="rounded-xl bg-slate-100 p-2.5 text-slate-700 sm:rounded-2xl sm:p-3"><Icon className="h-4 w-4" /></div></div><p className="mt-1 text-xs text-slate-500 sm:text-sm">{meta}</p></div>;
+function TopCard({
+  icon: Icon,
+  label,
+  value,
+  meta,
+}: {
+  icon: typeof BellRing;
+  label: string;
+  value: string;
+  meta: string;
+}) {
+  return (
+    <div className="rounded-[22px] border border-slate-200 bg-white p-3 shadow-sm sm:rounded-[28px] sm:p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500 sm:text-xs">
+            {label}
+          </p>
+          <p className="mt-2 text-xl font-black tracking-[-0.05em] text-slate-950 sm:mt-3 sm:text-3xl">
+            {value}
+          </p>
+        </div>
+        <div className="rounded-xl bg-slate-100 p-2.5 text-slate-700 sm:rounded-2xl sm:p-3">
+          <Icon className="h-4 w-4" />
+        </div>
+      </div>
+      <p className="mt-1 text-xs text-slate-500 sm:text-sm">{meta}</p>
+    </div>
+  );
 }
 
-function ActionTile({ title, value, meta }: { title: string; value: string; meta: string }) {
-  return <div className="rounded-[20px] border border-slate-200 bg-slate-50 p-3 sm:rounded-[24px] sm:p-4"><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500 sm:text-xs">{title}</p><p className="mt-1.5 break-words text-base font-black tracking-[-0.04em] text-slate-950 sm:mt-2 sm:text-lg">{value}</p><p className="mt-1 text-xs text-slate-500 sm:text-sm">{meta}</p></div>;
+function ActionTile({
+  title,
+  value,
+  meta,
+}: {
+  title: string;
+  value: string;
+  meta: string;
+}) {
+  return (
+    <div className="rounded-[20px] border border-slate-200 bg-slate-50 p-3 sm:rounded-[24px] sm:p-4">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500 sm:text-xs">
+        {title}
+      </p>
+      <p className="mt-1.5 break-words text-base font-black tracking-[-0.04em] text-slate-950 sm:mt-2 sm:text-lg">
+        {value}
+      </p>
+      <p className="mt-1 text-xs text-slate-500 sm:text-sm">{meta}</p>
+    </div>
+  );
 }
 
-function CompactCard({ icon: Icon, title, value, meta }: { icon: typeof MapPinned; title: string; value: string; meta: string }) {
-  return <div className="rounded-[22px] border border-slate-200 bg-white p-4 shadow-sm sm:rounded-[28px] sm:p-5"><div className="inline-flex rounded-xl bg-sky-100 p-2.5 text-sky-700 sm:rounded-2xl sm:p-3"><Icon className="h-4 w-4 sm:h-5 sm:w-5" /></div><p className="mt-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500 sm:mt-4 sm:text-xs">{title}</p><p className="mt-1.5 break-words text-xl font-black tracking-[-0.05em] text-slate-950 sm:mt-2 sm:text-2xl">{value}</p><p className="mt-1 text-xs text-slate-500 sm:text-sm">{meta}</p></div>;
+function CompactCard({
+  icon: Icon,
+  title,
+  value,
+  meta,
+}: {
+  icon: typeof MapPinned;
+  title: string;
+  value: string;
+  meta: string;
+}) {
+  return (
+    <div className="rounded-[22px] border border-slate-200 bg-white p-4 shadow-sm sm:rounded-[28px] sm:p-5">
+      <div className="inline-flex rounded-xl bg-sky-100 p-2.5 text-sky-700 sm:rounded-2xl sm:p-3">
+        <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
+      </div>
+      <p className="mt-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500 sm:mt-4 sm:text-xs">
+        {title}
+      </p>
+      <p className="mt-1.5 break-words text-xl font-black tracking-[-0.05em] text-slate-950 sm:mt-2 sm:text-2xl">
+        {value}
+      </p>
+      <p className="mt-1 text-xs text-slate-500 sm:text-sm">{meta}</p>
+    </div>
+  );
 }
 
-function StatusChip({ label, value, good = false }: { label: string; value: string; good?: boolean }) {
-  return <div className={cx("rounded-[20px] border p-3 sm:rounded-[24px] sm:p-4", good ? "border-emerald-200 bg-emerald-50" : "border-slate-200 bg-white")}><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500 sm:text-xs">{label}</p><p className="mt-1.5 break-words text-sm font-semibold text-slate-900 sm:mt-2">{value}</p></div>;
+function StatusChip({
+  label,
+  value,
+  good = false,
+}: {
+  label: string;
+  value: string;
+  good?: boolean;
+}) {
+  return (
+    <div
+      className={cx(
+        "rounded-[20px] border p-3 sm:rounded-[24px] sm:p-4",
+        good ? "border-emerald-200 bg-emerald-50" : "border-slate-200 bg-white",
+      )}
+    >
+      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500 sm:text-xs">
+        {label}
+      </p>
+      <p className="mt-1.5 break-words text-sm font-semibold text-slate-900 sm:mt-2">
+        {value}
+      </p>
+    </div>
+  );
 }
 
 function ExpiryStatusChip({ state }: { state: LeadExpiryState }) {
@@ -1729,27 +2733,69 @@ function ExpiryStatusChip({ state }: { state: LeadExpiryState }) {
               : "border-slate-200 bg-white",
       )}
     >
-      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500 sm:text-xs">{t("moverDashboard.leadExpiry")}</p>
-      <p className="mt-1.5 break-words text-sm font-semibold text-slate-900 sm:mt-2">{t(state.labelKey, { count: state.hoursRemaining ?? 0 })}</p>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500 sm:text-xs">
+        {t("moverDashboard.leadExpiry")}
+      </p>
+      <p className="mt-1.5 break-words text-sm font-semibold text-slate-900 sm:mt-2">
+        {t(state.labelKey, { count: state.hoursRemaining ?? 0 })}
+      </p>
       <p className="mt-1 text-xs text-slate-500">{t(state.metaKey)}</p>
     </div>
   );
 }
 
-function JumpCard({ title, action, href, onClickLabel, onClick }: { title: string; action: string; href?: string; onClickLabel?: string; onClick?: () => void }) {
+function JumpCard({
+  title,
+  action,
+  href,
+  onClickLabel,
+  onClick,
+}: {
+  title: string;
+  action: string;
+  href?: string;
+  onClickLabel?: string;
+  onClick?: () => void;
+}) {
   return (
     <div className="rounded-[20px] border border-slate-200 bg-slate-50 p-3 sm:rounded-[24px] sm:p-4">
       <p className="font-semibold text-slate-900">{title}</p>
       <p className="mt-1 text-sm text-slate-500">{action}</p>
-      {href ? <Link href={href} className="mt-3 inline-flex rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white sm:mt-4">{onClickLabel ?? "Open"}</Link> : <button type="button" onClick={onClick} className="mt-3 inline-flex rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-white sm:mt-4">{onClickLabel ?? "Ready"}</button>}
+      {href ? (
+        <Link
+          href={href}
+          className="mt-3 inline-flex rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white sm:mt-4"
+        >
+          {onClickLabel ?? "Open"}
+        </Link>
+      ) : (
+        <button
+          type="button"
+          onClick={onClick}
+          className="mt-3 inline-flex rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-white sm:mt-4"
+        >
+          {onClickLabel ?? "Ready"}
+        </button>
+      )}
     </div>
   );
 }
 
 function FlowRow({ number, title }: { number: string; title: string }) {
-  return <div className="flex items-center gap-3 rounded-[20px] border border-white/10 bg-white/[0.06] px-3 py-3 sm:gap-4 sm:rounded-[24px] sm:px-4 sm:py-4"><div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-sm font-black text-white sm:h-10 sm:w-10 sm:rounded-2xl">{number}</div><p className="text-sm font-semibold text-white sm:text-base">{title}</p></div>;
+  return (
+    <div className="flex items-center gap-3 rounded-[20px] border border-white/10 bg-white/[0.06] px-3 py-3 sm:gap-4 sm:rounded-[24px] sm:px-4 sm:py-4">
+      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-sm font-black text-white sm:h-10 sm:w-10 sm:rounded-2xl">
+        {number}
+      </div>
+      <p className="text-sm font-semibold text-white sm:text-base">{title}</p>
+    </div>
+  );
 }
 
 function EmptyCard({ title }: { title: string }) {
-  return <div className="flex min-h-[180px] items-center justify-center rounded-[20px] border border-dashed border-slate-300 bg-slate-50 p-5 text-center sm:min-h-[240px] sm:rounded-[24px] sm:p-6"><p className="font-semibold text-slate-600">{title}</p></div>;
+  return (
+    <div className="flex min-h-[180px] items-center justify-center rounded-[20px] border border-dashed border-slate-300 bg-slate-50 p-5 text-center sm:min-h-[240px] sm:rounded-[24px] sm:p-6">
+      <p className="font-semibold text-slate-600">{title}</p>
+    </div>
+  );
 }

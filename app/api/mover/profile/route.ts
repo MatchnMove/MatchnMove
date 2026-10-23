@@ -3,19 +3,33 @@ import { syncRecruitmentOutcomes } from "@/lib/recruitment-outreach";
 import { rateLimit } from "@/lib/rate-limit";
 import { prisma } from "@/lib/db";
 import { sendVerificationReviewSubmitted } from "@/lib/email";
-import { calculateMoverProfileReadiness, isPhoneVerificationRequired, requireAuthenticatedMover } from "@/lib/mover-profile";
+import {
+  calculateMoverProfileReadiness,
+  isPhoneVerificationRequired,
+  requireAuthenticatedMover,
+} from "@/lib/mover-profile";
 import { getMoverLogoUrl } from "@/lib/mover-logo";
 import { canMoverAccessLeads } from "@/lib/mover-lead-access";
-import { NZBN_VERIFICATION, verifyNzbnAgainstRegister } from "@/lib/nzbn-verification";
-import { revalidateAboutPage, revalidatePublicMovers } from "@/lib/public-cache";
+import {
+  NZBN_VERIFICATION,
+  verifyNzbnAgainstRegister,
+} from "@/lib/nzbn-verification";
+import {
+  revalidateAboutPage,
+  revalidatePublicMovers,
+} from "@/lib/public-cache";
 import { moverProfileSchema, sanitiseServiceAreas } from "@/lib/validators";
 
-function serialiseProfile(mover: NonNullable<Awaited<ReturnType<typeof requireAuthenticatedMover>>>) {
+function serialiseProfile(
+  mover: NonNullable<Awaited<ReturnType<typeof requireAuthenticatedMover>>>,
+) {
   const readiness = calculateMoverProfileReadiness(mover);
 
   return {
     companyName: mover.companyName,
     businessDescription: mover.businessDescription ?? "",
+    operatingRegion: mover.operatingRegion ?? "",
+    movingServices: mover.movingServices,
     contactPerson: mover.contactPerson ?? "",
     phone: mover.phone ?? "",
     phoneVerifiedAt: mover.phoneVerifiedAt?.toISOString() ?? null,
@@ -57,22 +71,32 @@ function serialiseProfile(mover: NonNullable<Awaited<ReturnType<typeof requireAu
 
 export async function GET() {
   const mover = await requireAuthenticatedMover();
-  if (!mover) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!mover)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   return NextResponse.json(serialiseProfile(mover));
 }
 
 export async function PATCH(req: NextRequest) {
   const mover = await requireAuthenticatedMover();
-  if (!mover) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!mover)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   if (!rateLimit(`mover-profile:${mover.id}`, 20, 60_000).allowed) {
-    return NextResponse.json({ error: "Too many profile update attempts. Please try again shortly." }, { status: 429 });
+    return NextResponse.json(
+      { error: "Too many profile update attempts. Please try again shortly." },
+      { status: 429 },
+    );
   }
 
-  const parsed = moverProfileSchema.safeParse(await req.json().catch(() => null));
+  const parsed = moverProfileSchema.safeParse(
+    await req.json().catch(() => null),
+  );
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.issues[0]?.message || "Invalid profile details" }, { status: 400 });
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message || "Invalid profile details" },
+      { status: 400 },
+    );
   }
 
   const serviceAreas = sanitiseServiceAreas(parsed.data.serviceAreas);
@@ -84,8 +108,10 @@ export async function PATCH(req: NextRequest) {
       parsed.data.authorityConfirmed,
   );
   const authorityChanged =
-    mover.authorizedRepresentativeName !== parsed.data.authorizedRepresentativeName ||
-    mover.authorizedRepresentativeRole !== parsed.data.authorizedRepresentativeRole ||
+    mover.authorizedRepresentativeName !==
+      parsed.data.authorizedRepresentativeName ||
+    mover.authorizedRepresentativeRole !==
+      parsed.data.authorizedRepresentativeRole ||
     Boolean(mover.authorityDeclaredAt) !== authorityComplete;
   let nzbnVerificationData = {};
 
@@ -98,11 +124,20 @@ export async function PATCH(req: NextRequest) {
       nzbnVerificationSource: null,
       nzbnVerificationError: null,
     };
-  } else if (nzbnChanged || mover.nzbnVerificationStatus !== NZBN_VERIFICATION.VERIFIED) {
-    const nzbnVerification = await verifyNzbnAgainstRegister(parsed.data.nzbn, mover.companyName);
+  } else if (
+    nzbnChanged ||
+    mover.nzbnVerificationStatus !== NZBN_VERIFICATION.VERIFIED
+  ) {
+    const nzbnVerification = await verifyNzbnAgainstRegister(
+      parsed.data.nzbn,
+      mover.companyName,
+    );
 
     if (nzbnVerification.status === NZBN_VERIFICATION.FAILED) {
-      return NextResponse.json({ error: nzbnVerification.error ?? "NZBN could not be verified." }, { status: 400 });
+      return NextResponse.json(
+        { error: nzbnVerification.error ?? "NZBN could not be verified." },
+        { status: 400 },
+      );
     }
 
     nzbnVerificationData = {
@@ -140,6 +175,13 @@ export async function PATCH(req: NextRequest) {
           : mover.authorityDeclaredAt
         : null,
       nzbn: parsed.data.nzbn,
+      profileReviewedAt: null,
+      operatingRegion: parsed.data.operatingRegion,
+      movingServices: parsed.data.movingServices,
+      yearsOperatingVerifiedAt:
+        mover.yearsOperating === parsed.data.yearsOperating
+          ? mover.yearsOperatingVerifiedAt
+          : null,
       yearsOperating: parsed.data.yearsOperating,
       serviceAreas,
       businessDescription: parsed.data.businessDescription,
@@ -169,13 +211,17 @@ export async function PATCH(req: NextRequest) {
       },
     });
 
-    if (updatedMover.nzbnVerificationStatus === NZBN_VERIFICATION.PENDING_REVIEW) {
+    if (
+      updatedMover.nzbnVerificationStatus === NZBN_VERIFICATION.PENDING_REVIEW
+    ) {
       await sendVerificationReviewSubmitted({
         moverCompanyName: updatedMover.companyName,
         moverEmail: updatedMover.user.email,
         item: "NZBN",
         detail: `NZBN ${updatedMover.nzbn || "not supplied"} requires manual review.`,
-      }).catch((error) => console.error("Could not queue NZBN review email", error));
+      }).catch((error) =>
+        console.error("Could not queue NZBN review email", error),
+      );
     }
   }
 
@@ -184,6 +230,8 @@ export async function PATCH(req: NextRequest) {
     revalidateAboutPage();
   }
 
-  await syncRecruitmentOutcomes(updatedMover.id).catch(() => console.error("Recruitment activation sync deferred to scheduler"));
+  await syncRecruitmentOutcomes(updatedMover.id).catch(() =>
+    console.error("Recruitment activation sync deferred to scheduler"),
+  );
   return NextResponse.json(serialiseProfile(updatedMover));
 }

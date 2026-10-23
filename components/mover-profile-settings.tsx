@@ -1,14 +1,44 @@
 "use client";
 
-import { ChangeEvent, useEffect, useMemo, useRef, useState, useTransition, type HTMLAttributes } from "react";
-import { CheckCircle2, FileText, LoaderCircle, Pencil, Plus, ShieldCheck, Trash2, X } from "lucide-react";
+import {
+  ChangeEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+  type HTMLAttributes,
+} from "react";
+import {
+  CheckCircle2,
+  FileText,
+  LoaderCircle,
+  Pencil,
+  Plus,
+  ShieldCheck,
+  Trash2,
+  X,
+} from "lucide-react";
+import Link from "next/link";
+import { MOVING_SERVICES } from "@/lib/profile-trust";
+import { NZ_SERVICE_AREAS } from "@/lib/nz-regions";
 import { MoverLogoUpload } from "@/components/mover-logo-upload";
 import { NzRegionSelector } from "@/components/nz-region-selector";
-import { formatServiceAreaLabel, sanitiseNzServiceAreas } from "@/lib/nz-regions";
+import {
+  formatServiceAreaLabel,
+  sanitiseNzServiceAreas,
+} from "@/lib/nz-regions";
 import { cx } from "@/lib/utils";
 
 type ReadinessCheck = {
-  key: "email" | "contact" | "business" | "description" | "serviceAreas" | "logo" | "docs";
+  key:
+    | "email"
+    | "contact"
+    | "business"
+    | "description"
+    | "serviceAreas"
+    | "logo"
+    | "docs";
   complete: boolean;
   label: string;
   title: string;
@@ -36,6 +66,8 @@ type ProfileDocument = {
 export type MoverProfileState = {
   companyName: string;
   businessDescription: string;
+  operatingRegion?: string;
+  movingServices?: string[];
   contactPerson: string;
   phone: string;
   phoneVerifiedAt?: string | null;
@@ -81,34 +113,60 @@ type Props = {
 const phonePattern = /^[+\d][\d\s()-]{6,24}$/;
 const nzbnPattern = /^\d{13}$/;
 const MAX_DOCUMENT_SIZE = 4 * 1024 * 1024;
-const ALLOWED_DOCUMENT_TYPES = ["application/pdf", "image/png", "image/jpeg", "image/webp"];
+const ALLOWED_DOCUMENT_TYPES = [
+  "application/pdf",
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+];
 const BUSINESS_DESCRIPTION_LIMIT = 800;
 const DOCUMENT_TYPE_DETAILS = {
   INSURANCE: {
     title: "Insurance",
-    description: "Upload current proof that your moving business is insured. A certificate of currency or policy schedule is best.",
-    examples: ["Public liability insurance", "Goods in transit or carrier's liability cover", "Commercial vehicle or fleet insurance"],
+    description:
+      "Upload current proof that your moving business is insured. A certificate of currency or policy schedule is best.",
+    examples: [
+      "Public liability insurance",
+      "Goods in transit or carrier's liability cover",
+      "Commercial vehicle or fleet insurance",
+    ],
   },
   NZBN_PROOF: {
     title: "NZBN proof",
-    description: "Upload a document that clearly shows your business name and 13-digit NZBN so your company details can be verified.",
-    examples: ["NZBN register extract", "IRD or Companies Office document showing the NZBN", "Official business record with your NZBN visible"],
+    description:
+      "Upload a document that clearly shows your business name and 13-digit NZBN so your company details can be verified.",
+    examples: [
+      "NZBN register extract",
+      "IRD or Companies Office document showing the NZBN",
+      "Official business record with your NZBN visible",
+    ],
   },
   LICENCE: {
     title: "Licence",
-    description: "Upload any licence or transport authorisation relevant to the vehicles or services your moving business operates.",
-    examples: ["Goods service licence", "Transport service licence", "Other operator or business licence relevant to your work"],
+    description:
+      "Upload any licence or transport authorisation relevant to the vehicles or services your moving business operates.",
+    examples: [
+      "Goods service licence",
+      "Transport service licence",
+      "Other operator or business licence relevant to your work",
+    ],
   },
   OTHER: {
     title: "Other",
-    description: "Upload any other supporting business document that helps verify or strengthen your mover profile.",
-    examples: ["Health and safety certification", "Industry membership", "Additional compliance or verification document"],
+    description:
+      "Upload any other supporting business document that helps verify or strengthen your mover profile.",
+    examples: [
+      "Health and safety certification",
+      "Industry membership",
+      "Additional compliance or verification document",
+    ],
   },
 } as const;
 
 function formatFileSize(fileSize: number | null) {
   if (!fileSize) return "Unknown size";
-  if (fileSize >= 1024 * 1024) return `${(fileSize / (1024 * 1024)).toFixed(1)} MB`;
+  if (fileSize >= 1024 * 1024)
+    return `${(fileSize / (1024 * 1024)).toFixed(1)} MB`;
   return `${Math.round(fileSize / 1024)} KB`;
 }
 
@@ -120,11 +178,14 @@ function inferReadiness(profile: MoverProfileState) {
           document.verificationStatus === "APPROVED" &&
           Boolean(document.detectedMimeType) &&
           ["CLEAN", "NOT_CONFIGURED"].includes(document.scanStatus) &&
-          (!document.expiresAt || new Date(document.expiresAt).getTime() > Date.now()),
+          (!document.expiresAt ||
+            new Date(document.expiresAt).getTime() > Date.now()),
       )
       .map((document) => document.type),
   );
-  const requiredDocumentCount = ["INSURANCE", "NZBN_PROOF"].filter((type) => approvedDocumentTypes.has(type)).length;
+  const requiredDocumentCount = ["INSURANCE", "NZBN_PROOF"].filter((type) =>
+    approvedDocumentTypes.has(type),
+  ).length;
   const nzbnVerified = profile.nzbnVerificationStatus === "VERIFIED";
   const phoneVerificationRequired = profile.phoneVerificationRequired;
   const contactComplete = Boolean(profile.contactPerson && profile.phone);
@@ -134,12 +195,15 @@ function inferReadiness(profile: MoverProfileState) {
       complete: profile.emailVerified,
       label: profile.emailVerified ? "Verified" : "Verify email",
       title: "Verify email",
-      description: "Confirm the account email so profile changes and account recovery are protected.",
+      description:
+        "Confirm the account email so profile changes and account recovery are protected.",
       destination: "security",
     },
     {
       key: "contact",
-      complete: contactComplete && (!phoneVerificationRequired || Boolean(profile.phoneVerifiedAt)),
+      complete:
+        contactComplete &&
+        (!phoneVerificationRequired || Boolean(profile.phoneVerifiedAt)),
       label: phoneVerificationRequired
         ? profile.phoneVerifiedAt
           ? "Phone verified"
@@ -149,7 +213,9 @@ function inferReadiness(profile: MoverProfileState) {
         : contactComplete
           ? "Ready"
           : "Add contact",
-      title: phoneVerificationRequired ? "Verify contact details" : "Add contact details",
+      title: phoneVerificationRequired
+        ? "Verify contact details"
+        : "Add contact details",
       description: phoneVerificationRequired
         ? "Save a contact name and confirm the phone number with a one-time SMS code."
         : "Save a contact name and phone number customers and Match 'n Move can use.",
@@ -165,9 +231,17 @@ function inferReadiness(profile: MoverProfileState) {
           profile.authorizedRepresentativeRole &&
           profile.authorityDeclaredAt,
       ),
-      label: nzbnVerified ? "NZBN verified" : profile.nzbnVerificationStatus === "PENDING_REVIEW" ? "NZBN in review" : profile.nzbnVerificationStatus === "FAILED" ? "NZBN failed" : "Verify NZBN",
+      label: nzbnVerified
+        ? "NZBN verified"
+        : profile.nzbnVerificationStatus === "PENDING_REVIEW"
+          ? "NZBN in review"
+          : profile.nzbnVerificationStatus === "FAILED"
+            ? "NZBN failed"
+            : "Verify NZBN",
       title: "Verify business identity",
-      description: profile.nzbnVerificationError || "Verify the NZBN and confirm who is authorised to maintain these business details.",
+      description:
+        profile.nzbnVerificationError ||
+        "Verify the NZBN and confirm who is authorised to maintain these business details.",
       destination: "profile",
     },
     {
@@ -175,15 +249,19 @@ function inferReadiness(profile: MoverProfileState) {
       complete: Boolean(profile.businessDescription.trim()),
       label: profile.businessDescription.trim() ? "Ready" : "Add summary",
       title: "Write public profile",
-      description: "Add a public business description so customers can understand who they are choosing.",
+      description:
+        "Add a public business description so customers can understand who they are choosing.",
       destination: "profile",
     },
     {
       key: "serviceAreas",
       complete: profile.serviceAreas.length > 0,
-      label: profile.serviceAreas.length ? `${profile.serviceAreas.length} selected` : "Add regions",
+      label: profile.serviceAreas.length
+        ? `${profile.serviceAreas.length} selected`
+        : "Add regions",
       title: "Choose service areas",
-      description: "Select the NZ regions your team actively covers so leads are matched correctly.",
+      description:
+        "Select the NZ regions your team actively covers so leads are matched correctly.",
       destination: "profile",
     },
     {
@@ -191,15 +269,20 @@ function inferReadiness(profile: MoverProfileState) {
       complete: Boolean(profile.logoUrl),
       label: profile.logoUrl ? "Uploaded" : "Upload logo",
       title: "Upload company logo",
-      description: "Add a logo so the public profile looks legitimate and easy to recognise.",
+      description:
+        "Add a logo so the public profile looks legitimate and easy to recognise.",
       destination: "profile",
     },
     {
       key: "docs",
       complete: requiredDocumentCount === 2,
-      label: requiredDocumentCount === 2 ? "Approved" : `${requiredDocumentCount}/2 approved`,
+      label:
+        requiredDocumentCount === 2
+          ? "Approved"
+          : `${requiredDocumentCount}/2 approved`,
       title: "Upload verification documents",
-      description: "Upload insurance and NZBN proof. They must be reviewed and approved before the profile can go live.",
+      description:
+        "Upload insurance and NZBN proof. They must be reviewed and approved before the profile can go live.",
       destination: "documents",
     },
   ];
@@ -214,7 +297,9 @@ function inferReadiness(profile: MoverProfileState) {
     : null;
 
   return {
-    completion: Math.round((checks.filter((check) => check.complete).length / checks.length) * 100),
+    completion: Math.round(
+      (checks.filter((check) => check.complete).length / checks.length) * 100,
+    ),
     checks,
     isLive: missingChecks.length === 0,
     missingCount: missingChecks.length,
@@ -222,7 +307,10 @@ function inferReadiness(profile: MoverProfileState) {
   };
 }
 
-function withReadiness(profile: MoverProfileState, readiness?: MoverProfileState["readiness"]) {
+function withReadiness(
+  profile: MoverProfileState,
+  readiness?: MoverProfileState["readiness"],
+) {
   return { ...profile, readiness: readiness ?? inferReadiness(profile) };
 }
 
@@ -232,27 +320,40 @@ function getDocumentVerificationLabel(status: string) {
   return "Pending review";
 }
 
-export function MoverProfileSettings({ profile, onProfileChange, focusSection, onFocusHandled, onOpenSecurity }: Props) {
+export function MoverProfileSettings({
+  profile,
+  onProfileChange,
+  focusSection,
+  onFocusHandled,
+  onOpenSecurity,
+}: Props) {
   const editableServiceAreas = sanitiseNzServiceAreas(profile.serviceAreas);
   const profileSectionRef = useRef<HTMLElement | null>(null);
   const documentsSectionRef = useRef<HTMLElement | null>(null);
   const [form, setForm] = useState({
     businessDescription: profile.businessDescription,
+    operatingRegion: profile.operatingRegion ?? "",
+    movingServices: profile.movingServices ?? [],
     contactPerson: profile.contactPerson,
     phone: profile.phone,
     nzbn: profile.nzbn,
     authorizedRepresentativeName: profile.authorizedRepresentativeName,
     authorizedRepresentativeRole: profile.authorizedRepresentativeRole,
     authorityConfirmed: Boolean(profile.authorityDeclaredAt),
-    yearsOperating: profile.yearsOperating === null ? "" : String(profile.yearsOperating),
+    yearsOperating:
+      profile.yearsOperating === null ? "" : String(profile.yearsOperating),
     serviceAreas: editableServiceAreas,
   });
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [documentType, setDocumentType] = useState<"INSURANCE" | "NZBN_PROOF" | "LICENCE" | "OTHER">("INSURANCE");
+  const [documentType, setDocumentType] = useState<
+    "INSURANCE" | "NZBN_PROOF" | "LICENCE" | "OTHER"
+  >("INSURANCE");
   const [documentExpiry, setDocumentExpiry] = useState("");
-  const [categoryDocuments, setCategoryDocuments] = useState<ProfileDocument[]>(profile.documents.filter((document) => document.type === "INSURANCE"));
+  const [categoryDocuments, setCategoryDocuments] = useState<ProfileDocument[]>(
+    profile.documents.filter((document) => document.type === "INSURANCE"),
+  );
   const [isLoadingDocuments, startLoadingDocuments] = useTransition();
   const [documentError, setDocumentError] = useState<string | null>(null);
   const [documentSuccess, setDocumentSuccess] = useState<string | null>(null);
@@ -260,27 +361,42 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
   const [isUploading, startUploading] = useTransition();
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [phoneCode, setPhoneCode] = useState("");
-  const [phoneVerificationMessage, setPhoneVerificationMessage] = useState<string | null>(null);
-  const [phoneVerificationError, setPhoneVerificationError] = useState<string | null>(null);
+  const [phoneVerificationMessage, setPhoneVerificationMessage] = useState<
+    string | null
+  >(null);
+  const [phoneVerificationError, setPhoneVerificationError] = useState<
+    string | null
+  >(null);
   const [isSendingPhoneCode, setIsSendingPhoneCode] = useState(false);
   const [isVerifyingPhone, setIsVerifyingPhone] = useState(false);
   const selectedDocumentType = DOCUMENT_TYPE_DETAILS[documentType];
 
-  const readinessItems = useMemo(() => profile.readiness.checks, [profile.readiness.checks]);
+  const readinessItems = useMemo(
+    () => profile.readiness.checks,
+    [profile.readiness.checks],
+  );
 
   useEffect(() => {
     let active = true;
     setDocumentError(null);
 
     startLoadingDocuments(async () => {
-      const response = await fetch(`/api/mover/profile/documents?type=${documentType}`, { cache: "no-store" });
-      const data = (await response.json().catch(() => null)) as { error?: string; documents?: ProfileDocument[] } | null;
+      const response = await fetch(
+        `/api/mover/profile/documents?type=${documentType}`,
+        { cache: "no-store" },
+      );
+      const data = (await response.json().catch(() => null)) as {
+        error?: string;
+        documents?: ProfileDocument[];
+      } | null;
 
       if (!active) return;
 
       if (!response.ok) {
         setCategoryDocuments([]);
-        setDocumentError(data?.error ?? "Could not load documents for that category.");
+        setDocumentError(
+          data?.error ?? "Could not load documents for that category.",
+        );
         return;
       }
 
@@ -295,7 +411,10 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
   useEffect(() => {
     if (!focusSection) return;
 
-    const target = focusSection === "documents" ? documentsSectionRef.current : profileSectionRef.current;
+    const target =
+      focusSection === "documents"
+        ? documentsSectionRef.current
+        : profileSectionRef.current;
     if (!target) return;
 
     target.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -307,8 +426,10 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
 
   function validateForm() {
     if (form.contactPerson.trim().length < 2) return "Enter a contact name.";
-    if (!phonePattern.test(form.phone.trim())) return "Enter a valid phone number.";
-    if (form.nzbn.trim() && !nzbnPattern.test(form.nzbn.trim())) return "NZBN must be 13 digits.";
+    if (!phonePattern.test(form.phone.trim()))
+      return "Enter a valid phone number.";
+    if (form.nzbn.trim() && !nzbnPattern.test(form.nzbn.trim()))
+      return "NZBN must be 13 digits.";
 
     const hasAuthorityInput = Boolean(
       form.authorizedRepresentativeName.trim() ||
@@ -316,18 +437,24 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
         form.authorityConfirmed,
     );
     if (hasAuthorityInput) {
-      if (form.authorizedRepresentativeName.trim().length < 2) return "Enter the authorised representative's name.";
-      if (form.authorizedRepresentativeRole.trim().length < 2) return "Enter the authorised representative's role.";
-      if (!form.authorityConfirmed) return "Confirm that you are authorised to submit these business details.";
+      if (form.authorizedRepresentativeName.trim().length < 2)
+        return "Enter the authorised representative's name.";
+      if (form.authorizedRepresentativeRole.trim().length < 2)
+        return "Enter the authorised representative's role.";
+      if (!form.authorityConfirmed)
+        return "Confirm that you are authorised to submit these business details.";
     }
 
     if (form.yearsOperating.trim()) {
       const years = Number(form.yearsOperating.trim());
-      if (!Number.isInteger(years) || years < 0 || years > 200) return "Years operating must be between 0 and 200.";
+      if (!Number.isInteger(years) || years < 0 || years > 200)
+        return "Years operating must be between 0 and 200.";
     }
 
-    if (!form.serviceAreas.length) return "Choose at least one coverage region.";
-    if (form.businessDescription.trim().length > BUSINESS_DESCRIPTION_LIMIT) return `Business description must be ${BUSINESS_DESCRIPTION_LIMIT} characters or less.`;
+    if (!form.serviceAreas.length)
+      return "Choose at least one coverage region.";
+    if (form.businessDescription.trim().length > BUSINESS_DESCRIPTION_LIMIT)
+      return `Business description must be ${BUSINESS_DESCRIPTION_LIMIT} characters or less.`;
 
     return null;
   }
@@ -335,24 +462,32 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
   function resetForm() {
     setForm({
       businessDescription: profile.businessDescription,
+      operatingRegion: profile.operatingRegion ?? "",
+      movingServices: profile.movingServices ?? [],
       contactPerson: profile.contactPerson,
       phone: profile.phone,
       nzbn: profile.nzbn,
       authorizedRepresentativeName: profile.authorizedRepresentativeName,
       authorizedRepresentativeRole: profile.authorizedRepresentativeRole,
       authorityConfirmed: Boolean(profile.authorityDeclaredAt),
-      yearsOperating: profile.yearsOperating === null ? "" : String(profile.yearsOperating),
+      yearsOperating:
+        profile.yearsOperating === null ? "" : String(profile.yearsOperating),
       serviceAreas: editableServiceAreas,
     });
   }
 
-  function openReadinessDestination(destination: ReadinessCheck["destination"]) {
+  function openReadinessDestination(
+    destination: ReadinessCheck["destination"],
+  ) {
     if (destination === "security") {
       onOpenSecurity?.();
       return;
     }
 
-    const target = destination === "documents" ? documentsSectionRef.current : profileSectionRef.current;
+    const target =
+      destination === "documents"
+        ? documentsSectionRef.current
+        : profileSectionRef.current;
     target?.scrollIntoView({ behavior: "smooth", block: "start" });
     target?.focus({ preventScroll: true });
 
@@ -377,6 +512,8 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
 
     const payload = {
       businessDescription: form.businessDescription.trim(),
+      operatingRegion: form.operatingRegion,
+      movingServices: form.movingServices,
       contactPerson: form.contactPerson.trim(),
       phone: form.phone.trim(),
       nzbn: form.nzbn.trim(),
@@ -394,7 +531,9 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
         body: JSON.stringify(payload),
       });
 
-      const data = (await response.json().catch(() => null)) as Partial<MoverProfileState> & { error?: string } | null;
+      const data = (await response.json().catch(() => null)) as
+        | (Partial<MoverProfileState> & { error?: string })
+        | null;
       if (!response.ok) {
         setError(data?.error ?? "Could not save profile.");
         return;
@@ -403,24 +542,44 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
       const nextProfile = withReadiness(
         {
           ...profile,
-          businessDescription: data?.businessDescription ?? payload.businessDescription,
+          businessDescription:
+            data?.businessDescription ?? payload.businessDescription,
+          operatingRegion: data?.operatingRegion ?? payload.operatingRegion,
+          movingServices: data?.movingServices ?? payload.movingServices,
           contactPerson: data?.contactPerson ?? payload.contactPerson,
           phone: data?.phone ?? payload.phone,
           phoneVerifiedAt: data?.phoneVerifiedAt ?? null,
-          phoneVerificationRequired: typeof data?.phoneVerificationRequired === "boolean" ? data.phoneVerificationRequired : profile.phoneVerificationRequired,
-          authorizedRepresentativeName: data?.authorizedRepresentativeName ?? "",
-          authorizedRepresentativeRole: data?.authorizedRepresentativeRole ?? "",
+          phoneVerificationRequired:
+            typeof data?.phoneVerificationRequired === "boolean"
+              ? data.phoneVerificationRequired
+              : profile.phoneVerificationRequired,
+          authorizedRepresentativeName:
+            data?.authorizedRepresentativeName ?? "",
+          authorizedRepresentativeRole:
+            data?.authorizedRepresentativeRole ?? "",
           authorityDeclaredAt: data?.authorityDeclaredAt ?? null,
           nzbn: data?.nzbn ?? payload.nzbn,
-          nzbnVerificationStatus: data?.nzbnVerificationStatus ?? profile.nzbnVerificationStatus,
-          nzbnRegisteredName: data?.nzbnRegisteredName ?? profile.nzbnRegisteredName,
+          nzbnVerificationStatus:
+            data?.nzbnVerificationStatus ?? profile.nzbnVerificationStatus,
+          nzbnRegisteredName:
+            data?.nzbnRegisteredName ?? profile.nzbnRegisteredName,
           nzbnEntityStatus: data?.nzbnEntityStatus ?? profile.nzbnEntityStatus,
           nzbnVerifiedAt: data?.nzbnVerifiedAt ?? profile.nzbnVerifiedAt,
-          nzbnVerificationError: data?.nzbnVerificationError ?? profile.nzbnVerificationError,
-          yearsOperating: typeof data?.yearsOperating === "number" || data?.yearsOperating === null ? data.yearsOperating : payload.yearsOperating ? Number(payload.yearsOperating) : null,
+          nzbnVerificationError:
+            data?.nzbnVerificationError ?? profile.nzbnVerificationError,
+          yearsOperating:
+            typeof data?.yearsOperating === "number" ||
+            data?.yearsOperating === null
+              ? data.yearsOperating
+              : payload.yearsOperating
+                ? Number(payload.yearsOperating)
+                : null,
           serviceAreas: data?.serviceAreas ?? payload.serviceAreas,
           email: data?.email ?? profile.email,
-          emailVerified: typeof data?.emailVerified === "boolean" ? data.emailVerified : profile.emailVerified,
+          emailVerified:
+            typeof data?.emailVerified === "boolean"
+              ? data.emailVerified
+              : profile.emailVerified,
           canAccessLeads: data?.canAccessLeads ?? profile.canAccessLeads,
           logoUrl: data?.logoUrl ?? profile.logoUrl,
           documents: data?.documents ?? profile.documents,
@@ -444,7 +603,9 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
     setDocumentSuccess(null);
 
     if (documentType === "INSURANCE" && !documentExpiry) {
-      setDocumentError("Choose the insurance policy expiry date before uploading.");
+      setDocumentError(
+        "Choose the insurance policy expiry date before uploading.",
+      );
       return;
     }
 
@@ -478,7 +639,11 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
           }),
         });
 
-        const data = (await response.json().catch(() => null)) as { error?: string; document?: ProfileDocument; readiness?: MoverProfileState["readiness"] } | null;
+        const data = (await response.json().catch(() => null)) as {
+          error?: string;
+          document?: ProfileDocument;
+          readiness?: MoverProfileState["readiness"];
+        } | null;
         if (!response.ok || !data?.document) {
           setDocumentError(data?.error ?? "Could not upload that document.");
           return;
@@ -494,7 +659,10 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
           ),
         );
         if (data.document.type === documentType) {
-          setCategoryDocuments((current) => [data.document!, ...current.filter((document) => document.id !== data.document!.id)]);
+          setCategoryDocuments((current) => [
+            data.document!,
+            ...current.filter((document) => document.id !== data.document!.id),
+          ]);
         }
         setDocumentSuccess("Document uploaded for verification review.");
         setDocumentExpiry("");
@@ -510,9 +678,14 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
     setPhoneVerificationMessage(null);
     try {
       const response = await fetch("/api/mover/phone/send", { method: "POST" });
-      const data = (await response.json().catch(() => null)) as { error?: string; developmentCode?: string } | null;
+      const data = (await response.json().catch(() => null)) as {
+        error?: string;
+        developmentCode?: string;
+      } | null;
       if (!response.ok) {
-        setPhoneVerificationError(data?.error ?? "Could not send the verification SMS.");
+        setPhoneVerificationError(
+          data?.error ?? "Could not send the verification SMS.",
+        );
         return;
       }
       setPhoneVerificationMessage(
@@ -534,7 +707,10 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code: phoneCode }),
       });
-      const data = (await response.json().catch(() => null)) as { error?: string; phoneVerifiedAt?: string } | null;
+      const data = (await response.json().catch(() => null)) as {
+        error?: string;
+        phoneVerifiedAt?: string;
+      } | null;
       if (!response.ok || !data?.phoneVerifiedAt) {
         setPhoneVerificationError(data?.error ?? "Could not verify that code.");
         return;
@@ -554,8 +730,13 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
     setDocumentSuccess(null);
 
     try {
-      const response = await fetch(`/api/mover/profile/documents/${id}`, { method: "DELETE" });
-      const data = (await response.json().catch(() => null)) as { error?: string; readiness?: MoverProfileState["readiness"] } | null;
+      const response = await fetch(`/api/mover/profile/documents/${id}`, {
+        method: "DELETE",
+      });
+      const data = (await response.json().catch(() => null)) as {
+        error?: string;
+        readiness?: MoverProfileState["readiness"];
+      } | null;
 
       if (!response.ok) {
         setDocumentError(data?.error ?? "Could not remove that document.");
@@ -566,12 +747,16 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
         withReadiness(
           {
             ...profile,
-            documents: profile.documents.filter((document) => document.id !== id),
+            documents: profile.documents.filter(
+              (document) => document.id !== id,
+            ),
           },
           data?.readiness,
         ),
       );
-      setCategoryDocuments((current) => current.filter((document) => document.id !== id));
+      setCategoryDocuments((current) =>
+        current.filter((document) => document.id !== id),
+      );
       setDocumentSuccess("Document removed.");
     } finally {
       setRemovingId(null);
@@ -579,71 +764,200 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
   }
 
   return (
-    <div className={cx("grid gap-3 sm:gap-4", profile.readiness.isLive ? "" : "2xl:grid-cols-[minmax(0,1fr)_minmax(340px,0.88fr)]")}>
-      <div className={cx("space-y-3 sm:space-y-4", profile.readiness.isLive ? "" : "order-2 2xl:order-1")}>
-        <section ref={profileSectionRef} tabIndex={-1} className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 sm:rounded-[30px] sm:p-5">
+    <div
+      className={cx(
+        "grid gap-3 sm:gap-4",
+        profile.readiness.isLive
+          ? ""
+          : "2xl:grid-cols-[minmax(0,1fr)_minmax(340px,0.88fr)]",
+      )}
+    >
+      <div
+        className={cx(
+          "space-y-3 sm:space-y-4",
+          profile.readiness.isLive ? "" : "order-2 2xl:order-1",
+        )}
+      >
+        <section
+          ref={profileSectionRef}
+          tabIndex={-1}
+          className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 sm:rounded-[30px] sm:p-5"
+        >
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700 sm:text-sm">Business details</p>
-              <h2 className="mt-1 text-xl font-black tracking-[-0.05em] text-slate-950 sm:text-2xl">Company profile</h2>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700 sm:text-sm">
+                Business details
+              </p>
+              <h2 className="mt-1 text-xl font-black tracking-[-0.05em] text-slate-950 sm:text-2xl">
+                Company profile
+              </h2>
             </div>
             {!editing ? (
-              <button type="button" onClick={() => { setEditing(true); setError(null); setSuccess(null); resetForm(); }} className="inline-flex items-center gap-2 rounded-2xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+              <button
+                type="button"
+                onClick={() => {
+                  setEditing(true);
+                  setError(null);
+                  setSuccess(null);
+                  resetForm();
+                }}
+                className="inline-flex items-center gap-2 rounded-2xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
                 <Pencil className="h-4 w-4" />
                 Edit
               </button>
             ) : (
               <div className="flex gap-2">
-                <button type="button" onClick={() => { setEditing(false); setError(null); setSuccess(null); resetForm(); }} className="inline-flex items-center gap-2 rounded-2xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditing(false);
+                    setError(null);
+                    setSuccess(null);
+                    resetForm();
+                  }}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
                   <X className="h-4 w-4" />
                   Cancel
                 </button>
-                <button type="button" onClick={saveProfile} disabled={isSaving} className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:translate-y-[-1px] disabled:opacity-70">
-                  {isSaving ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                <button
+                  type="button"
+                  onClick={saveProfile}
+                  disabled={isSaving}
+                  className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:translate-y-[-1px] disabled:opacity-70"
+                >
+                  {isSaving ? (
+                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4" />
+                  )}
                   {isSaving ? "Saving..." : "Save changes"}
                 </button>
               </div>
             )}
           </div>
-          {success ? <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">{success}</p> : null}
-          {error ? <p className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{error}</p> : null}
+          {success ? (
+            <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+              {success}
+            </p>
+          ) : null}
+          {error ? (
+            <p className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
+              {error}
+            </p>
+          ) : null}
 
           <div className="mt-3 grid gap-2 sm:mt-4 sm:gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <EditableField label="Contact name" value={form.contactPerson} editing={editing} onChange={(value) => setForm((current) => ({ ...current, contactPerson: value }))} placeholder="Primary contact" />
-            <EditableField label="Phone number" value={form.phone} editing={editing} onChange={(value) => setForm((current) => ({ ...current, phone: value }))} placeholder="+64..." />
-            <EditableField label="NZBN" value={form.nzbn} editing={editing} onChange={(value) => setForm((current) => ({ ...current, nzbn: value }))} placeholder="13-digit NZBN" />
-            <EditableField label="Years operating" value={form.yearsOperating} editing={editing} onChange={(value) => setForm((current) => ({ ...current, yearsOperating: value }))} placeholder="0" inputMode="numeric" />
+            <EditableField
+              label="Contact name"
+              value={form.contactPerson}
+              editing={editing}
+              onChange={(value) =>
+                setForm((current) => ({ ...current, contactPerson: value }))
+              }
+              placeholder="Primary contact"
+            />
+            <EditableField
+              label="Phone number"
+              value={form.phone}
+              editing={editing}
+              onChange={(value) =>
+                setForm((current) => ({ ...current, phone: value }))
+              }
+              placeholder="+64..."
+            />
+            <EditableField
+              label="NZBN"
+              value={form.nzbn}
+              editing={editing}
+              onChange={(value) =>
+                setForm((current) => ({ ...current, nzbn: value }))
+              }
+              placeholder="13-digit NZBN"
+            />
+            <EditableField
+              label="Years operating"
+              value={form.yearsOperating}
+              editing={editing}
+              onChange={(value) =>
+                setForm((current) => ({ ...current, yearsOperating: value }))
+              }
+              placeholder="Years supplied by your company"
+              inputMode="numeric"
+            />
           </div>
 
-          {profile.phoneVerificationRequired ? <div className="mt-3 rounded-[20px] border border-slate-200 bg-slate-50 p-3 sm:mt-4 sm:rounded-[24px] sm:p-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Phone verification</p>
-                <p className="mt-2 text-sm font-semibold text-slate-900">
-                  {profile.phoneVerifiedAt ? "Verified" : "Verification required"}
-                </p>
+          {profile.phoneVerificationRequired ? (
+            <div className="mt-3 rounded-[20px] border border-slate-200 bg-slate-50 p-3 sm:mt-4 sm:rounded-[24px] sm:p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                    Phone verification
+                  </p>
+                  <p className="mt-2 text-sm font-semibold text-slate-900">
+                    {profile.phoneVerifiedAt
+                      ? "Verified"
+                      : "Verification required"}
+                  </p>
+                </div>
+                {!profile.phoneVerifiedAt ? (
+                  <button
+                    type="button"
+                    onClick={() => void sendPhoneCode()}
+                    disabled={isSendingPhoneCode || editing}
+                    className="rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50"
+                  >
+                    {isSendingPhoneCode ? "Sending..." : "Send SMS code"}
+                  </button>
+                ) : null}
               </div>
               {!profile.phoneVerifiedAt ? (
-                <button type="button" onClick={() => void sendPhoneCode()} disabled={isSendingPhoneCode || editing} className="rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50">
-                  {isSendingPhoneCode ? "Sending..." : "Send SMS code"}
-                </button>
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                  <input
+                    value={phoneCode}
+                    onChange={(event) =>
+                      setPhoneCode(
+                        event.target.value.replace(/\D/g, "").slice(0, 6),
+                      )
+                    }
+                    inputMode="numeric"
+                    placeholder="6-digit code"
+                    className="min-h-[44px] flex-1 rounded-2xl border border-slate-300 bg-white px-4 text-sm outline-none focus:border-sky-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void verifyPhoneCode()}
+                    disabled={isVerifyingPhone || phoneCode.length !== 6}
+                    className="min-h-[44px] rounded-2xl bg-slate-900 px-4 text-sm font-semibold text-white disabled:opacity-50"
+                  >
+                    {isVerifyingPhone ? "Checking..." : "Verify phone"}
+                  </button>
+                </div>
+              ) : null}
+              {editing ? (
+                <p className="mt-2 text-xs text-amber-700">
+                  Save phone changes before requesting a code. Changing the
+                  number removes its verified status.
+                </p>
+              ) : null}
+              {phoneVerificationMessage ? (
+                <p className="mt-2 text-sm font-semibold text-emerald-700">
+                  {phoneVerificationMessage}
+                </p>
+              ) : null}
+              {phoneVerificationError ? (
+                <p className="mt-2 text-sm font-semibold text-rose-700">
+                  {phoneVerificationError}
+                </p>
               ) : null}
             </div>
-            {!profile.phoneVerifiedAt ? (
-              <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-                <input value={phoneCode} onChange={(event) => setPhoneCode(event.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" placeholder="6-digit code" className="min-h-[44px] flex-1 rounded-2xl border border-slate-300 bg-white px-4 text-sm outline-none focus:border-sky-500" />
-                <button type="button" onClick={() => void verifyPhoneCode()} disabled={isVerifyingPhone || phoneCode.length !== 6} className="min-h-[44px] rounded-2xl bg-slate-900 px-4 text-sm font-semibold text-white disabled:opacity-50">
-                  {isVerifyingPhone ? "Checking..." : "Verify phone"}
-                </button>
-              </div>
-            ) : null}
-            {editing ? <p className="mt-2 text-xs text-amber-700">Save phone changes before requesting a code. Changing the number removes its verified status.</p> : null}
-            {phoneVerificationMessage ? <p className="mt-2 text-sm font-semibold text-emerald-700">{phoneVerificationMessage}</p> : null}
-            {phoneVerificationError ? <p className="mt-2 text-sm font-semibold text-rose-700">{phoneVerificationError}</p> : null}
-          </div> : null}
+          ) : null}
 
           <div className="mt-3 rounded-[20px] border border-slate-200 bg-slate-50 p-3 sm:mt-4 sm:rounded-[24px] sm:p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">NZBN verification</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+              NZBN verification
+            </p>
             <p className="mt-2 text-sm font-semibold text-slate-900">
               {profile.nzbnVerificationStatus === "VERIFIED"
                 ? `Verified${profile.nzbnRegisteredName ? ` as ${profile.nzbnRegisteredName}` : ""}`
@@ -660,28 +974,73 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
           </div>
 
           <div className="mt-3 rounded-[20px] border border-slate-200 bg-slate-50 p-3 sm:mt-4 sm:rounded-[24px] sm:p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Authorised representative</p>
-            <p className="mt-2 text-sm leading-6 text-slate-600">Name the person authorised to submit, update, and certify this mover&apos;s business information.</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+              Authorised representative
+            </p>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Name the person authorised to submit, update, and certify this
+              mover&apos;s business information.
+            </p>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <EditableField label="Representative name" value={form.authorizedRepresentativeName} editing={editing} onChange={(value) => setForm((current) => ({ ...current, authorizedRepresentativeName: value }))} placeholder="Full legal name" />
-              <EditableField label="Role or title" value={form.authorizedRepresentativeRole} editing={editing} onChange={(value) => setForm((current) => ({ ...current, authorizedRepresentativeRole: value }))} placeholder="Director, owner, manager..." />
+              <EditableField
+                label="Representative name"
+                value={form.authorizedRepresentativeName}
+                editing={editing}
+                onChange={(value) =>
+                  setForm((current) => ({
+                    ...current,
+                    authorizedRepresentativeName: value,
+                  }))
+                }
+                placeholder="Full legal name"
+              />
+              <EditableField
+                label="Role or title"
+                value={form.authorizedRepresentativeRole}
+                editing={editing}
+                onChange={(value) =>
+                  setForm((current) => ({
+                    ...current,
+                    authorizedRepresentativeRole: value,
+                  }))
+                }
+                placeholder="Director, owner, manager..."
+              />
             </div>
             {editing ? (
               <label className="mt-3 flex items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-700">
-                <input type="checkbox" checked={form.authorityConfirmed} onChange={(event) => setForm((current) => ({ ...current, authorityConfirmed: event.target.checked }))} className="mt-1 h-4 w-4 rounded border-slate-300" />
-                I confirm I am authorised by this business to submit and maintain these verification details.
+                <input
+                  type="checkbox"
+                  checked={form.authorityConfirmed}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      authorityConfirmed: event.target.checked,
+                    }))
+                  }
+                  className="mt-1 h-4 w-4 rounded border-slate-300"
+                />
+                I confirm I am authorised by this business to submit and
+                maintain these verification details.
               </label>
             ) : (
-              <p className="mt-3 text-sm font-semibold text-emerald-700">{profile.authorityDeclaredAt ? "Authority declaration recorded" : "Authority declaration required"}</p>
+              <p className="mt-3 text-sm font-semibold text-emerald-700">
+                {profile.authorityDeclaredAt
+                  ? "Authority declaration recorded"
+                  : "Authority declaration required"}
+              </p>
             )}
           </div>
 
           <div className="mt-3 rounded-[20px] border border-slate-200 bg-slate-50 p-3 sm:mt-4 sm:rounded-[24px] sm:p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Business description</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  Business description
+                </p>
                 <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-                  This appears on the public movers page so customers can learn about your business before requesting quotes.
+                  This appears on the public movers page so customers can learn
+                  about your business before requesting quotes.
                 </p>
               </div>
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
@@ -692,7 +1051,15 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
             {editing ? (
               <textarea
                 value={form.businessDescription}
-                onChange={(event) => setForm((current) => ({ ...current, businessDescription: event.target.value.slice(0, BUSINESS_DESCRIPTION_LIMIT) }))}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    businessDescription: event.target.value.slice(
+                      0,
+                      BUSINESS_DESCRIPTION_LIMIT,
+                    ),
+                  }))
+                }
                 rows={6}
                 maxLength={BUSINESS_DESCRIPTION_LIMIT}
                 className="mt-3 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none ring-0 transition focus:border-slate-500"
@@ -700,49 +1067,161 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
               />
             ) : (
               <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-700">
-                {profile.businessDescription || "Add a short public summary so customers can get a feel for your business."}
+                {profile.businessDescription ||
+                  "Add a short public summary so customers can get a feel for your business."}
               </p>
             )}
           </div>
 
           <div className="mt-3 rounded-[20px] border border-slate-200 bg-slate-50 p-3 sm:mt-4 sm:rounded-[24px] sm:p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Coverage regions</p>
+            <div className="mb-6">
+              <h3 className="font-semibold">Public profile completeness</h3>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                New directory profiles need an operating location, services and
+                a meaningful description of at least 80 characters, alongside
+                contact and coverage information. Existing listings are flagged
+                for owner review while they are completed.
+              </p>
+              <label className="mt-4 block text-sm font-semibold">
+                Operating location
+                {editing ? (
+                  <select
+                    value={form.operatingRegion}
+                    onChange={(e) =>
+                      setForm((current) => ({
+                        ...current,
+                        operatingRegion: e.target.value,
+                      }))
+                    }
+                    className="mt-2 block w-full rounded-xl border border-slate-300 bg-white p-3"
+                  >
+                    <option value="">Select region</option>
+                    {NZ_SERVICE_AREAS.map((area) => (
+                      <option key={area}>{area}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <span className="mt-2 block font-normal">
+                    {profile.operatingRegion || "Not supplied"}
+                  </span>
+                )}
+              </label>
+              <fieldset className="mt-5">
+                <legend className="text-sm font-semibold">
+                  Moving services supplied by your company
+                </legend>
+                {editing ? (
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    {MOVING_SERVICES.map((service) => (
+                      <label
+                        key={service}
+                        className="flex items-center gap-3 text-sm"
+                      >
+                        <input
+                          type="checkbox"
+                          className="h-5 w-5"
+                          checked={form.movingServices.includes(service)}
+                          onChange={(e) =>
+                            setForm((current) => ({
+                              ...current,
+                              movingServices: e.target.checked
+                                ? [...current.movingServices, service]
+                                : current.movingServices.filter(
+                                    (s) => s !== service,
+                                  ),
+                            }))
+                          }
+                        />
+                        {service}
+                      </label>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-2 text-sm">
+                    {profile.movingServices?.join(" \u00b7 ") || "Not supplied"}
+                  </p>
+                )}
+              </fieldset>
+              <Link
+                href="/mover/reviews"
+                className="mt-4 inline-block py-2 text-sm font-semibold text-teal-700 underline"
+              >
+                Manage customer review responses
+              </Link>
+            </div>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+              Coverage regions
+            </p>
             {editing ? (
               <NzRegionSelector
                 selectedRegions={form.serviceAreas}
-                onChange={(regions) => setForm((current) => ({ ...current, serviceAreas: regions }))}
+                onChange={(regions) =>
+                  setForm((current) => ({ ...current, serviceAreas: regions }))
+                }
                 className="mt-3 border-none bg-transparent p-0"
                 title="Coverage regions"
                 description="Pick the NZ regions your team actively covers so customer leads are matched to the right mover."
               />
             ) : (
               <div className="mt-3 flex flex-wrap gap-2">
-                {profile.serviceAreas.length ? profile.serviceAreas.map((area) => <span key={area} className="rounded-full bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm">{formatServiceAreaLabel(area)}</span>) : <p className="text-sm text-slate-500">Add coverage regions.</p>}
+                {profile.serviceAreas.length ? (
+                  profile.serviceAreas.map((area) => (
+                    <span
+                      key={area}
+                      className="rounded-full bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm"
+                    >
+                      {formatServiceAreaLabel(area)}
+                    </span>
+                  ))
+                ) : (
+                  <p className="text-sm text-slate-500">
+                    Add coverage regions.
+                  </p>
+                )}
               </div>
             )}
-            {!editing ? <p className="mt-2 text-xs text-slate-500">Coverage is now managed by official NZ region selection.</p> : null}
+            {!editing ? (
+              <p className="mt-2 text-xs text-slate-500">
+                Coverage is now managed by official NZ region selection.
+              </p>
+            ) : null}
           </div>
         </section>
 
         <MoverLogoUpload
           initialLogoUrl={profile.logoUrl}
           onSaved={({ logoUrl, readiness }) => {
-            onProfileChange(withReadiness({ ...profile, logoUrl }, readiness as MoverProfileState["readiness"] | undefined));
+            onProfileChange(
+              withReadiness(
+                { ...profile, logoUrl },
+                readiness as MoverProfileState["readiness"] | undefined,
+              ),
+            );
             setSuccess("Logo saved.");
             setError(null);
           }}
         />
 
-        <section ref={documentsSectionRef} tabIndex={-1} className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 sm:rounded-[30px] sm:p-5">
+        <section
+          ref={documentsSectionRef}
+          tabIndex={-1}
+          className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 sm:rounded-[30px] sm:p-5"
+        >
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700 sm:text-sm">Business docs</p>
-              <h2 className="mt-1 text-xl font-black tracking-[-0.05em] text-slate-950 sm:text-2xl">Documents</h2>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700 sm:text-sm">
+                Business docs
+              </p>
+              <h2 className="mt-1 text-xl font-black tracking-[-0.05em] text-slate-950 sm:text-2xl">
+                Documents
+              </h2>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <select
                 value={documentType}
-                onChange={(event) => setDocumentType(event.target.value as typeof documentType)}
+                onChange={(event) =>
+                  setDocumentType(event.target.value as typeof documentType)
+                }
                 className="rounded-2xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 outline-none"
               >
                 <option value="INSURANCE">Insurance</option>
@@ -753,23 +1232,48 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
               {documentType === "INSURANCE" ? (
                 <label className="flex items-center gap-2 rounded-2xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700">
                   Expires
-                  <input type="date" value={documentExpiry} min={new Date(Date.now() + 86_400_000).toISOString().slice(0, 10)} onChange={(event) => setDocumentExpiry(event.target.value)} className="bg-transparent text-sm outline-none" />
+                  <input
+                    type="date"
+                    value={documentExpiry}
+                    min={new Date(Date.now() + 86_400_000)
+                      .toISOString()
+                      .slice(0, 10)}
+                    onChange={(event) => setDocumentExpiry(event.target.value)}
+                    className="bg-transparent text-sm outline-none"
+                  />
                 </label>
               ) : null}
               <label className="inline-flex cursor-pointer items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:translate-y-[-1px]">
-                {isUploading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                {isUploading ? (
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Plus className="h-4 w-4" />
+                )}
                 {isUploading ? "Uploading..." : "Upload document"}
-                <input type="file" accept=".pdf,image/png,image/jpeg,image/webp" className="hidden" onChange={handleDocumentChange} disabled={isUploading} />
+                <input
+                  type="file"
+                  accept=".pdf,image/png,image/jpeg,image/webp"
+                  className="hidden"
+                  onChange={handleDocumentChange}
+                  disabled={isUploading}
+                />
               </label>
             </div>
           </div>
 
           <div className="mt-3 rounded-[20px] border border-slate-200 bg-[linear-gradient(180deg,#f8fbff_0%,#ffffff_100%)] p-3 shadow-sm sm:mt-4 sm:rounded-[24px] sm:p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700 sm:text-sm">{selectedDocumentType.title}</p>
-            <p className="mt-2 text-sm leading-6 text-slate-600">{selectedDocumentType.description}</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700 sm:text-sm">
+              {selectedDocumentType.title}
+            </p>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              {selectedDocumentType.description}
+            </p>
             <div className="mt-3 flex flex-wrap gap-2">
               {selectedDocumentType.examples.map((example) => (
-                <span key={example} className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm">
+                <span
+                  key={example}
+                  className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm"
+                >
                   {example}
                 </span>
               ))}
@@ -786,16 +1290,32 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
               </div>
             ) : categoryDocuments.length ? (
               categoryDocuments.map((document) => (
-                <div key={document.id} className="flex flex-col gap-3 rounded-[20px] border border-slate-200 bg-slate-50 p-3 sm:rounded-[24px] sm:p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div
+                  key={document.id}
+                  className="flex flex-col gap-3 rounded-[20px] border border-slate-200 bg-slate-50 p-3 sm:rounded-[24px] sm:p-4 sm:flex-row sm:items-center sm:justify-between"
+                >
                   <div className="flex items-start gap-3">
                     <div className="rounded-2xl bg-white p-3 text-slate-700 shadow-sm">
                       <FileText className="h-5 w-5" />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-slate-900">{document.fileName}</p>
-                      <p className="mt-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{document.type.replaceAll("_", " ")}</p>
-                      <p className="mt-1 text-sm text-slate-500">{formatFileSize(document.fileSize)}</p>
-                      {document.expiresAt ? <p className="mt-1 text-xs text-slate-500">Expires {new Intl.DateTimeFormat("en-NZ", { dateStyle: "medium" }).format(new Date(document.expiresAt))}</p> : null}
+                      <p className="text-sm font-semibold text-slate-900">
+                        {document.fileName}
+                      </p>
+                      <p className="mt-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                        {document.type.replaceAll("_", " ")}
+                      </p>
+                      <p className="mt-1 text-sm text-slate-500">
+                        {formatFileSize(document.fileSize)}
+                      </p>
+                      {document.expiresAt ? (
+                        <p className="mt-1 text-xs text-slate-500">
+                          Expires{" "}
+                          {new Intl.DateTimeFormat("en-NZ", {
+                            dateStyle: "medium",
+                          }).format(new Date(document.expiresAt))}
+                        </p>
+                      ) : null}
                       <div className="mt-2 flex flex-wrap items-center gap-2">
                         <span
                           className={cx(
@@ -807,18 +1327,38 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
                                 : "bg-amber-100 text-amber-800",
                           )}
                         >
-                          {getDocumentVerificationLabel(document.verificationStatus)}
+                          {getDocumentVerificationLabel(
+                            document.verificationStatus,
+                          )}
                         </span>
-                        {document.verificationNote ? <span className="text-xs text-slate-500">{document.verificationNote}</span> : null}
+                        {document.verificationNote ? (
+                          <span className="text-xs text-slate-500">
+                            {document.verificationNote}
+                          </span>
+                        ) : null}
                       </div>
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <a href={document.viewUrl} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center rounded-2xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-white">
+                    <a
+                      href={document.viewUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center justify-center rounded-2xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-white"
+                    >
                       View
                     </a>
-                    <button type="button" onClick={() => removeDocument(document.id)} disabled={removingId === document.id} className="inline-flex items-center gap-2 rounded-2xl border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-70">
-                      {removingId === document.id ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                    <button
+                      type="button"
+                      onClick={() => removeDocument(document.id)}
+                      disabled={removingId === document.id}
+                      className="inline-flex items-center gap-2 rounded-2xl border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-70"
+                    >
+                      {removingId === document.id ? (
+                        <LoaderCircle className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
                       Remove
                     </button>
                   </div>
@@ -826,15 +1366,32 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
               ))
             ) : (
               <div className="rounded-[20px] border border-dashed border-slate-300 bg-slate-50 px-4 py-7 text-center sm:rounded-[24px] sm:py-8">
-                <p className="font-semibold text-slate-900">No documents uploaded for this category yet</p>
-                <p className="mt-2 text-sm text-slate-500">Upload {selectedDocumentType.title.toLowerCase()} documents here so Match &apos;n Move can review and approve this part of your profile.</p>
+                <p className="font-semibold text-slate-900">
+                  No documents uploaded for this category yet
+                </p>
+                <p className="mt-2 text-sm text-slate-500">
+                  Upload {selectedDocumentType.title.toLowerCase()} documents
+                  here so Match &apos;n Move can review and approve this part of
+                  your profile.
+                </p>
               </div>
             )}
           </div>
 
-          <p className="mt-3 text-xs text-slate-500">PDF, PNG, JPG, or WEBP up to 4MB. Uploaded documents stay pending until a reviewer approves them.</p>
-          {documentSuccess ? <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">{documentSuccess}</p> : null}
-          {documentError ? <p className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{documentError}</p> : null}
+          <p className="mt-3 text-xs text-slate-500">
+            PDF, PNG, JPG, or WEBP up to 4MB. Uploaded documents stay pending
+            until a reviewer approves them.
+          </p>
+          {documentSuccess ? (
+            <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+              {documentSuccess}
+            </p>
+          ) : null}
+          {documentError ? (
+            <p className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
+              {documentError}
+            </p>
+          ) : null}
         </section>
       </div>
 
@@ -842,7 +1399,9 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
         <aside className="order-1 rounded-[24px] border border-slate-200 bg-[linear-gradient(180deg,#fff8ef,#ffffff)] p-4 shadow-sm sm:rounded-[30px] sm:p-5 2xl:order-2">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-orange-600 sm:text-sm">Verification readiness</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-orange-600 sm:text-sm">
+                Verification readiness
+              </p>
               <h2 className="mt-1 text-xl font-black tracking-[-0.05em] text-slate-950 sm:text-2xl">
                 {profile.readiness.missingCount} to go live
               </h2>
@@ -853,17 +1412,26 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
           </div>
 
           <p className="mt-3 text-sm leading-6 text-slate-600">
-            Complete every verification check to earn a verified profile badge. Active accounts with a verified email and service regions can access matching leads while these checks are pending.
+            Complete every verification check to earn a verified profile badge.
+            Active accounts with a verified email and service regions can access
+            matching leads while these checks are pending.
           </p>
 
           <div className="mt-4 h-3 rounded-full bg-slate-200">
-            <div className="h-full rounded-full bg-[linear-gradient(90deg,#f97316,#fb923c)]" style={{ width: `${profile.readiness.completion}%` }} />
+            <div
+              className="h-full rounded-full bg-[linear-gradient(90deg,#f97316,#fb923c)]"
+              style={{ width: `${profile.readiness.completion}%` }}
+            />
           </div>
 
           {profile.readiness.nextStep ? (
             <button
               type="button"
-              onClick={() => openReadinessDestination(profile.readiness.nextStep!.destination)}
+              onClick={() =>
+                openReadinessDestination(
+                  profile.readiness.nextStep!.destination,
+                )
+              }
               className="mt-4 inline-flex w-full items-center justify-center rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:translate-y-[-1px]"
             >
               Next: {profile.readiness.nextStep.title}
@@ -878,8 +1446,20 @@ export function MoverProfileSettings({ profile, onProfileChange, focusSection, o
                 value={item.key === "email" ? profile.email : item.label}
                 status={item.complete ? "Complete" : item.description}
                 complete={item.complete}
-                actionLabel={item.complete ? undefined : item.destination === "security" ? "Open security" : item.destination === "documents" ? "Upload docs" : "Edit profile"}
-                onClick={item.complete ? undefined : () => openReadinessDestination(item.destination)}
+                actionLabel={
+                  item.complete
+                    ? undefined
+                    : item.destination === "security"
+                      ? "Open security"
+                      : item.destination === "documents"
+                        ? "Upload docs"
+                        : "Edit profile"
+                }
+                onClick={
+                  item.complete
+                    ? undefined
+                    : () => openReadinessDestination(item.destination)
+                }
               />
             ))}
           </div>
@@ -906,7 +1486,9 @@ function EditableField({
 }) {
   return (
     <div className="rounded-[20px] border border-slate-200 bg-slate-50 p-3 sm:rounded-[24px] sm:p-4">
-      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{label}</p>
+      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+        {label}
+      </p>
       {editing ? (
         <input
           value={value}
@@ -916,7 +1498,9 @@ function EditableField({
           className="mt-3 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-slate-500"
         />
       ) : (
-        <p className="mt-3 break-words text-lg font-black tracking-[-0.04em] text-slate-950">{value || placeholder}</p>
+        <p className="mt-3 break-words text-lg font-black tracking-[-0.04em] text-slate-950">
+          {value || placeholder}
+        </p>
       )}
     </div>
   );
@@ -938,12 +1522,34 @@ function ReadinessCard({
   onClick?: () => void;
 }) {
   return (
-    <div className={cx("rounded-[20px] border p-3 sm:rounded-[24px] sm:p-4", complete ? "border-emerald-200 bg-emerald-50" : "border-slate-200 bg-white")}>
-      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{title}</p>
-      <p className="mt-2 break-words text-sm font-semibold text-slate-900">{value}</p>
-      <p className={cx("mt-1 text-sm", complete ? "text-emerald-700" : "text-slate-500")}>{status}</p>
+    <div
+      className={cx(
+        "rounded-[20px] border p-3 sm:rounded-[24px] sm:p-4",
+        complete
+          ? "border-emerald-200 bg-emerald-50"
+          : "border-slate-200 bg-white",
+      )}
+    >
+      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+        {title}
+      </p>
+      <p className="mt-2 break-words text-sm font-semibold text-slate-900">
+        {value}
+      </p>
+      <p
+        className={cx(
+          "mt-1 text-sm",
+          complete ? "text-emerald-700" : "text-slate-500",
+        )}
+      >
+        {status}
+      </p>
       {actionLabel && onClick ? (
-        <button type="button" onClick={onClick} className="mt-3 rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">
+        <button
+          type="button"
+          onClick={onClick}
+          className="mt-3 rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+        >
           {actionLabel}
         </button>
       ) : null}

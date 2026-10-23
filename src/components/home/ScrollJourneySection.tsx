@@ -1,315 +1,76 @@
-"use client";
-
 import Link from "next/link";
-import { ShieldCheck, Sparkles, WalletCards, type LucideIcon } from "lucide-react";
-import { motion, useInView, useMotionValueEvent, useReducedMotion, useScroll, useSpring, useTransform } from "framer-motion";
-import { useRef, useState } from "react";
-
-const steps = [
-  { number: "1", title: "Tell Us About Your Move" },
-  { number: "2", title: "Compare Quotes" },
-  { number: "3", title: "Choose & Save" },
-] as const;
-
-const benefits = [
-  {
-    title: "Trusted movers",
-    description: "Vetted moving companies with profiles you can compare in one place.",
-    icon: ShieldCheck,
-    accent: "from-emerald-300/24 via-emerald-400/10 to-transparent",
-    iconColor: "text-emerald-200",
-    pill: "Verified partners",
-    href: "/movers",
-    cta: "View trusted movers",
-  },
-  {
-    title: "Quick and easy",
-    description: "Send one request and start receiving quotes without the back-and-forth.",
-    icon: Sparkles,
-    accent: "from-sky-300/24 via-blue-400/10 to-transparent",
-    iconColor: "text-sky-200",
-    pill: "Fast responses",
-    href: "/quote",
-    cta: "Get quotes",
-  },
-  {
-    title: "No obligation",
-    description: "Browse your options freely and choose only when the price feels right.",
-    icon: WalletCards,
-    accent: "from-amber-300/24 via-accentOrange/10 to-transparent",
-    iconColor: "text-orange-200",
-    pill: "100% free to compare",
-  },
-] as const;
-
-function getStepState(progress: number, index: number, total: number) {
-  const segment = 1 / total;
-  const start = index * segment;
-  const end = start + segment;
-  const center = start + segment / 2;
-
-  if (progress >= end) {
-    return "complete" as const;
-  }
-
-  const distanceFromCenter = Math.abs(progress - center);
-  const activationWindow = segment * 0.55;
-
-  if (distanceFromCenter <= activationWindow) {
-    return "active" as const;
-  }
-
-  return "upcoming" as const;
-}
-
-function StepCard({
-  number,
-  title,
-  state,
-}: {
-  number: string;
-  title: string;
-  state: "active" | "complete" | "upcoming";
-}) {
-  const stateClasses = {
-    active: {
-      card: "border-white/20 bg-white/[0.12] shadow-[0_24px_70px_-30px_rgba(222,122,58,0.85)]",
-      ring: "border-white/35 bg-white/[0.06] text-white",
-      title: "text-white",
-      number: "text-white",
-      scale: 1.015,
-      opacity: 1,
-      y: -2,
-    },
-    complete: {
-      card: "border-white/12 bg-white/[0.08]",
-      ring: "border-white/15 bg-white/[0.04] text-white/90",
-      title: "text-slate-100",
-      number: "text-white/85",
-      scale: 1,
-      opacity: 0.8,
-      y: 0,
-    },
-    upcoming: {
-      card: "border-white/10 bg-white/[0.04]",
-      ring: "border-white/10 bg-white/[0.04] text-slate-400",
-      title: "text-slate-400",
-      number: "text-slate-500",
-      scale: 0.98,
-      opacity: 0.58,
-      y: 6,
-    },
-  }[state];
-
-  return (
-    <motion.article
-      animate={{ scale: stateClasses.scale, opacity: stateClasses.opacity, y: stateClasses.y }}
-      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-      className={`transform-gpu rounded-[22px] border px-4 py-4 sm:backdrop-blur-xl md:rounded-[28px] md:px-6 md:py-6 ${stateClasses.card}`}
-    >
-      <div className="flex items-center gap-3 md:gap-4">
-        <div
-          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border text-sm font-semibold md:h-12 md:w-12 md:rounded-2xl md:text-base ${stateClasses.ring}`}
-        >
-          {number}
-        </div>
-        <h3 className={`text-base font-semibold tracking-[-0.01em] md:text-[1.35rem] md:tracking-[-0.02em] ${stateClasses.title}`}>{title}</h3>
-      </div>
-    </motion.article>
-  );
-}
-
-function BenefitCard({
-  title,
-  description,
-  icon: Icon,
-  accent,
-  iconColor,
-  pill,
-  href,
-  cta,
-  index,
-}: {
-  title: string;
-  description: string;
-  icon: LucideIcon;
-  accent: string;
-  iconColor: string;
-  pill: string;
-  href?: string;
-  cta?: string;
-  index: number;
-}) {
-  const cardRef = useRef<HTMLDivElement | null>(null);
-  const isInView = useInView(cardRef, { once: true, margin: "-15% 0px -10% 0px" });
-  const isInteractive = Boolean(href);
-  const cardClassName = `group relative h-full overflow-hidden rounded-[22px] border bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.04))] px-4 py-4 sm:rounded-[28px] sm:px-6 sm:py-6 sm:backdrop-blur-xl ${
-    isInteractive
-      ? "cursor-pointer border-white/12 transition duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#091423]"
-      : "border-white/12"
-  }`;
-
-  const cardBody = (
-    <>
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.05),transparent_42%,rgba(255,255,255,0.03))] opacity-90 transition duration-500 group-hover:opacity-100" />
-      <div className={`pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-br ${accent} opacity-90 blur-2xl`} />
-      <div className="pointer-events-none absolute -right-12 bottom-0 h-24 w-24 rounded-full bg-white/5 blur-3xl" />
-      <div className="relative flex min-h-[150px] flex-col justify-between sm:min-h-[220px]">
-        <div className="flex items-start justify-between gap-4">
-          <div className={`inline-flex h-11 w-11 items-center justify-center rounded-xl border border-white/12 bg-white/[0.08] shadow-[0_12px_30px_-18px_rgba(15,23,42,0.9)] sm:h-14 sm:w-14 sm:rounded-2xl ${iconColor}`}>
-            <Icon className="h-5 w-5 sm:h-7 sm:w-7" strokeWidth={2.1} />
-          </div>
-          <span className="rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[0.64rem] font-semibold uppercase tracking-[0.14em] text-white/65 sm:px-3 sm:text-[0.7rem] sm:tracking-[0.18em]">
-            {pill}
-          </span>
-        </div>
-
-        <div className="mt-7 sm:mt-12">
-          <h3 className="max-w-[11ch] text-[1.55rem] font-semibold leading-[1] tracking-[-0.025em] text-white sm:text-[2.2rem] sm:leading-[0.96] sm:tracking-[-0.04em]">
-            {title}
-          </h3>
-          <p className="mt-3 max-w-[26ch] text-sm leading-6 text-slate-300 sm:text-[0.98rem]">
-            {description}
-          </p>
-          {cta ? (
-            <div className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-white/90">
-              <span>{cta}</span>
-              <span aria-hidden="true" className="text-base transition duration-300 group-hover:translate-x-1">
-                &rarr;
-              </span>
-            </div>
-          ) : null}
-        </div>
-      </div>
-    </>
-  );
-
-  if (href) {
-    return (
-      <motion.div
-        ref={cardRef}
-        initial={{ opacity: 0, y: 26, scale: 0.98 }}
-        animate={isInView ? { opacity: 1, y: 0, scale: 1 } : undefined}
-        transition={{ duration: 0.65, delay: index * 0.1, ease: [0.22, 1, 0.36, 1] }}
-        whileHover={{ y: -6, scale: 1.018 }}
-        className="h-full"
-      >
-        <Link href={href} className={`${cardClassName} flex w-full`}>
-          {cardBody}
-        </Link>
-      </motion.div>
-    );
-  }
-
-  return (
-    <motion.div
-      ref={cardRef}
-      initial={{ opacity: 0, y: 26, scale: 0.98 }}
-      animate={isInView ? { opacity: 1, y: 0, scale: 1 } : undefined}
-      transition={{ duration: 0.65, delay: index * 0.1, ease: [0.22, 1, 0.36, 1] }}
-      whileHover={{ y: -4, scale: 1.01 }}
-      className="h-full"
-    >
-      <article className={cardClassName}>{cardBody}</article>
-    </motion.div>
-  );
-}
-
+import { FileText, MessagesSquare, Truck, Sparkles } from "lucide-react";
 export function ScrollJourneySection() {
-  const sectionRef = useRef<HTMLElement | null>(null);
-  const timelineRef = useRef<HTMLDivElement | null>(null);
-  const prefersReducedMotion = useReducedMotion();
-  const [stepStates, setStepStates] = useState<Array<"active" | "complete" | "upcoming">>(
-    steps.map((_, index) => getStepState(0, index, steps.length)),
-  );
-  const stepStatesRef = useRef(stepStates);
-  const { scrollYProgress } = useScroll({
-    target: sectionRef,
-    offset: ["start 80%", "end 80%"],
-  });
-
-  const { scrollYProgress: timelineProgress } = useScroll({
-    target: timelineRef,
-    offset: ["start 62%", "end 58%"],
-  });
-
-  const easedProgress = useSpring(timelineProgress, { stiffness: 130, damping: 28, mass: 0.2 });
-  const headerOpacity = useTransform(scrollYProgress, [0, 0.16, 0.28], [0.42, 0.72, 1]);
-  const headerY = useTransform(scrollYProgress, [0, 0.28], [18, 0]);
-  const sectionGlow = useTransform(scrollYProgress, [0, 1], [0.28, 0.6]);
-
-  useMotionValueEvent(easedProgress, "change", (latest) => {
-    const nextStates = steps.map((_, index) => getStepState(latest, index, steps.length));
-
-    if (nextStates.every((state, index) => state === stepStatesRef.current[index])) {
-      return;
-    }
-
-    stepStatesRef.current = nextStates;
-    setStepStates(nextStates);
-  });
-
   return (
-    <section
-      id="how-it-works"
-      data-analytics-section="homepage_how_it_works"
-      ref={sectionRef}
-      className="relative overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.26),transparent_28%),radial-gradient(circle_at_85%_18%,rgba(56,189,248,0.16),transparent_24%),linear-gradient(180deg,#06111f_0%,#081425_28%,#091524_58%,#07111d_100%)] text-white"
-    >
-      <motion.div
-        style={{ opacity: prefersReducedMotion ? 0.44 : sectionGlow }}
-        className="pointer-events-none absolute inset-x-0 top-0 h-80 transform-gpu bg-[radial-gradient(circle_at_30%_30%,rgba(96,165,250,0.24),transparent_38%),radial-gradient(circle_at_70%_10%,rgba(59,130,246,0.14),transparent_28%)] sm:blur-3xl"
-      />
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(120deg,transparent,rgba(148,163,184,0.035),transparent)]" />
-      <div className="pointer-events-none absolute left-[12%] top-28 hidden h-44 w-44 rounded-full bg-blue-400/10 blur-[120px] sm:block" />
-      <div className="pointer-events-none absolute right-[10%] top-1/3 hidden h-56 w-56 rounded-full bg-cyan-300/10 blur-[140px] sm:block" />
-
-      <div className="relative mx-auto max-w-[1240px] px-4 py-12 sm:px-6 sm:py-24 lg:px-8 lg:py-28">
-        <div ref={timelineRef} className="grid gap-10 lg:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)] lg:gap-12">
-          <motion.div style={{ opacity: headerOpacity, y: headerY }} className="lg:sticky lg:top-28 lg:self-start">
-            <div className="max-w-[28rem]">
-              <p className="text-sm font-semibold uppercase tracking-[0.26em] text-blue-200/75">Steps</p>
-              <h2 className="mt-4 max-w-[12ch] text-[clamp(2rem,10vw,4.75rem)] font-black leading-[0.96] tracking-[-0.035em] text-white sm:mt-5 sm:max-w-none sm:leading-[0.92] sm:tracking-[-0.05em]">
-                Scroll through the moving journey.
-              </h2>
+    <section id="how-it-works" className="bg-white py-12 sm:py-20">
+      <div className="container-shell">
+        <p className="text-sm font-semibold uppercase tracking-widest text-teal-700">
+          A clear process, your choice
+        </p>
+        <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
+          From one request to your next move.
+        </h2>
+        <div className="mt-8 grid gap-6 md:grid-cols-3">
+          {[
+            {
+              Icon: FileText,
+              title: "1. Tell us about your move",
+              text: "Add pickup and destination details, your preferred date and what needs moving. Requesting quotes is free.",
+            },
+            {
+              Icon: MessagesSquare,
+              title: "2. Receive and compare quotes",
+              text: "Your enquiry can be shared with companies covering your route. Responses depend on availability; companies contact you directly.",
+            },
+            {
+              Icon: Truck,
+              title: "3. Choose the right mover",
+              text: "Compare scope, price and terms with each company. You decide whether to book, with no obligation to accept an offer.",
+            },
+          ].map(({ Icon, title, text }) => (
+            <div
+              key={title}
+              className="rounded-2xl border border-slate-200 p-6"
+            >
+              <Icon aria-hidden="true" className="h-7 w-7 text-teal-700" />
+              <h3 className="mt-4 text-xl font-semibold text-slate-950">
+                {title}
+              </h3>
+              <p className="mt-3 leading-7 text-slate-600">{text}</p>
             </div>
-          </motion.div>
-
-          <div className="relative">
-            <div className="absolute left-[22px] top-2 bottom-2 w-px bg-gradient-to-b from-white/5 via-white/10 to-white/5 md:left-7" />
-            <motion.div
-              style={{ scaleY: prefersReducedMotion ? 1 : easedProgress }}
-              className="absolute bottom-2 left-[21px] top-2 w-[3px] origin-top transform-gpu rounded-full bg-[linear-gradient(180deg,rgba(255,210,182,0.35),rgba(222,122,58,0.95),rgba(255,190,144,0.45))] shadow-[0_0_28px_rgba(222,122,58,0.55)] will-change-transform md:left-[26px]"
-            />
-
-            <div className="space-y-4 md:space-y-7">
-              {steps.map((step, index) => (
-                <div key={step.number} className="relative pl-14 md:pl-20">
-                  <div className="absolute left-[14px] top-6 h-4 w-4 rounded-full border border-blue-200/35 bg-slate-950 md:left-[19px]" />
-                  <div
-                    className={`absolute left-[12px] top-[22px] h-8 w-8 rounded-full blur-xl md:left-[17px] ${
-                      stepStates[index] === "active" ? "bg-[rgba(222,122,58,0.55)]" : "bg-transparent"
-                    }`}
-                  />
-                  <StepCard number={step.number} title={step.title} state={stepStates[index]} />
-                </div>
-              ))}
-            </div>
-          </div>
+          ))}
         </div>
-
-        <div className="mt-14 border-t border-white/8 pt-10 sm:mt-28 sm:pt-24">
-          <div className="max-w-[40rem]">
-            <p className="text-sm font-semibold uppercase tracking-[0.26em] text-blue-200/75">Benefits</p>
-            <h2 className="mt-4 text-[clamp(1.95rem,9vw,4rem)] font-black leading-[0.98] tracking-[-0.035em] text-white sm:mt-5 sm:leading-[0.94] sm:tracking-[-0.05em]">
-              Why choose us?
+        <div className="mt-10 grid gap-6 rounded-3xl bg-slate-950 p-6 text-white sm:p-10 md:grid-cols-[1.4fr_1fr]">
+          <div>
+            <p className="inline-flex flex-wrap items-center gap-2 text-sm font-semibold text-teal-200">
+              <Truck size={20} /> MOVING QUOTES <span className="mx-2">+</span>
+              <Sparkles size={20} /> CLEANING QUOTES
+            </p>
+            <h2 className="mt-4 text-3xl font-bold">
+              One move. Two things sorted.
             </h2>
+            <p className="mt-4 max-w-xl leading-7 text-slate-300">
+              Organise moving and optional move-out or move-in cleaning quotes
+              through one request. Choose the property to clean and the services
+              you need. Cleaners receive information relevant to that property.
+            </p>
           </div>
-
-          <div className="mt-7 grid gap-3 sm:mt-12 sm:gap-5 md:grid-cols-3">
-            {benefits.map((benefit, index) => (
-              <BenefitCard key={benefit.title} index={index} {...benefit} />
-            ))}
+          <div className="flex flex-col justify-center gap-4">
+            <Link
+              className="min-h-12 rounded-xl bg-teal-300 px-5 py-3 text-center font-semibold text-slate-950"
+              href="/quote?cleaning=1"
+            >
+              Get moving &amp; cleaning quotes
+            </Link>
+            <Link
+              className="py-2 text-center underline underline-offset-4"
+              href="/cleaning-quotes"
+            >
+              How cleaning quotes work
+            </Link>
+            <p className="text-center text-sm text-slate-300">
+              Optional cleaning. Free to request. No obligation.
+            </p>
           </div>
         </div>
       </div>

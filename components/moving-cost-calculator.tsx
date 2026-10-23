@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import Link from "next/link";
+import { useMemo, useState, useEffect, useRef } from "react";
+import { trackAnalyticsEvent } from "@/lib/analytics";
 import { ArrowRight, Calculator, CheckCircle2, Info } from "lucide-react";
 
 type RouteType = "local" | "regional" | "long-distance" | "inter-island";
@@ -44,6 +44,9 @@ const currency = new Intl.NumberFormat("en-NZ", {
 });
 
 export function MovingCostCalculator() {
+  const [transferError, setTransferError] = useState("");
+  const [transferring, setTransferring] = useState(false);
+  const usedRef = useRef(false);
   const [routeType, setRouteType] = useState<RouteType>("local");
   const [homeSize, setHomeSize] = useState<HomeSize>("two");
   const [city, setCity] = useState<City>("other");
@@ -56,7 +59,9 @@ export function MovingCostCalculator() {
     let [low, high] =
       routeType === "inter-island"
         ? interIslandRanges[homeSize]
-        : homeRanges[homeSize].map((amount) => amount * routeMultipliers[routeType]) as [number, number];
+        : (homeRanges[homeSize].map(
+            (amount) => amount * routeMultipliers[routeType],
+          ) as [number, number]);
 
     const cityMultiplier = routeType === "local" ? cityMultipliers[city] : 1;
     low *= cityMultiplier;
@@ -83,8 +88,63 @@ export function MovingCostCalculator() {
       low: roundEstimate(low),
       high: roundEstimate(high),
     };
-  }, [busyTiming, city, difficultAccess, heavyItem, homeSize, packing, routeType]);
+  }, [
+    busyTiming,
+    city,
+    difficultAccess,
+    heavyItem,
+    homeSize,
+    packing,
+    routeType,
+  ]);
 
+  useEffect(() => {
+    if (usedRef.current) return;
+    usedRef.current = true;
+    trackAnalyticsEvent("calculator_used", { source: "calculator" });
+  }, [
+    routeType,
+    homeSize,
+    city,
+    packing,
+    difficultAccess,
+    heavyItem,
+    busyTiming,
+  ]);
+  async function transfer() {
+    if (transferring) return;
+    setTransferring(true);
+    setTransferError("");
+    try {
+      const old = await fetch("/api/quote-draft", { cache: "no-store" });
+      if (!old.ok) throw Error();
+      const { draft } = await old.json();
+      const res = await fetch("/api/quote-draft", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...draft,
+          step: 1,
+          calculator: {
+            routeType,
+            homeSize,
+            city,
+            packing,
+            difficultAccess,
+            heavyItem,
+            busyTiming,
+          },
+        }),
+      });
+      if (!res.ok) throw Error();
+      window.location.href = "/quote";
+    } catch {
+      setTransferError(
+        "Your estimate could not be carried across. Please try again.",
+      );
+      setTransferring(false);
+    }
+  }
   return (
     <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
       <div className="min-w-0 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
@@ -93,8 +153,12 @@ export function MovingCostCalculator() {
             <Calculator className="h-6 w-6" />
           </div>
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-sky-700">Build your estimate</p>
-            <h2 className="mt-1 text-2xl font-black tracking-[-0.04em] text-slate-950">Tell us about the move</h2>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-sky-700">
+              Build your estimate
+            </p>
+            <h2 className="mt-1 text-2xl font-black tracking-[-0.04em] text-slate-950">
+              Tell us about the move
+            </h2>
           </div>
         </div>
 
@@ -140,7 +204,9 @@ export function MovingCostCalculator() {
         </div>
 
         <fieldset className="mt-7">
-          <legend className="text-sm font-bold text-slate-900">Possible extras</legend>
+          <legend className="text-sm font-bold text-slate-900">
+            Possible extras
+          </legend>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <CalculatorCheck
               checked={packing}
@@ -171,30 +237,43 @@ export function MovingCostCalculator() {
       </div>
 
       <aside className="rounded-[28px] bg-[linear-gradient(145deg,#0f172a,#17324f)] p-6 text-white shadow-[0_28px_70px_-42px_rgba(15,23,42,0.75)] lg:sticky lg:top-6">
-        <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-200">Indicative planning range</p>
+        <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-200">
+          Indicative planning range
+        </p>
         <p className="mt-4 text-[clamp(2.3rem,8vw,3.7rem)] font-black tracking-[-0.06em] text-white">
           {currency.format(estimate.low)}
         </p>
-        <p className="text-xl font-bold text-sky-100">to {currency.format(estimate.high)}</p>
+        <p className="text-xl font-bold text-sky-100">
+          to {currency.format(estimate.high)}
+        </p>
         <p className="mt-4 text-sm leading-7 text-slate-300">
-          This is a broad budget estimate, not a quote. It cannot see your inventory, exact distance, property access,
-          mover availability, storage needs, insurance choice, or required delivery timing.
+          This is a broad budget estimate, not a quote. It cannot see your
+          inventory, exact distance, property access, mover availability,
+          storage needs, insurance choice, or required delivery timing.
         </p>
         <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.06] p-4">
           <div className="flex items-start gap-3">
             <Info className="mt-1 h-5 w-5 shrink-0 text-sky-200" />
             <p className="text-sm leading-6 text-slate-200">
-              For budgeting, consider keeping another 15% to 25% available until you have a complete written quote.
+              For budgeting, consider keeping another 15% to 25% available until
+              you have a complete written quote.
             </p>
           </div>
         </div>
-        <Link
-          href="/quote"
+        <button
+          type="button"
+          disabled={transferring}
+          onClick={() => void transfer()}
           className="mt-5 inline-flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 font-semibold text-slate-950"
         >
-          Get quotes for the real job
+          {transferring ? "Saving..." : "Get real quotes for my move"}
           <ArrowRight className="h-4 w-4" />
-        </Link>
+        </button>
+        {transferError && (
+          <p role="alert" className="mt-3 text-sm text-red-700">
+            {transferError}
+          </p>
+        )}
       </aside>
     </div>
   );
@@ -221,7 +300,9 @@ function CalculatorSelect({
 }) {
   return (
     <label htmlFor={id} className={disabled ? "opacity-55" : ""}>
-      <span className="mb-2 block text-sm font-bold text-slate-900">{label}</span>
+      <span className="mb-2 block text-sm font-bold text-slate-900">
+        {label}
+      </span>
       <select
         id={id}
         value={value}
@@ -230,7 +311,9 @@ function CalculatorSelect({
         className="min-h-[52px] min-w-0 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-800 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100 disabled:cursor-not-allowed"
       >
         {options.map(([optionValue, optionLabel]) => (
-          <option key={optionValue} value={optionValue}>{optionLabel}</option>
+          <option key={optionValue} value={optionValue}>
+            {optionLabel}
+          </option>
         ))}
       </select>
     </label>
@@ -259,14 +342,18 @@ function CalculatorCheck({
       <span
         aria-hidden="true"
         className={`mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border ${
-          checked ? "border-emerald-600 bg-emerald-600 text-white" : "border-slate-300 bg-white text-transparent"
+          checked
+            ? "border-emerald-600 bg-emerald-600 text-white"
+            : "border-slate-300 bg-white text-transparent"
         }`}
       >
         <CheckCircle2 className="h-4 w-4" />
       </span>
       <span>
         <span className="block font-semibold text-slate-900">{label}</span>
-        <span className="mt-1 block text-sm leading-6 text-slate-500">{detail}</span>
+        <span className="mt-1 block text-sm leading-6 text-slate-500">
+          {detail}
+        </span>
       </span>
     </label>
   );

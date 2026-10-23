@@ -1,9 +1,15 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { MovingChecklist } from "@/components/moving-checklist";
 import { ResourceArticle } from "@/components/resource-article";
 import { SiteShell } from "@/components/site-shell";
 import { articleResources, getResource } from "@/lib/moving-resources";
-import { absoluteUrl, createPageMetadata, SITE_NAME, SITE_URL } from "@/lib/seo";
+import {
+  absoluteUrl,
+  createPageMetadata,
+  SITE_NAME,
+  SITE_URL,
+} from "@/lib/seo";
 
 export function generateStaticParams() {
   return articleResources.map((resource) => ({ slug: resource.slug }));
@@ -20,7 +26,8 @@ export async function generateMetadata({
   if (!resource) {
     return createPageMetadata({
       title: "Moving and Cleaning Resource",
-      description: "Practical New Zealand moving and move-out cleaning guidance.",
+      description:
+        "Practical New Zealand moving and move-out cleaning guidance.",
       path: `/resources/${slug}`,
       noIndex: true,
     });
@@ -45,7 +52,12 @@ export default async function MovingResourcePage({
   const pageUrl = absoluteUrl(`/resources/${resource.slug}`);
   const breadcrumbItems = [
     { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
-    { "@type": "ListItem", position: 2, name: "Resources", item: absoluteUrl("/resources") },
+    {
+      "@type": "ListItem",
+      position: 2,
+      name: "Resources",
+      item: absoluteUrl("/resources"),
+    },
     ...(resource.category === "cleaning"
       ? [
           {
@@ -74,9 +86,12 @@ export default async function MovingResourcePage({
         "@type": "Article",
         headline: resource.title,
         description: resource.description,
-        dateModified: resource.category === "cleaning" ? "2026-09-08" : "2026-06-15",
-        datePublished: resource.category === "cleaning" ? "2026-09-08" : "2026-06-15",
-        articleSection: resource.category === "cleaning" ? "Move-out cleaning" : "Moving",
+        dateModified:
+          resource.category === "cleaning" ? "2026-09-08" : "2026-06-15",
+        datePublished:
+          resource.category === "cleaning" ? "2026-09-08" : "2026-06-15",
+        articleSection:
+          resource.category === "cleaning" ? "Move-out cleaning" : "Moving",
         inLanguage: "en-NZ",
         mainEntityOfPage: pageUrl,
         author: {
@@ -99,6 +114,7 @@ export default async function MovingResourcePage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
+      {slug === "moving-house-checklist" && <MovingChecklist />}
       <ResourceArticle resource={resource} />
     </SiteShell>
   );

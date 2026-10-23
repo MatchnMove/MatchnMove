@@ -5,10 +5,14 @@ import { sendReviewSurveyEmail } from "@/lib/email";
 import { revalidatePublicMovers } from "@/lib/public-cache";
 
 export const REVIEW_RANKING_MINIMUM = 5;
-const REVIEW_SURVEY_EXPIRY_DAYS = Number(process.env.REVIEW_SURVEY_EXPIRY_DAYS ?? 14);
+const REVIEW_SURVEY_EXPIRY_DAYS = Number(
+  process.env.REVIEW_SURVEY_EXPIRY_DAYS ?? 14,
+);
 const LEADERBOARD_PRIOR_AVERAGE = 4.2;
 const LEADERBOARD_PRIOR_WEIGHT = 5;
-const AUTOMATIC_REVIEW_INVITE_DELAY_HOURS = Number(process.env.REVIEW_INVITE_DELAY_HOURS ?? 24);
+const AUTOMATIC_REVIEW_INVITE_DELAY_HOURS = Number(
+  process.env.REVIEW_INVITE_DELAY_HOURS ?? 24,
+);
 const AUTO_REJECT_PATTERNS = [
   /\b(?:http:\/\/|https:\/\/|www\.)/i,
   /\b[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}\b/i,
@@ -48,7 +52,10 @@ function roundToTwoDecimals(value: number) {
   return Math.round(value * 100) / 100;
 }
 
-export function getDisplayedReviewerName(customerName: string | null | undefined, showReviewerName: boolean) {
+export function getDisplayedReviewerName(
+  customerName: string | null | undefined,
+  showReviewerName: boolean,
+) {
   const normalizedName = customerName?.trim() ?? "";
   if (!showReviewerName || !normalizedName) {
     return ANONYMOUS_REVIEWER_LABEL;
@@ -61,7 +68,9 @@ function averageFromNullable(values: Array<number | null>) {
   const filtered = values.filter((value): value is number => value !== null);
   if (!filtered.length) return 0;
 
-  return roundToOneDecimal(filtered.reduce((sum, value) => sum + value, 0) / filtered.length);
+  return roundToOneDecimal(
+    filtered.reduce((sum, value) => sum + value, 0) / filtered.length,
+  );
 }
 
 export function hashReviewSurveyToken(token: string) {
@@ -73,7 +82,9 @@ export function createReviewSurveyToken() {
 }
 
 function getAutomaticInviteCutoff() {
-  return new Date(Date.now() - AUTOMATIC_REVIEW_INVITE_DELAY_HOURS * 60 * 60 * 1000);
+  return new Date(
+    Date.now() - AUTOMATIC_REVIEW_INVITE_DELAY_HOURS * 60 * 60 * 1000,
+  );
 }
 
 function canLeadReceiveAutomaticReviewInvite(lead: {
@@ -81,9 +92,10 @@ function canLeadReceiveAutomaticReviewInvite(lead: {
   purchasedAt: Date | null;
   quoteRequest: { moveDate: Date | null; dateFlexible: boolean };
 }) {
-  if (!["PURCHASED", "CONTACTED", "WON"].includes(lead.status)) return false;
+  if (lead.status !== "WON") return false;
   if (!lead.purchasedAt) return false;
-  if (!lead.quoteRequest.moveDate || lead.quoteRequest.dateFlexible) return false;
+  if (!lead.quoteRequest.moveDate || lead.quoteRequest.dateFlexible)
+    return false;
 
   return lead.quoteRequest.moveDate <= getAutomaticInviteCutoff();
 }
@@ -96,9 +108,7 @@ function normalizeReviewText(value: string) {
 }
 
 function getUniqueWordRatio(value: string) {
-  const words = value
-    .toLowerCase()
-    .match(/[a-z0-9']+/g) ?? [];
+  const words = value.toLowerCase().match(/[a-z0-9']+/g) ?? [];
   if (!words.length) return 1;
 
   return new Set(words).size / words.length;
@@ -108,7 +118,9 @@ function hasExcessiveCharacterRepetition(value: string) {
   return /(.)\1{5,}/i.test(value);
 }
 
-function getAutomatedModerationResult(writtenReview: string | null): AutomatedModerationResult {
+function getAutomatedModerationResult(
+  writtenReview: string | null,
+): AutomatedModerationResult {
   if (!writtenReview) {
     return {
       moderationStatus: ReviewModerationStatus.APPROVED,
@@ -143,7 +155,10 @@ function getAutomatedModerationResult(writtenReview: string | null): AutomatedMo
     };
   }
 
-  if (hasExcessiveCharacterRepetition(normalizedReview) || getUniqueWordRatio(normalizedReview) < 0.35) {
+  if (
+    hasExcessiveCharacterRepetition(normalizedReview) ||
+    getUniqueWordRatio(normalizedReview) < 0.35
+  ) {
     return {
       moderationStatus: ReviewModerationStatus.REJECTED,
       isPublic: false,
@@ -152,21 +167,28 @@ function getAutomatedModerationResult(writtenReview: string | null): AutomatedMo
     };
   }
 
-  if ((letters >= 12 && upperCaseLetters / letters > 0.8) || punctuationCount >= 8) {
+  if (
+    (letters >= 12 && upperCaseLetters / letters > 0.8) ||
+    punctuationCount >= 8
+  ) {
     return {
       moderationStatus: ReviewModerationStatus.PENDING,
       isPublic: false,
       requiresModeration: true,
-      moderationReason: "Review looked unusually formatted and needs a manual check.",
+      moderationReason:
+        "Review looked unusually formatted and needs a manual check.",
     };
   }
 
-  if (MANUAL_REVIEW_PATTERNS.some((pattern) => pattern.test(normalizedReview))) {
+  if (
+    MANUAL_REVIEW_PATTERNS.some((pattern) => pattern.test(normalizedReview))
+  ) {
     return {
       moderationStatus: ReviewModerationStatus.PENDING,
       isPublic: false,
       requiresModeration: true,
-      moderationReason: "Review contains a sensitive complaint and needs a manual check.",
+      moderationReason:
+        "Review contains a sensitive complaint and needs a manual check.",
     };
   }
 
@@ -178,7 +200,10 @@ function getAutomatedModerationResult(writtenReview: string | null): AutomatedMo
   };
 }
 
-export async function recalculateMoverReviewAggregates(moverCompanyId: string, db: PrismaLike = prisma) {
+export async function recalculateMoverReviewAggregates(
+  moverCompanyId: string,
+  db: PrismaLike = prisma,
+) {
   const approvedPublicReviews = await db.review.findMany({
     where: {
       moverCompanyId,
@@ -216,7 +241,12 @@ export async function recalculateMoverReviewAggregates(moverCompanyId: string, d
   );
 
   const averageRating = totalReviewCount
-    ? roundToTwoDecimals(approvedPublicReviews.reduce((sum, review) => sum + review.overallRating, 0) / totalReviewCount)
+    ? roundToTwoDecimals(
+        approvedPublicReviews.reduce(
+          (sum, review) => sum + review.overallRating,
+          0,
+        ) / totalReviewCount,
+      )
     : 0;
 
   const recommendationVotes = approvedPublicReviews
@@ -227,13 +257,27 @@ export async function recalculateMoverReviewAggregates(moverCompanyId: string, d
     averageRating,
     totalReviewCount,
     ...totalsByStar,
-    communicationAverage: averageFromNullable(approvedPublicReviews.map((review) => review.communicationRating)),
-    punctualityAverage: averageFromNullable(approvedPublicReviews.map((review) => review.punctualityRating)),
-    careOfBelongingsAverage: averageFromNullable(approvedPublicReviews.map((review) => review.careOfBelongingsRating)),
-    professionalismAverage: averageFromNullable(approvedPublicReviews.map((review) => review.professionalismRating)),
-    valueForMoneyAverage: averageFromNullable(approvedPublicReviews.map((review) => review.valueForMoneyRating)),
+    communicationAverage: averageFromNullable(
+      approvedPublicReviews.map((review) => review.communicationRating),
+    ),
+    punctualityAverage: averageFromNullable(
+      approvedPublicReviews.map((review) => review.punctualityRating),
+    ),
+    careOfBelongingsAverage: averageFromNullable(
+      approvedPublicReviews.map((review) => review.careOfBelongingsRating),
+    ),
+    professionalismAverage: averageFromNullable(
+      approvedPublicReviews.map((review) => review.professionalismRating),
+    ),
+    valueForMoneyAverage: averageFromNullable(
+      approvedPublicReviews.map((review) => review.valueForMoneyRating),
+    ),
     recommendationRate: recommendationVotes.length
-      ? roundToOneDecimal((recommendationVotes.filter(Boolean).length / recommendationVotes.length) * 100)
+      ? roundToOneDecimal(
+          (recommendationVotes.filter(Boolean).length /
+            recommendationVotes.length) *
+            100,
+        )
       : 0,
     leaderboardEligible: totalReviewCount >= REVIEW_RANKING_MINIMUM,
   };
@@ -246,7 +290,10 @@ export async function recalculateMoverReviewAggregates(moverCompanyId: string, d
   return nextStats;
 }
 
-export async function createReviewSurveyInvite(leadId: string, db: PrismaLike = prisma) {
+export async function createReviewSurveyInvite(
+  leadId: string,
+  db: PrismaLike = prisma,
+) {
   const lead = await db.lead.findUnique({
     where: { id: leadId },
     include: {
@@ -281,7 +328,9 @@ export async function createReviewSurveyInvite(leadId: string, db: PrismaLike = 
 
   const token = createReviewSurveyToken();
   const tokenHash = hashReviewSurveyToken(token);
-  const expiresAt = new Date(Date.now() + REVIEW_SURVEY_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
+  const expiresAt = new Date(
+    Date.now() + REVIEW_SURVEY_EXPIRY_DAYS * 24 * 60 * 60 * 1000,
+  );
 
   const invite = await db.reviewSurveyInvite.create({
     data: {
@@ -307,10 +356,17 @@ export async function createReviewSurveyInvite(leadId: string, db: PrismaLike = 
 }
 
 function getAppBaseUrl() {
-  return process.env.NEXTAUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  return (
+    process.env.NEXTAUTH_URL ??
+    process.env.NEXT_PUBLIC_APP_URL ??
+    "http://localhost:3000"
+  );
 }
 
-async function recordReviewInviteAuditLog(leadId: string, meta: ReviewInviteAuditMeta) {
+async function recordReviewInviteAuditLog(
+  leadId: string,
+  meta: ReviewInviteAuditMeta,
+) {
   await prisma.auditLog.create({
     data: {
       leadId,
@@ -320,7 +376,10 @@ async function recordReviewInviteAuditLog(leadId: string, meta: ReviewInviteAudi
   });
 }
 
-async function sendReviewInviteForLead(leadId: string, trigger: "manual_completion" | "automatic_post_move") {
+async function sendReviewInviteForLead(
+  leadId: string,
+  trigger: "manual_completion" | "automatic_post_move",
+) {
   const { invite, token } = await createReviewSurveyInvite(leadId);
   const reviewUrl = new URL(`/review/${token}`, getAppBaseUrl()).toString();
 
@@ -386,7 +445,10 @@ export async function processAutomaticReviewInvites(limit = 25) {
 
   for (const lead of candidates) {
     try {
-      const result = await sendReviewInviteForLead(lead.id, "automatic_post_move");
+      const result = await sendReviewInviteForLead(
+        lead.id,
+        "automatic_post_move",
+      );
       results.push({
         leadId: lead.id,
         customerEmail: lead.quoteRequest.email,
@@ -399,7 +461,8 @@ export async function processAutomaticReviewInvites(limit = 25) {
         customerEmail: lead.quoteRequest.email,
         sent: false,
         skipped: false,
-        error: error instanceof Error ? error.message : "Could not issue invite.",
+        error:
+          error instanceof Error ? error.message : "Could not issue invite.",
       });
     }
   }
@@ -518,7 +581,9 @@ export async function submitVerifiedReview(input: ReviewSubmissionInput) {
       throw new Error("This review link has expired.");
     }
 
-    const automatedModeration = getAutomatedModerationResult(input.writtenReview);
+    const automatedModeration = getAutomatedModerationResult(
+      input.writtenReview,
+    );
 
     const review = await tx.review.create({
       data: {
@@ -582,7 +647,10 @@ export async function updateReviewModeration(
     where: { id: reviewId },
     data: {
       moderationStatus,
-      isPublic: moderationStatus === ReviewModerationStatus.APPROVED ? options?.isPublic ?? true : false,
+      isPublic:
+        moderationStatus === ReviewModerationStatus.APPROVED
+          ? (options?.isPublic ?? true)
+          : false,
     },
   });
 
@@ -626,7 +694,9 @@ export async function getMoverRatingsDashboardData(moverCompanyId: string) {
     }),
   ]);
 
-  const pendingCount = reviews.filter((review) => review.moderationStatus === ReviewModerationStatus.PENDING).length;
+  const pendingCount = reviews.filter(
+    (review) => review.moderationStatus === ReviewModerationStatus.PENDING,
+  ).length;
 
   return {
     summary: mover,
@@ -644,7 +714,10 @@ export async function getMoverRatingsDashboardData(moverCompanyId: string) {
       moderationStatus: review.moderationStatus,
       isPublic: review.isPublic,
       submittedAt: review.submittedAt.toISOString(),
-      customerName: getDisplayedReviewerName(review.lead.quoteRequest.name, review.showReviewerName),
+      customerName: getDisplayedReviewerName(
+        review.lead.quoteRequest.name,
+        review.showReviewerName,
+      ),
       routeLabel: `${review.lead.quoteRequest.fromCity} to ${review.lead.quoteRequest.toCity}`,
     })),
   };
@@ -665,12 +738,22 @@ export function getMoverCompetitionSnapshot(
   summary: Awaited<ReturnType<typeof getMoverRatingsDashboardData>>["summary"],
   leaderboard: LeaderboardSnapshotEntry[],
 ) {
-  const rankedMoverCount = leaderboard.filter((entry) => entry.leaderboardEligible && entry.rank !== null).length;
-  const currentMoverEntry = leaderboard.find((entry) => entry.id === currentMoverCompanyId) ?? null;
-  const totalReviewCount = summary?.totalReviewCount ?? currentMoverEntry?.totalReviewCount ?? 0;
-  const reviewsNeededToRank = Math.max(REVIEW_RANKING_MINIMUM - totalReviewCount, 0);
+  const rankedMoverCount = leaderboard.filter(
+    (entry) => entry.leaderboardEligible && entry.rank !== null,
+  ).length;
+  const currentMoverEntry =
+    leaderboard.find((entry) => entry.id === currentMoverCompanyId) ?? null;
+  const totalReviewCount =
+    summary?.totalReviewCount ?? currentMoverEntry?.totalReviewCount ?? 0;
+  const reviewsNeededToRank = Math.max(
+    REVIEW_RANKING_MINIMUM - totalReviewCount,
+    0,
+  );
 
-  if (currentMoverEntry?.leaderboardEligible && currentMoverEntry.rank !== null) {
+  if (
+    currentMoverEntry?.leaderboardEligible &&
+    currentMoverEntry.rank !== null
+  ) {
     return {
       isRanked: true,
       rank: currentMoverEntry.rank,
@@ -707,7 +790,8 @@ export function getMoverCompetitionSnapshot(
 
 function getLeaderboardScore(averageRating: number, totalReviewCount: number) {
   return roundToTwoDecimals(
-    ((averageRating * totalReviewCount) + LEADERBOARD_PRIOR_AVERAGE * LEADERBOARD_PRIOR_WEIGHT) /
+    (averageRating * totalReviewCount +
+      LEADERBOARD_PRIOR_AVERAGE * LEADERBOARD_PRIOR_WEIGHT) /
       (totalReviewCount + LEADERBOARD_PRIOR_WEIGHT),
   );
 }
@@ -728,16 +812,24 @@ export async function getMoverLeaderboard(currentMoverCompanyId?: string) {
     .filter((mover) => mover.leaderboardEligible)
     .map((mover) => ({
       ...mover,
-      leaderboardScore: getLeaderboardScore(mover.averageRating, mover.totalReviewCount),
+      leaderboardScore: getLeaderboardScore(
+        mover.averageRating,
+        mover.totalReviewCount,
+      ),
     }))
     .sort((left, right) => {
-      if (right.leaderboardScore !== left.leaderboardScore) return right.leaderboardScore - left.leaderboardScore;
-      if (right.averageRating !== left.averageRating) return right.averageRating - left.averageRating;
-      if (right.totalReviewCount !== left.totalReviewCount) return right.totalReviewCount - left.totalReviewCount;
+      if (right.leaderboardScore !== left.leaderboardScore)
+        return right.leaderboardScore - left.leaderboardScore;
+      if (right.averageRating !== left.averageRating)
+        return right.averageRating - left.averageRating;
+      if (right.totalReviewCount !== left.totalReviewCount)
+        return right.totalReviewCount - left.totalReviewCount;
       return left.companyName.localeCompare(right.companyName);
     });
 
-  const rankMap = new Map(rankedEligible.map((mover, index) => [mover.id, index + 1]));
+  const rankMap = new Map(
+    rankedEligible.map((mover, index) => [mover.id, index + 1]),
+  );
 
   return movers
     .map((mover) => ({
@@ -746,24 +838,42 @@ export async function getMoverLeaderboard(currentMoverCompanyId?: string) {
       averageRating: mover.averageRating,
       totalReviewCount: mover.totalReviewCount,
       leaderboardEligible: mover.leaderboardEligible,
-      rank: mover.leaderboardEligible ? rankMap.get(mover.id) ?? null : null,
+      rank: mover.leaderboardEligible ? (rankMap.get(mover.id) ?? null) : null,
       isCurrentMover: mover.id === currentMoverCompanyId,
-      leaderboardScore: getLeaderboardScore(mover.averageRating, mover.totalReviewCount),
+      leaderboardScore: getLeaderboardScore(
+        mover.averageRating,
+        mover.totalReviewCount,
+      ),
     }))
     .sort((left, right) => {
-      if (Number(right.leaderboardEligible) !== Number(left.leaderboardEligible)) {
-        return Number(right.leaderboardEligible) - Number(left.leaderboardEligible);
+      if (
+        Number(right.leaderboardEligible) !== Number(left.leaderboardEligible)
+      ) {
+        return (
+          Number(right.leaderboardEligible) - Number(left.leaderboardEligible)
+        );
       }
-      if ((right.rank ?? Number.MAX_SAFE_INTEGER) !== (left.rank ?? Number.MAX_SAFE_INTEGER)) {
-        return (left.rank ?? Number.MAX_SAFE_INTEGER) - (right.rank ?? Number.MAX_SAFE_INTEGER);
+      if (
+        (right.rank ?? Number.MAX_SAFE_INTEGER) !==
+        (left.rank ?? Number.MAX_SAFE_INTEGER)
+      ) {
+        return (
+          (left.rank ?? Number.MAX_SAFE_INTEGER) -
+          (right.rank ?? Number.MAX_SAFE_INTEGER)
+        );
       }
-      if (right.averageRating !== left.averageRating) return right.averageRating - left.averageRating;
-      if (right.totalReviewCount !== left.totalReviewCount) return right.totalReviewCount - left.totalReviewCount;
+      if (right.averageRating !== left.averageRating)
+        return right.averageRating - left.averageRating;
+      if (right.totalReviewCount !== left.totalReviewCount)
+        return right.totalReviewCount - left.totalReviewCount;
       return left.companyName.localeCompare(right.companyName);
     });
 }
 
-export async function getPublicReviewsForMover(moverCompanyId: string, limit = 6) {
+export async function getPublicReviewsForMover(
+  moverCompanyId: string,
+  limit = 6,
+) {
   return prisma.review.findMany({
     where: {
       moverCompanyId,

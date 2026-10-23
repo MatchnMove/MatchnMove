@@ -10,9 +10,9 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export const metadata: Metadata = createPageMetadata({
-  title: "Trusted Moving Companies NZ",
+  title: "Moving Companies NZ | Directory & Profiles",
   description:
-    "Browse trusted New Zealand moving companies, service areas, ratings, and verified customer reviews before requesting free moving quotes.",
+    "Browse New Zealand moving companies, service areas, ratings, and available customer reviews before requesting free moving quotes.",
   path: "/movers",
 });
 
@@ -34,14 +34,16 @@ export default async function MoversPage() {
               <div className="max-w-3xl">
                 <p className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.06] px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-sky-100/80 sm:text-sm">
                   <ShieldCheck className="h-4 w-4" />
-                  Trusted movers
+                  Moving companies
                 </p>
                 <h1 className="mt-4 max-w-[12ch] text-[clamp(2.05rem,10vw,5rem)] font-black leading-[0.98] tracking-[-0.035em] text-white sm:mt-5 sm:max-w-none sm:leading-[0.92] sm:tracking-[-0.06em]">
-                  Browse trusted movers on Match &apos;n Move
+                  Browse moving companies on Match &apos;n Move
                 </h1>
                 <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-300 sm:mt-5 sm:text-base sm:leading-7">
-                  Explore moving companies on the Match &apos;n Move network, learn what each business offers, and get a feel
-                  for who you may want to request quotes from before you start comparing pricing.
+                  Explore moving companies on the Match &apos;n Move network,
+                  learn what each business offers, and get a feel for who you
+                  may want to request quotes from before you start comparing
+                  pricing.
                 </p>
               </div>
 
@@ -58,10 +60,13 @@ export default async function MoversPage() {
               <PublicMoversDirectory movers={movers} />
             ) : (
               <div className="mt-10 rounded-[28px] border border-dashed border-white/14 bg-white/[0.05] px-6 py-10 text-center">
-                <p className="text-lg font-semibold text-white">Trusted mover profiles are on the way.</p>
+                <p className="text-lg font-semibold text-white">
+                  No public profiles to show right now.
+                </p>
                 <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-slate-300">
-                  We don&apos;t have any publicly visible mover profiles to show right now. Check back soon or request
-                  quotes directly and we&apos;ll help connect you with available movers.
+                  We don&apos;t have any publicly visible mover profiles to show
+                  right now. Check back soon or request quotes directly and
+                  we&apos;ll help connect you with available movers.
                 </p>
               </div>
             )}

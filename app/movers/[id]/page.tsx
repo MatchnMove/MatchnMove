@@ -1,281 +1,208 @@
 /* eslint-disable @next/next/no-img-element */
-import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, Building2, MapPinned, ShieldCheck, Trophy } from "lucide-react";
+import { Building2 } from "lucide-react";
 import { ReviewStars } from "@/components/review-stars";
 import { SiteShell } from "@/components/site-shell";
-import { PUBLIC_MOVER_DESCRIPTION_FALLBACK } from "@/lib/public-mover-constants";
+import { ReviewActions } from "@/components/review-actions";
 import { formatServiceAreaLabel } from "@/lib/nz-regions";
 import { getPublicMoverProfile } from "@/lib/public-movers";
-import { absoluteUrl, createPageMetadata, SITE_URL } from "@/lib/seo";
-
-// The shared layout reads the visitor's language cookie. Profiles must render
-// per request, including movers published after the build; data stays cached
-// separately in getPublicMoverProfile.
+import { createPageMetadata } from "@/lib/seo";
 export const dynamic = "force-dynamic";
-
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ id: string }>;
-}): Promise<Metadata> {
-  const { id } = await params;
-  const mover = await getPublicMoverProfile(id);
-
-  if (!mover) {
-    return {
-      title: "Mover Profile",
-      robots: {
-        index: false,
-        follow: false,
-      },
-    };
-  }
-
-  const serviceAreaSummary = mover.serviceAreas.length
-    ? ` serving ${mover.serviceAreas.slice(0, 3).map(formatServiceAreaLabel).join(", ")}`
-    : "";
-
-  return createPageMetadata({
-    title: `${mover.companyName} Reviews and Moving Services`,
-    description: `View ${mover.companyName}${serviceAreaSummary}, including verified customer reviews, ratings, experience, and service details.`,
-    path: `/movers/${mover.id}`,
-  });
+}) {
+  const mover = await getPublicMoverProfile((await params).id);
+  return mover
+    ? createPageMetadata({
+        title: mover.companyName + " | Moving Services & Customer Reviews",
+        description:
+          "View company-supplied services and coverage for " +
+          mover.companyName +
+          ", recorded profile checks and available customer reviews.",
+        path: "/movers/" + mover.id,
+      })
+    : { title: "Mover profile", robots: { index: false, follow: false } };
 }
-
-export default async function PublicMoverProfilePage({
+export default async function Profile({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
-  const mover = await getPublicMoverProfile(id);
+  const mover = await getPublicMoverProfile((await params).id);
   if (!mover) notFound();
-
-  const ratingBreakdown = [
-    { label: "5 star", value: mover.fiveStarCount },
-    { label: "4 star", value: mover.fourStarCount },
-    { label: "3 star", value: mover.threeStarCount },
-    { label: "2 star", value: mover.twoStarCount },
-    { label: "1 star", value: mover.oneStarCount },
-  ];
-  const pageUrl = absoluteUrl(`/movers/${mover.id}`);
-  const structuredData = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    itemListElement: [
-      {
-        "@type": "ListItem",
-        position: 1,
-        name: "Home",
-        item: SITE_URL,
-      },
-      {
-        "@type": "ListItem",
-        position: 2,
-        name: "Moving companies",
-        item: absoluteUrl("/movers"),
-      },
-      {
-        "@type": "ListItem",
-        position: 3,
-        name: mover.companyName,
-        item: pageUrl,
-      },
-    ],
-  };
-
   return (
     <SiteShell>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
-      />
-      <section className="relative overflow-hidden bg-[linear-gradient(180deg,#06111f_0%,#081425_34%,#091423_68%,#07101c_100%)] py-12 text-white sm:py-18 lg:py-24">
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute left-[7%] top-12 h-44 w-44 rounded-full bg-sky-400/10 blur-[120px]" />
-          <div className="absolute right-[9%] top-24 h-56 w-56 rounded-full bg-cyan-300/10 blur-[140px]" />
+      <main className="container-shell max-w-5xl py-12 sm:py-16">
+        <Link href="/movers" className="font-semibold text-teal-700 underline">
+          All moving companies
+        </Link>
+        <header className="mt-7 rounded-3xl bg-slate-950 p-6 text-white sm:p-10">
+          <div className="flex items-start gap-5">
+            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-white p-3">
+              {mover.logoUrl ? (
+                <img
+                  src={mover.logoUrl}
+                  alt={mover.companyName + " logo"}
+                  className="max-h-full max-w-full object-contain"
+                />
+              ) : (
+                <Building2 className="text-slate-500" />
+              )}
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold sm:text-4xl">
+                {mover.companyName}
+              </h1>
+              <p className="mt-3 text-slate-300">
+                {mover.operatingRegion
+                  ? formatServiceAreaLabel(mover.operatingRegion)
+                  : "Operating location not supplied"}
+              </p>
+            </div>
+          </div>
+          <div className="mt-6 flex flex-wrap gap-2">
+            {mover.trustLabels.map((label) => (
+              <span
+                key={label}
+                className="rounded-full border border-teal-300/40 px-3 py-2 text-sm text-teal-100"
+              >
+                {label}
+              </span>
+            ))}
+          </div>
+          <p className="mt-5 text-sm leading-6 text-slate-300">
+            Checks relate to the specific information labelled above. Services
+            and coverage are supplied by the company.{" "}
+            <Link href="/trust" className="underline">
+              Understand profile checks
+            </Link>
+            .
+          </p>
+        </header>
+        <div className="mt-9 grid gap-10 md:grid-cols-[1.6fr_1fr]">
+          <div>
+            <section>
+              <h2 className="text-2xl font-bold">About the company</h2>
+              <p className="mt-4 whitespace-pre-line leading-7 text-slate-600">
+                {mover.businessDescription ||
+                  "This company has not supplied a business description yet. Ask about their experience, equipment and suitability for your move."}
+              </p>
+              {mover.yearsOperating !== null && (
+                <p className="mt-4 text-slate-600">
+                  {mover.yearsOperating} years operating &middot;
+                  operating-history evidence reviewed.
+                </p>
+              )}
+            </section>
+            <section className="mt-9">
+              <h2 className="text-2xl font-bold">Services &amp; coverage</h2>
+              <p className="mt-3 leading-7 text-slate-600">
+                {mover.movingServices.length
+                  ? mover.movingServices.join(" \u00b7 ")
+                  : "Service categories have not been supplied. Confirm your requirements with the company."}
+              </p>
+              <p className="mt-3 leading-7 text-slate-600">
+                {mover.serviceAreas
+                  .map(formatServiceAreaLabel)
+                  .join(" \u00b7 ") || "Coverage available on request"}
+              </p>
+              <p className="mt-3 text-sm text-slate-500">
+                Coverage does not guarantee availability for a specific route or
+                date.
+              </p>
+            </section>
+          </div>
+          <aside className="self-start rounded-2xl border border-slate-200 bg-slate-50 p-6">
+            <h2 className="text-xl font-bold">Compare your options</h2>
+            <p className="mt-3 leading-7 text-slate-600">
+              Submit a free request to be matched by service area. A directory
+              profile does not reserve this company or guarantee it will
+              respond.
+            </p>
+            <Link
+              href="/quote"
+              className="mt-5 block rounded-xl bg-teal-700 px-5 py-3 text-center font-semibold text-white"
+            >
+              Get moving quotes
+            </Link>
+            <Link
+              href="/mover/dashboard?section=profile"
+              className="mt-4 block py-2 text-sm text-teal-700 underline"
+            >
+              Own this business? Complete your profile
+            </Link>
+          </aside>
         </div>
-
-        <div className="container-shell relative">
-          <div className="overflow-hidden rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.04))] p-6 shadow-[0_40px_100px_-52px_rgba(2,6,23,0.85)] backdrop-blur-xl sm:p-8 lg:p-10">
-            <div className="grid gap-8 lg:grid-cols-[150px_minmax(0,1fr)_minmax(280px,0.75fr)] lg:items-start">
-              <div className="flex h-28 w-28 items-center justify-center rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(241,245,249,0.92))] p-4 shadow-[0_18px_42px_-28px_rgba(15,23,42,0.72)] sm:h-32 sm:w-32">
-                {mover.logoUrl ? (
-                  <img src={mover.logoUrl} alt={`${mover.companyName} logo`} className="max-h-full max-w-full object-contain" />
-                ) : (
-                  <Building2 className="h-10 w-10 text-slate-500" />
+        <section id="reviews" className="mt-12 border-t border-slate-200 pt-8">
+          <h2 className="text-2xl font-bold">Customer reviews</h2>
+          {mover.totalReviewCount > 0 ? (
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <ReviewStars rating={mover.averageRating} />
+              <p>
+                {mover.averageRating.toFixed(1)} / 5 from{" "}
+                {mover.totalReviewCount} approved reviews
+              </p>
+            </div>
+          ) : (
+            <p className="mt-4 text-slate-600">
+              New to Match &apos;n Move. No customer reviews yet.
+            </p>
+          )}
+          <p className="mt-3 text-sm leading-6 text-slate-500">
+            Reviews are linked to a genuine platform enquiry. This association
+            is not independent proof of a completed move.{" "}
+            <Link href="/trust" className="underline">
+              How reviews work
+            </Link>
+            .
+          </p>
+          <div className="mt-6 space-y-5">
+            {mover.approvedReviews.map((review) => (
+              <article
+                key={review.id}
+                className="rounded-2xl border border-slate-200 p-6"
+              >
+                <ReviewStars rating={review.overallRating} />
+                <p className="mt-3 whitespace-pre-line leading-7 text-slate-700">
+                  {review.writtenReview}
+                </p>
+                <p className="mt-4 text-sm text-slate-500">
+                  {review.customerName} ?{" "}
+                  {new Date(review.submittedAt).toLocaleDateString("en-NZ")}
+                </p>
+                {review.providerResponse && (
+                  <div className="mt-4 border-l-2 border-teal-600 pl-4">
+                    <p className="text-sm font-semibold">
+                      Response from {mover.companyName}
+                    </p>
+                    <p className="mt-2 whitespace-pre-line text-slate-600">
+                      {review.providerResponse}
+                    </p>
+                  </div>
                 )}
-              </div>
-
-              <div>
-                <p className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.08] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-sky-100">
-                  {mover.isVerifiedProfile ? <ShieldCheck className="h-4 w-4" /> : <Building2 className="h-4 w-4" />}
-                  {mover.isVerifiedProfile ? "Verified mover profile" : "New mover profile"}
-                </p>
-                <h1 className="mt-4 text-[clamp(2.4rem,7vw,4.8rem)] font-black leading-[0.92] tracking-[-0.06em] text-white">
-                  {mover.companyName}
-                </h1>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-sm text-slate-300">
-                    <MapPinned className="h-4 w-4 text-sky-200" />
-                    {mover.serviceAreas.length ? mover.serviceAreas.map(formatServiceAreaLabel).join(" / ") : "Service area on request"}
-                  </span>
-                  {typeof mover.yearsOperating === "number" ? (
-                    <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-sm text-slate-300">
-                      {mover.yearsOperating}+ years operating
-                    </span>
-                  ) : null}
-                  {mover.leaderboardEligible ? (
-                    <span className="rounded-full border border-amber-300/20 bg-amber-400/10 px-3 py-1.5 text-sm text-amber-100">
-                      Ranked on mover leaderboard
-                    </span>
-                  ) : null}
-                </div>
-                <p className="mt-6 max-w-3xl whitespace-pre-wrap text-sm leading-7 text-slate-300 sm:text-base">
-                  {mover.businessDescription || PUBLIC_MOVER_DESCRIPTION_FALLBACK}
-                </p>
-              </div>
-
-              <div className="rounded-[28px] border border-white/10 bg-white/[0.05] p-5">
-                <p className="text-xs uppercase tracking-[0.18em] text-sky-100/75">Public rating</p>
-                <p className="mt-3 text-[clamp(2.6rem,8vw,4rem)] font-black tracking-[-0.06em] text-white">
-                  {mover.averageRating.toFixed(2)}
-                </p>
-                <div className="mt-2 flex items-center gap-3">
-                  <ReviewStars rating={mover.averageRating} size="lg" />
-                  <span className="text-sm text-slate-300">
-                    {mover.totalReviewCount} verified review{mover.totalReviewCount === 1 ? "" : "s"}
-                  </span>
-                </div>
-                <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                  <MetricCard label="Recommend rate" value={`${Math.round(mover.recommendationRate)}%`} />
-                  <MetricCard label="Leaderboard" value={mover.leaderboardEligible ? "Eligible" : "Not yet ranked"} />
-                </div>
-                <Link
-                  href="/quote"
-                  className="mt-5 inline-flex min-h-[50px] w-full items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition hover:translate-y-[-1px]"
-                >
-                  Request a quote
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </div>
-            </div>
+                <ReviewActions reviewId={review.id} />
+              </article>
+            ))}
           </div>
-        </div>
-      </section>
-
-      <section className="bg-[linear-gradient(180deg,#eef5fb_0%,#ffffff_100%)] py-12 sm:py-16">
-        <div className="container-shell">
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,0.95fr)_minmax(340px,0.75fr)]">
-            <div className="space-y-6">
-              <div className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-2xl bg-sky-50 p-3 text-sky-700">
-                    <Trophy className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold uppercase tracking-[0.18em] text-sky-700">Ratings snapshot</p>
-                    <h2 className="mt-2 text-2xl font-black tracking-[-0.05em] text-slate-950">What verified customers rated</h2>
-                  </div>
-                </div>
-
-                <div className="mt-5 grid gap-3 md:grid-cols-5">
-                  {ratingBreakdown.map((bucket) => (
-                    <div key={bucket.label} className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-4">
-                      <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{bucket.label}</p>
-                      <p className="mt-2 text-2xl font-black tracking-[-0.04em] text-slate-950">{bucket.value}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-sky-700">Approved reviews</p>
-                <h2 className="mt-2 text-2xl font-black tracking-[-0.05em] text-slate-950">Verified customer feedback</h2>
-
-                <div className="mt-5 space-y-4">
-                  {mover.approvedReviews.length ? (
-                    mover.approvedReviews.map((review) => (
-                      <article key={review.id} className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
-                        <div className="flex flex-wrap items-center justify-between gap-3">
-                          <div>
-                            <p className="font-semibold text-slate-900">{review.customerName}</p>
-                            <p className="mt-1 text-sm text-slate-500">{review.routeLabel}</p>
-                          </div>
-                          <div className="text-right">
-                            <ReviewStars rating={review.overallRating} />
-                            <p className="mt-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-                              {new Intl.DateTimeFormat("en-NZ", { dateStyle: "medium" }).format(new Date(review.submittedAt))}
-                            </p>
-                          </div>
-                        </div>
-                        <p className="mt-4 text-sm leading-7 text-slate-600">{review.writtenReview}</p>
-                        {review.recommendMover !== null ? (
-                          <span className="mt-4 inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
-                            {review.recommendMover ? "Would recommend this mover" : "Would not recommend this mover"}
-                          </span>
-                        ) : null}
-                      </article>
-                    ))
-                  ) : (
-                    <div className="rounded-[24px] border border-dashed border-slate-300 bg-slate-50 px-5 py-10 text-center">
-                      <p className="font-semibold text-slate-900">Approved written reviews are on the way</p>
-                      <p className="mt-2 text-sm leading-7 text-slate-500">
-                        Verified star ratings are already counted in this mover&apos;s profile. Written reviews will appear here once customers submit them and moderation is complete.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-6">
-              <div className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-sky-700">Service quality</p>
-                <div className="mt-5 space-y-3">
-                  {[
-                    { label: "Communication", value: mover.communicationAverage },
-                    { label: "Punctuality", value: mover.punctualityAverage },
-                    { label: "Care of belongings", value: mover.careOfBelongingsAverage },
-                    { label: "Professionalism", value: mover.professionalismAverage },
-                    { label: "Value for money", value: mover.valueForMoneyAverage },
-                  ].map((item) => (
-                    <div key={item.label} className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <p className="font-semibold text-slate-900">{item.label}</p>
-                        <div className="flex items-center gap-3">
-                          <ReviewStars rating={item.value} />
-                          <span className="text-sm font-semibold text-slate-600">{item.value.toFixed(1)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="rounded-[30px] border border-slate-200 bg-[linear-gradient(145deg,#0f172a,#17324f)] p-6 text-white shadow-sm sm:p-7">
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-200">Why these reviews are trusted</p>
-                <div className="mt-5 space-y-4 text-sm leading-7 text-slate-200">
-                  <p>Customers cannot leave ratings from a public open form.</p>
-                  <p>Every review is submitted through a unique single-use survey link tied to a completed Match &apos;n Move job.</p>
-                  <p>Written reviews are moderated before they appear publicly, keeping the profile clean and trustworthy.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+        </section>
+        <section className="mt-12 rounded-2xl bg-slate-50 p-6">
+          <h2 className="text-2xl font-bold">Before you book</h2>
+          <p className="mt-3 leading-7 text-slate-600">
+            Ask what is included, whether access or heavy items change the
+            price, and what insurance cover and cancellation terms apply. Quotes
+            and bookings are agreed directly with the provider.
+          </p>
+          <Link
+            href="/contact"
+            className="mt-4 inline-block py-2 font-semibold text-teal-700 underline"
+          >
+            Report incorrect company information
+          </Link>
+        </section>
+      </main>
     </SiteShell>
-  );
-}
-
-function MetricCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-[22px] border border-white/10 bg-white/[0.06] px-4 py-4">
-      <p className="text-xs uppercase tracking-[0.16em] text-sky-100/75">{label}</p>
-      <p className="mt-2 text-xl font-black tracking-[-0.04em] text-white">{value}</p>
-    </div>
   );
 }

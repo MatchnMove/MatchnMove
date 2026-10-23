@@ -222,14 +222,14 @@ test("analytics are excluded from private workspaces and token-bearing account p
     "/mover/reset-password",
     "/cleaner/dashboard",
     "/review/invitation",
+    "/quote",
+    "/contact",
+    "/request",
+    "/request/access",
+    "/thank-you",
+    "/moving-inventory",
   ])
     assert.equal(isPrivateWorkspacePath(path), true);
-  for (const path of [
-    "/",
-    "/quote",
-    "/movers",
-    "/moving-quotes/auckland",
-    "/resources",
-  ])
+  for (const path of ["/", "/movers", "/moving-quotes/auckland", "/resources"])
     assert.equal(isPrivateWorkspacePath(path), false);
 });

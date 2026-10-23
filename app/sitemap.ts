@@ -10,13 +10,16 @@ const publicRoutes = [
   "/cleaning-quotes",
   "/movers",
   "/about",
+  "/trust",
+  "/moving-inventory",
+  "/cleaner/partner",
   "/faq",
   "/contact",
   "/resources",
   "/resources/moving-cost-calculator",
   "/mover/pricing",
   "/privacy",
-  "/terms"
+  "/terms",
 ];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -28,17 +31,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: route === "" ? 1 : route === "/quote" ? 0.95 : 0.7,
   }));
 
-  const movingRegionPages: MetadataRoute.Sitemap = NZ_SERVICE_AREAS.map((region) => ({
-    url: `${SITE_URL}/moving-quotes/${toRegionSlug(region)}`,
-    changeFrequency: "monthly",
-    priority: 0.85,
-  }));
+  const movingRegionPages: MetadataRoute.Sitemap = NZ_SERVICE_AREAS.map(
+    (region) => ({
+      url: `${SITE_URL}/moving-quotes/${toRegionSlug(region)}`,
+      changeFrequency: "monthly",
+      priority: 0.85,
+    }),
+  );
 
-  const cleaningRegionPages: MetadataRoute.Sitemap = NZ_SERVICE_AREAS.map((region) => ({
-    url: `${SITE_URL}/cleaning-quotes/${toRegionSlug(region)}`,
-    changeFrequency: "monthly",
-    priority: 0.85,
-  }));
+  const cleaningRegionPages: MetadataRoute.Sitemap = NZ_SERVICE_AREAS.map(
+    (region) => ({
+      url: `${SITE_URL}/cleaning-quotes/${toRegionSlug(region)}`,
+      changeFrequency: "monthly",
+      priority: 0.85,
+    }),
+  );
 
   const moverPages: MetadataRoute.Sitemap = movers.map((mover) => ({
     url: `${SITE_URL}/movers/${mover.id}`,
@@ -46,14 +53,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.75,
   }));
 
-  const resourcePages: MetadataRoute.Sitemap = articleResources.map((resource) => ({
-    url: `${SITE_URL}/resources/${resource.slug}`,
-    changeFrequency: "monthly",
-    priority:
-      resource.slug === "nz-moving-costs-2026" || resource.slug === "end-of-tenancy-cleaning-nz-guide"
-        ? 0.9
-        : 0.8,
-  }));
+  const resourcePages: MetadataRoute.Sitemap = articleResources.map(
+    (resource) => ({
+      url: `${SITE_URL}/resources/${resource.slug}`,
+      changeFrequency: "monthly",
+      priority:
+        resource.slug === "nz-moving-costs-2026" ||
+        resource.slug === "end-of-tenancy-cleaning-nz-guide"
+          ? 0.9
+          : 0.8,
+    }),
+  );
 
-  return [...staticPages, ...resourcePages, ...movingRegionPages, ...cleaningRegionPages, ...moverPages];
+  return [
+    ...staticPages,
+    ...resourcePages,
+    ...movingRegionPages,
+    ...cleaningRegionPages,
+    ...moverPages,
+  ];
 }

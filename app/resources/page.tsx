@@ -13,7 +13,12 @@ import {
 } from "lucide-react";
 import { SiteShell } from "@/components/site-shell";
 import { resourceCards } from "@/lib/moving-resources";
-import { absoluteUrl, createPageMetadata, SITE_NAME, SITE_URL } from "@/lib/seo";
+import {
+  absoluteUrl,
+  createPageMetadata,
+  SITE_NAME,
+  SITE_URL,
+} from "@/lib/seo";
 
 export const metadata: Metadata = createPageMetadata({
   title: "NZ Moving and Move-Out Cleaning Guides",
@@ -35,8 +40,12 @@ const resourceIcons = {
 } as const;
 
 export default function ResourcesPage() {
-  const movingCards = resourceCards.filter((resource) => resource.category !== "cleaning");
-  const cleaningCards = resourceCards.filter((resource) => resource.category === "cleaning");
+  const movingCards = resourceCards.filter(
+    (resource) => resource.category !== "cleaning",
+  );
+  const cleaningCards = resourceCards.filter(
+    (resource) => resource.category === "cleaning",
+  );
 
   const structuredData = {
     "@context": "https://schema.org",
@@ -74,10 +83,17 @@ export default function ResourcesPage() {
             Plan the move and the clean in one place.
           </h1>
           <p className="mt-5 max-w-3xl text-base leading-8 text-slate-200 sm:text-lg">
-            Explore practical New Zealand moving-cost guidance, cleaning checklists, end-of-tenancy advice,
-            an interactive budget calculator, and clear ways to compare quotes on equal terms.
+            Explore practical New Zealand moving-cost guidance, cleaning
+            checklists, end-of-tenancy advice, an interactive budget calculator,
+            and clear ways to compare quotes on equal terms.
           </p>
-          <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+          <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+            <Link
+              href="/moving-inventory"
+              className="inline-flex min-h-[52px] items-center justify-center rounded-2xl border border-white/20 px-6 py-3 font-semibold text-white"
+            >
+              Build your moving inventory
+            </Link>
             <Link
               href="/resources/moving-cost-calculator"
               className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-2xl bg-white px-6 py-3 font-semibold text-slate-950"
@@ -135,10 +151,17 @@ function ResourceGroup({
   cleaning?: boolean;
 }) {
   return (
-    <section id={id} className="scroll-mt-24 py-7 first:pt-0 last:pb-0 sm:py-10">
+    <section
+      id={id}
+      className="scroll-mt-24 py-7 first:pt-0 last:pb-0 sm:py-10"
+    >
       <div className="mb-7 max-w-3xl">
-        <p className="text-xs font-bold uppercase tracking-[0.18em] text-sky-700">{eyebrow}</p>
-        <h2 className="mt-2 text-3xl font-black tracking-[-0.04em] text-slate-950 sm:text-4xl">{title}</h2>
+        <p className="text-xs font-bold uppercase tracking-[0.18em] text-sky-700">
+          {eyebrow}
+        </p>
+        <h2 className="mt-2 text-3xl font-black tracking-[-0.04em] text-slate-950 sm:text-4xl">
+          {title}
+        </h2>
         <p className="mt-3 text-base leading-8 text-slate-600">{description}</p>
       </div>
 
@@ -146,7 +169,8 @@ function ResourceGroup({
         {resources.map((resource) => {
           const Icon = cleaning
             ? Home
-            : resourceIcons[resource.slug as keyof typeof resourceIcons] ?? FileSearch;
+            : (resourceIcons[resource.slug as keyof typeof resourceIcons] ??
+              FileSearch);
           const isCaseStudies = resource.slug === "case-studies";
 
           return (
@@ -162,9 +186,15 @@ function ResourceGroup({
                   {isCaseStudies ? "Verified only" : resource.readTime}
                 </span>
               </div>
-              <p className="mt-5 text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">{resource.eyebrow}</p>
-              <h3 className="mt-2 text-2xl font-black tracking-[-0.04em] text-slate-950">{resource.title}</h3>
-              <p className="mt-3 flex-1 text-sm leading-7 text-slate-600">{resource.description}</p>
+              <p className="mt-5 text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">
+                {resource.eyebrow}
+              </p>
+              <h3 className="mt-2 text-2xl font-black tracking-[-0.04em] text-slate-950">
+                {resource.title}
+              </h3>
+              <p className="mt-3 flex-1 text-sm leading-7 text-slate-600">
+                {resource.description}
+              </p>
               <Link
                 href={`/resources/${resource.slug}`}
                 className="mt-6 inline-flex items-center gap-2 font-semibold text-sky-700 transition group-hover:text-sky-800"

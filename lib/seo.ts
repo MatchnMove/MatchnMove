@@ -5,7 +5,7 @@ export const SITE_URL = "https://www.matchnmove.co.nz";
 export const SITE_NAME = "Match 'n Move";
 export const SITE_PHONE = "+64 21 958 000";
 export const SITE_DESCRIPTION =
-  "Compare free moving quotes from trusted New Zealand moving companies. Submit your move once and find movers for local, intercity, and long-distance relocations.";
+  "Compare free moving quotes from New Zealand moving companies. Submit your move once and find movers for local, intercity, and long-distance relocations.";
 
 export function absoluteUrl(path = "/") {
   return new URL(path, SITE_URL).toString();
@@ -80,6 +80,7 @@ export function toRegionSlug(region: NzServiceArea) {
 }
 
 export function getRegionFromSlug(slug: string) {
-  return NZ_SERVICE_AREAS.find((region) => toRegionSlug(region) === slug) ?? null;
+  return (
+    NZ_SERVICE_AREAS.find((region) => toRegionSlug(region) === slug) ?? null
+  );
 }
-

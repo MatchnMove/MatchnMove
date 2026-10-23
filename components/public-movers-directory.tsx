@@ -2,8 +2,14 @@
 
 import { useDeferredValue, useState } from "react";
 import { Search, Sparkles, X } from "lucide-react";
-import { PublicMoverCard, type PublicMoverCardData } from "@/components/public-mover-card";
-import { canonicaliseServiceArea, formatServiceAreaLabel } from "@/lib/nz-regions";
+import {
+  PublicMoverCard,
+  type PublicMoverCardData,
+} from "@/components/public-mover-card";
+import {
+  canonicaliseServiceArea,
+  formatServiceAreaLabel,
+} from "@/lib/nz-regions";
 
 type PublicMoversDirectoryProps = {
   movers: PublicMoverCardData[];
@@ -32,18 +38,24 @@ function matchesServiceArea(mover: PublicMoverCardData, query: string) {
 
   const canonicalQuery = canonicaliseServiceArea(trimmedQuery);
   if (canonicalQuery) {
-    return mover.serviceAreas.some((area) => canonicaliseServiceArea(area) === canonicalQuery);
+    return mover.serviceAreas.some(
+      (area) => canonicaliseServiceArea(area) === canonicalQuery,
+    );
   }
 
   const normalizedQuery = trimmedQuery.toLowerCase();
-  return mover.serviceAreas.some((area) => formatServiceAreaLabel(area).toLowerCase().includes(normalizedQuery));
+  return mover.serviceAreas.some((area) =>
+    formatServiceAreaLabel(area).toLowerCase().includes(normalizedQuery),
+  );
 }
 
 export function PublicMoversDirectory({ movers }: PublicMoversDirectoryProps) {
   const [searchValue, setSearchValue] = useState("");
   const deferredSearchValue = useDeferredValue(searchValue);
   const serviceAreaOptions = getServiceAreaOptions(movers);
-  const filteredMovers = movers.filter((mover) => matchesServiceArea(mover, deferredSearchValue));
+  const filteredMovers = movers.filter((mover) =>
+    matchesServiceArea(mover, deferredSearchValue),
+  );
   const hasSearch = deferredSearchValue.trim().length > 0;
 
   return (
@@ -56,7 +68,8 @@ export function PublicMoversDirectory({ movers }: PublicMoversDirectoryProps) {
               Search by service area
             </p>
             <p className="mt-3 text-sm leading-6 text-slate-300 sm:text-base sm:leading-7">
-              Find movers covering your region, then compare the directory from the strongest public ratings down.
+              Find movers covering your region, read their company information
+              and available customer reviews.
             </p>
           </div>
 
@@ -90,7 +103,8 @@ export function PublicMoversDirectory({ movers }: PublicMoversDirectoryProps) {
 
         <div className="mt-4 flex flex-wrap gap-2">
           {serviceAreaOptions.map((area) => {
-            const isActive = area.toLowerCase() === searchValue.trim().toLowerCase();
+            const isActive =
+              area.toLowerCase() === searchValue.trim().toLowerCase();
 
             return (
               <button
@@ -111,17 +125,26 @@ export function PublicMoversDirectory({ movers }: PublicMoversDirectoryProps) {
 
         <div className="mt-5 flex flex-col gap-2 text-sm text-slate-300 sm:flex-row sm:items-center sm:justify-between">
           <p>
-            Showing <span className="font-semibold text-white">{filteredMovers.length}</span> mover
+            Showing{" "}
+            <span className="font-semibold text-white">
+              {filteredMovers.length}
+            </span>{" "}
+            mover
             {filteredMovers.length === 1 ? "" : "s"}
             {hasSearch ? (
               <>
                 {" "}
-                for <span className="font-semibold text-white">{formatServiceAreaLabel(deferredSearchValue)}</span>
+                for{" "}
+                <span className="font-semibold text-white">
+                  {formatServiceAreaLabel(deferredSearchValue)}
+                </span>
               </>
             ) : null}
             .
           </p>
-          <p className="text-sky-100/80">Sorted by public rating, highest first.</p>
+          <p className="text-sky-100/80">
+            Reviewed companies first; company names break ties.
+          </p>
         </div>
       </div>
 
@@ -133,9 +156,12 @@ export function PublicMoversDirectory({ movers }: PublicMoversDirectoryProps) {
         </div>
       ) : (
         <div className="mt-6 rounded-[28px] border border-dashed border-white/14 bg-white/[0.05] px-6 py-10 text-center">
-          <p className="text-lg font-semibold text-white">No movers found for that service area.</p>
+          <p className="text-lg font-semibold text-white">
+            No movers found for that service area.
+          </p>
           <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-slate-300">
-            Try a nearby region or clear the search to browse the full directory of trusted movers.
+            Try a nearby region or clear the search to browse the full directory
+            of trusted movers.
           </p>
         </div>
       )}

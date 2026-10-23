@@ -1,163 +1,72 @@
-import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, Clock3, ShieldCheck, Sparkles } from "lucide-react";
 import { SiteShell } from "@/components/site-shell";
-import { createPageMetadata } from "@/lib/seo";
-
-export const metadata: Metadata = createPageMetadata({
-  title: "Quote Request Received",
-  description: "Your Match 'n Move quote request has been received.",
-  path: "/thank-you",
-  noIndex: true,
-});
-
-function getNextSteps(cleaningSelected: boolean) {
-  return [
-    {
-      title: cleaningSelected ? "Requests received" : "Request received",
-      copy: cleaningSelected
-        ? "Your moving request and optional move-out cleaning request are ready to be matched."
-        : "Your move details are now in the Match 'n Move pipeline and ready to be reviewed.",
-      icon: CheckCircle2,
-      iconClassName: "bg-emerald-400/15 text-emerald-200"
-    },
-    {
-      title: "Quotes start moving",
-      copy: cleaningSelected
-        ? "Relevant movers and any suitable cleaners can review the parts of your request they need and respond with their quotes."
-        : "Trusted movers are prompted to respond quickly, with many quotes arriving within 24 hours.",
-      icon: Clock3,
-      iconClassName: "bg-sky-400/15 text-sky-200"
-    },
-    {
-      title: "Your details stay focused",
-      copy: cleaningSelected
-        ? "Movers receive your moving details, while cleaners receive only the details relevant to cleaning the property you're leaving."
-        : "We only pass your request to relevant moving companies in the Match 'n Move network.",
-      icon: ShieldCheck,
-      iconClassName: "bg-orange-400/15 text-orange-200"
-    }
-  ] as const;
-}
-
-export default async function ThankYouPage({
-  searchParams,
-}: {
-  searchParams?: Promise<{ id?: string | string[]; cleaning?: string | string[] }>;
-}) {
-  const params = searchParams ? await searchParams : {};
-  const rawRequestId = Array.isArray(params.id) ? params.id[0] : params.id;
-  const rawCleaning = Array.isArray(params.cleaning) ? params.cleaning[0] : params.cleaning;
-  const cleaningSelected = rawCleaning === "1";
-  const requestReference = rawRequestId ? `MN-${rawRequestId.slice(0, 8).toUpperCase()}` : null;
-  const nextSteps = getNextSteps(cleaningSelected);
-
+import { getCustomerRequest, requestReference } from "@/lib/customer-access";
+export const dynamic = "force-dynamic";
+export const metadata = {
+  title: "Request Confirmation | Match 'n Move",
+  robots: { index: false, follow: false },
+  referrer: "no-referrer" as const,
+};
+export default async function Thanks() {
+  const quote = await getCustomerRequest();
   return (
     <SiteShell>
-      <section className="relative overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(56,189,248,0.18),transparent_28%),radial-gradient(circle_at_82%_18%,rgba(34,197,94,0.16),transparent_24%),linear-gradient(180deg,#081323_0%,#0c2037_42%,#102845_100%)] py-14 text-white sm:py-16 lg:py-20">
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute left-[8%] top-16 h-32 w-32 rounded-full bg-sky-300/10 blur-3xl sm:h-52 sm:w-52" />
-          <div className="absolute right-[10%] top-10 h-36 w-36 rounded-full bg-orange-300/10 blur-3xl sm:h-56 sm:w-56" />
-          <div className="absolute inset-x-0 top-0 h-36 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),transparent)]" />
+      <main className="container-shell max-w-3xl py-16">
+        <p className="font-semibold text-teal-700">Match &apos;n Move</p>
+        <h1 className="mt-3 text-4xl font-bold">
+          {quote
+            ? "Your request has been received."
+            : "View your request securely."}
+        </h1>
+        {quote ? (
+          <>
+            <p className="mt-5 break-all font-semibold">
+              {requestReference(quote.id)}
+            </p>
+            <p className="mt-5 text-lg leading-8 text-slate-600">
+              Suitable companies can review your moving enquiry
+              {quote.cleaningRequest
+                ? " and your separate cleaning enquiry"
+                : ""}
+              . Responses depend on provider availability. Companies contact you
+              directly by email or phone, and you can choose whether to accept
+              any quote.
+            </p>
+            <ol className="mt-7 list-decimal space-y-3 pl-6 leading-7 text-slate-600">
+              <li>Check your submitted details and keep your reference.</li>
+              <li>
+                Discuss scope, pricing and terms with companies that respond.
+              </li>
+              <li>
+                Confirm any booking directly with the provider you choose.
+              </li>
+            </ol>
+            <Link
+              href="/request"
+              className="mt-7 inline-block rounded-xl bg-teal-700 px-6 py-3 font-semibold text-white"
+            >
+              View request &amp; create a private return link
+            </Link>
+          </>
+        ) : (
+          <p className="mt-5 leading-7 text-slate-600">
+            Use the browser where you submitted your enquiry or open your
+            private return link. A reference in a URL does not prove a request
+            was submitted.
+          </p>
+        )}
+        <div className="mt-8 flex flex-wrap gap-5">
+          <Link href="/contact" className="text-teal-700 underline">
+            Request support
+          </Link>
+          <Link
+            href="/resources/moving-house-checklist"
+            className="text-teal-700 underline"
+          >
+            Plan your checklist
+          </Link>
         </div>
-
-        <div className="container-shell relative">
-          <div className="overflow-hidden rounded-[34px] border border-white/10 bg-white/[0.06] shadow-[0_32px_100px_-48px_rgba(15,23,42,0.82)] backdrop-blur-xl">
-            <div className="grid gap-8 px-6 py-8 sm:px-8 sm:py-10 lg:grid-cols-[minmax(0,1.2fr)_360px] lg:px-12 lg:py-12">
-              <div className="max-w-3xl">
-                <p className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.08] px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-sky-100 sm:text-sm">
-                  <Sparkles className="h-4 w-4" />
-                  {cleaningSelected ? "Moving and cleaning requests submitted" : "Quote submitted successfully"}
-                </p>
-
-                <h1 className="mt-5 max-w-[11ch] text-[clamp(2.6rem,6vw,5.4rem)] font-black leading-[1] tracking-[-0.045em] text-white sm:leading-[0.98]">
-                  {cleaningSelected
-                    ? "Your move and move-out clean are officially in motion."
-                    : "Your move request is officially in motion."}
-                </h1>
-
-                <p className="mt-5 max-w-2xl text-base leading-8 text-slate-200 sm:text-lg">
-                  {cleaningSelected ? (
-                    <>
-                      We&apos;ve received your details and will connect your moving request with relevant movers while we try
-                      to match your optional cleaning request with suitable cleaners. Both quote requests are free and
-                      there is no obligation to book.
-                    </>
-                  ) : (
-                    <>
-                      We&apos;ve received your details and will send free, no-obligation moving quotes from trusted local
-                      moving companies shortly. Match &apos;n Move keeps the process simple so you can compare options without
-                      the usual back-and-forth.
-                    </>
-                  )}
-                </p>
-
-                <div className="mt-6 grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.07] px-4 py-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-100/75">Reference</p>
-                    <p className="mt-2 break-words text-lg font-black text-white">{requestReference ?? "Sent"}</p>
-                  </div>
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.07] px-4 py-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-100/75">Expected timing</p>
-                    <p className="mt-2 text-lg font-black text-white">24 hours</p>
-                  </div>
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.07] px-4 py-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-100/75">Cost to compare</p>
-                    <p className="mt-2 text-lg font-black text-white">$0</p>
-                  </div>
-                </div>
-
-                <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                  <Link
-                    href="/"
-                    className="inline-flex min-h-[54px] items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(135deg,#16a34a,#22c55e)] px-6 py-3 text-base font-semibold text-white shadow-[0_20px_44px_-24px_rgba(34,197,94,0.85)] transition hover:translate-y-[-1px] hover:shadow-[0_24px_48px_-24px_rgba(34,197,94,0.98)]"
-                  >
-                    Back to home
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
-                  <Link
-                    href={requestReference ? `/contact?subject=${encodeURIComponent(`Update quote request ${requestReference}`)}` : "/contact"}
-                    className="inline-flex min-h-[54px] items-center justify-center rounded-2xl border border-white/12 bg-white/[0.08] px-6 py-3 text-base font-semibold text-white transition hover:border-white/20 hover:bg-white/[0.12]"
-                  >
-                    Update request details
-                  </Link>
-                </div>
-              </div>
-
-              <aside className="rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.1),rgba(255,255,255,0.05))] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] sm:p-6">
-                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-100">What happens next</p>
-                <p className="mt-2 text-sm leading-6 text-slate-300">
-                  {cleaningSelected
-                    ? "Keep an eye on your phone and inbox. Relevant movers and cleaners may contact you directly if they need a little more detail before pricing."
-                    : "Keep an eye on your phone and inbox. Movers may contact you directly if they need access details, photos, or inventory clarification before pricing."}
-                </p>
-                <div className="mt-5 space-y-3">
-                  {nextSteps.map((step) => {
-                    const Icon = step.icon;
-
-                    return (
-                      <article
-                        key={step.title}
-                        className="rounded-[24px] border border-white/10 bg-slate-950/20 px-4 py-4"
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className={`rounded-2xl p-3 ${step.iconClassName}`}>
-                            <Icon className="h-5 w-5" />
-                          </div>
-                          <div>
-                            <h2 className="text-base font-semibold text-white">{step.title}</h2>
-                            <p className="mt-1 text-sm leading-6 text-slate-300">{step.copy}</p>
-                          </div>
-                        </div>
-                      </article>
-                    );
-                  })}
-                </div>
-              </aside>
-            </div>
-          </div>
-        </div>
-      </section>
+      </main>
     </SiteShell>
   );
 }

@@ -1,18 +1,31 @@
 import Link from "next/link";
 
-type AdminArea = "quote-flow" | "verification" | "cleaners" | "leads";
+type AdminArea = "quote-flow" | "verification" | "cleaners" | "leads" | "trust";
 
 const links: Array<{ id: AdminArea; href: string; label: string }> = [
+  { id: "trust", href: "/admin/trust", label: "Trust & support" },
   { id: "quote-flow", href: "/admin/quote-flow", label: "Quote flow" },
-  { id: "verification", href: "/admin/verification", label: "Mover verification" },
+  {
+    id: "verification",
+    href: "/admin/verification",
+    label: "Mover verification",
+  },
   { id: "cleaners", href: "/admin/cleaners", label: "Cleaners" },
   { id: "leads", href: "/admin/leads", label: "Google Sheets" },
 ];
 
 export function AdminNavigation({ current }: { current: AdminArea }) {
   return (
-    <nav aria-label="Admin sections" className="flex max-w-full gap-2 overflow-x-auto pb-1">
-      <Link href="/admin/recruitment" className="inline-flex min-h-10 shrink-0 items-center rounded-xl bg-teal-700 px-4 text-sm font-bold text-white">Recruitment</Link>
+    <nav
+      aria-label="Admin sections"
+      className="flex max-w-full gap-2 overflow-x-auto pb-1"
+    >
+      <Link
+        href="/admin/recruitment"
+        className="inline-flex min-h-10 shrink-0 items-center rounded-xl bg-teal-700 px-4 text-sm font-bold text-white"
+      >
+        Recruitment
+      </Link>
       {links.map((link) => {
         const active = link.id === current;
 

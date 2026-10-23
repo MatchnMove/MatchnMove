@@ -154,6 +154,11 @@ model MoverCompany {
   nzbnEntityStatus             String?
   nzbnVerificationSource       String?
   nzbnVerificationError        String?                 @db.Text
+  operatingRegion              String?
+  movingServices               String[]                @default([])
+  yearsOperatingVerifiedAt     DateTime?
+  legacyPublicProfile          Boolean                 @default(false)
+  profileReviewedAt            DateTime?
   yearsOperating               Int?
   logoUrl                      String?
   serviceAreas                 String[]
@@ -287,6 +292,11 @@ model QuoteRequest {
   submittedLocale           String                   @default("en-NZ")
   createdAt                 DateTime                 @default(now())
   leads                     Lead[]
+  movingDistributedAt       DateTime?
+  inventory                 Json?
+  toBedrooms                String?
+  customerAccess            CustomerRequestAccess[]
+  supportRequests           CustomerRequestSupport[]
   cleaningRequest           CleaningRequest?
   spreadsheetDelivery       LeadSpreadsheetDelivery?
   recruitmentSharingAllowed Boolean                  @default(false)
@@ -297,15 +307,29 @@ model QuoteRequest {
 }
 
 model CleaningRequest {
-  id             String           @id @default(cuid())
-  quoteRequestId String           @unique
-  location       CleaningLocation @default(MOVE_OUT)
-  notes          String?          @db.Text
-  consentAt      DateTime
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-  quoteRequest   QuoteRequest     @relation(fields: [quoteRequestId], references: [id], onDelete: Cascade)
-  leads          CleaningLead[]
+  id                   String           @id @default(cuid())
+  quoteRequestId       String           @unique
+  location             CleaningLocation @default(MOVE_OUT)
+  services             String[]         @default([])
+  targetAddress        String?
+  targetCity           String?
+  targetRegion         String?
+  targetPostcode       String?
+  propertyType         String?
+  bedrooms             String?
+  preferredDate        DateTime?
+  timeWindow           String?
+  propertyEmpty        String?
+  moverTiming          String?
+  accessNotes          String?          @db.Text
+  carpetRooms          Int?
+  destinationConsentAt DateTime?
+  notes                String?          @db.Text
+  consentAt            DateTime
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+  quoteRequest         QuoteRequest     @relation(fields: [quoteRequestId], references: [id], onDelete: Cascade)
+  leads                CleaningLead[]
 
   @@index([createdAt])
 }
@@ -485,6 +509,10 @@ model Review {
   careOfBelongingsRating Int?
   professionalismRating  Int?
   valueForMoneyRating    Int?
+  providerResponse       String?                @db.Text
+  responseSubmittedAt    DateTime?
+  responseApprovedAt     DateTime?
+  reports                ReviewReport[]
   writtenReview          String?                @db.Text
   recommendMover         Boolean?
   showReviewerName       Boolean                @default(true)
@@ -777,4 +805,59 @@ model RecruitmentProviderEvent {
   type      String
   email     String
   createdAt DateTime @default(now())
+}
+
+model QuoteDraft {
+  id            String   @id @default(cuid())
+  tokenHash     String   @unique
+  encryptedData String   @db.Text
+  expiresAt     DateTime
+  updatedAt     DateTime @updatedAt
+
+  @@index([expiresAt])
+}
+
+model CustomerRequestAccess {
+  id             String       @id @default(cuid())
+  tokenHash      String       @unique
+  quoteRequestId String
+  quoteRequest   QuoteRequest @relation(fields: [quoteRequestId], references: [id], onDelete: Cascade)
+  expiresAt      DateTime
+  createdAt      DateTime     @default(now())
+
+  @@index([quoteRequestId])
+  @@index([expiresAt])
+}
+
+model CustomerRequestSupport {
+  id             String       @id @default(cuid())
+  quoteRequestId String
+  quoteRequest   QuoteRequest @relation(fields: [quoteRequestId], references: [id], onDelete: Restrict)
+  message        String       @db.Text
+  status         String       @default("OPEN")
+  resolvedAt     DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([status, createdAt])
+}
+
+model ReviewReport {
+  id        String   @id @default(cuid())
+  reviewId  String
+  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  reason    String   @db.Text
+  status    String   @default("OPEN")
+  createdAt DateTime @default(now())
+
+  @@index([status, createdAt])
+}
+
+model ConversionEvent {
+  id        String   @id
+  name      String
+  source    String?
+  step      Int?
+  createdAt DateTime @default(now())
+
+  @@index([name, createdAt])
 }

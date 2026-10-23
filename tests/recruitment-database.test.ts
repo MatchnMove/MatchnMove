@@ -288,6 +288,7 @@ test(
           data: {
             ...quote,
             id: undefined,
+            inventory: undefined,
             transcriptRaw: undefined,
             transcriptFields: undefined,
             recruitmentSharingAllowed: false,

@@ -1,6 +1,16 @@
+import { LEAD_PRICING } from "@/lib/lead-pricing";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, BadgeDollarSign, Building2, CheckCircle2, FileText, Route, ShieldCheck, Sparkles } from "lucide-react";
+import {
+  ArrowRight,
+  BadgeDollarSign,
+  Building2,
+  CheckCircle2,
+  FileText,
+  Route,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
 import { SiteShell } from "@/components/site-shell";
 import { createPageMetadata } from "@/lib/seo";
 
@@ -11,68 +21,85 @@ export const metadata: Metadata = createPageMetadata({
   path: "/mover/pricing",
 });
 
+const money = (cents: number) =>
+  new Intl.NumberFormat("en-NZ", {
+    style: "currency",
+    currency: "NZD",
+    maximumFractionDigits: 2,
+  }).format(cents / 100);
 const pricingLevers = [
   {
     title: "Free mover membership",
     price: "$0/month",
-    description: "Join the platform, complete your profile, and review lead opportunities without paying a subscription.",
+    description:
+      "Join the platform, complete your profile, and review lead opportunities without paying a subscription.",
   },
   {
     title: "Base lead price",
-    price: "$20 NZD",
-    description: "Every standard local move starts from a clear $20 base price.",
+    price: money(LEAD_PRICING.basePrice) + " NZD",
+    description:
+      "Standard local leads start at the configured base price shown above.",
   },
   {
     title: "Billed monthly",
     price: "Invoice",
-    description: "Movers unlock leads immediately and settle the total with a month-end invoice instead of paying per unlock on the spot.",
+    description:
+      "Movers unlock leads immediately and settle the total with a month-end invoice instead of paying per unlock on the spot.",
   },
 ] as const;
 
 const modifierRows = [
   {
     label: "Local move",
-    amount: "$20",
+    amount: money(LEAD_PRICING.basePrice),
     detail: "Standard local jobs begin at the base rate.",
   },
   {
     label: "Large home",
-    amount: "+$10",
-    detail: "Applied when the move is for a larger home and the quoting workload is heavier.",
+    amount: "+" + money(LEAD_PRICING.largeHomeModifier),
+    detail:
+      "Applied when the move is for a larger home and the quoting workload is heavier.",
   },
   {
     label: "Urgent move",
-    amount: "+$20",
-    detail: "Applied to short-notice jobs that need faster response and scheduling.",
+    amount: "+" + money(LEAD_PRICING.urgentModifier),
+    detail:
+      "Applied to short-notice jobs that need faster response and scheduling.",
   },
   {
     label: "Long haul across island",
     amount: "+$20",
-    detail: "Applied to longer same-island routes that take more planning and transport time.",
+    detail:
+      "Applied to longer same-island routes that take more planning and transport time.",
   },
   {
     label: "Between islands",
-    amount: "+$45",
-    detail: "Applied when the move crosses between the North and South Islands.",
+    amount: "+" + money(LEAD_PRICING.interIslandModifier),
+    detail:
+      "Applied when the move crosses between the North and South Islands.",
   },
 ] as const;
 
 const invoiceFlow = [
   {
     title: "See the lead price first",
-    description: "The dashboard shows the lead price before the mover opens the full customer details.",
+    description:
+      "The dashboard shows the lead price before the mover opens the full customer details.",
   },
   {
     title: "Unlock immediately",
-    description: "There is no per-lead checkout flow. The mover can open the lead right away.",
+    description:
+      "There is no per-lead checkout flow. The mover can open the lead right away.",
   },
   {
     title: "Charges are tracked automatically",
-    description: "Each unlocked lead is recorded so the finance trail stays clear for support and billing.",
+    description:
+      "Each unlocked lead is recorded so the finance trail stays clear for support and billing.",
   },
   {
     title: "Receive one invoice at month end",
-    description: "Instead of paying lead by lead, movers receive a combined invoice for the month.",
+    description:
+      "Instead of paying lead by lead, movers receive a combined invoice for the month.",
   },
 ] as const;
 
@@ -80,22 +107,26 @@ const valuePillars = [
   {
     icon: Route,
     title: "Faster dispatch decisions",
-    description: "Office teams can open the opportunity immediately instead of stopping to pay first.",
+    description:
+      "Office teams can open the opportunity immediately instead of stopping to pay first.",
   },
   {
     icon: BadgeDollarSign,
     title: "Simple cost model",
-    description: "The rules are easy to explain: $20 base price plus a small number of fixed modifiers.",
+    description:
+      "The configured base price plus applicable fixed modifiers determines the displayed lead price.",
   },
   {
     icon: Building2,
     title: "Built for real operators",
-    description: "Owners, dispatchers, and on-road staff can understand the pricing at a glance from any device.",
+    description:
+      "Owners, dispatchers, and on-road staff can understand the pricing at a glance from any device.",
   },
   {
     icon: ShieldCheck,
     title: "Clear audit trail",
-    description: "Lead access and billing records stay visible so finance and support can verify what happened.",
+    description:
+      "Lead access and billing records stay visible so finance and support can verify what happened.",
   },
 ] as const;
 
@@ -103,45 +134,56 @@ const securityLayers = [
   {
     icon: ShieldCheck,
     title: "Assigned-lead access",
-    description: "Only the mover company attached to the lead can unlock and work that opportunity.",
+    description:
+      "Only the mover company attached to the lead can unlock and work that opportunity.",
   },
   {
     icon: FileText,
     title: "Invoice-ready records",
-    description: "Unlocked leads are stored as billing entries so month-end invoicing can be checked easily.",
+    description:
+      "Unlocked leads are stored as billing entries so month-end invoicing can be checked easily.",
   },
   {
     icon: CheckCircle2,
     title: "Server-side state changes",
-    description: "Lead status changes and unlock events are written on the server, not just in the browser.",
+    description:
+      "Lead status changes and unlock events are written on the server, not just in the browser.",
   },
   {
     icon: Sparkles,
     title: "Cleaner commercial flow",
-    description: "The mover journey focuses on response speed and trust instead of interrupting the workflow with checkout.",
+    description:
+      "The mover journey focuses on response speed and trust instead of interrupting the workflow with checkout.",
   },
 ] as const;
 
 const exampleLeadPrices = [
   {
     title: "Standard local apartment move",
-    price: "$20",
+    price: money(LEAD_PRICING.basePrice),
     detail: "A typical local lead with no urgent timing or long-haul modifier.",
   },
   {
     title: "Large local home",
-    price: "$30",
-    detail: "$20 base lead plus the larger-home modifier.",
+    price: money(LEAD_PRICING.basePrice + LEAD_PRICING.largeHomeModifier),
+    detail: "Base lead price plus the larger-home modifier.",
   },
   {
     title: "Urgent long-haul move",
-    price: "$60",
-    detail: "$20 base lead, urgent timing, and same-island long-haul planning.",
+    price: money(
+      LEAD_PRICING.basePrice +
+        LEAD_PRICING.urgentModifier +
+        LEAD_PRICING.sameIslandLongHaulModifier,
+    ),
+    detail:
+      "Base lead price, urgent timing and same-island long-haul modifier.",
   },
   {
     title: "Between-islands move",
-    price: "$65+",
-    detail: "$20 base lead plus the inter-island modifier; large or urgent moves can add more.",
+    price:
+      money(LEAD_PRICING.basePrice + LEAD_PRICING.interIslandModifier) + "+",
+    detail:
+      "Base lead price plus the inter-island modifier; large or urgent moves can add more.",
   },
 ] as const;
 
@@ -155,6 +197,28 @@ const moverControls = [
 export default function MoverPricingPage() {
   return (
     <SiteShell>
+      <section className="container-shell py-8">
+        <h2 className="text-2xl font-bold">Joining and managing enquiries</h2>
+        <p className="mt-4 leading-7 text-slate-600">
+          Create a free mover account, confirm your email and choose your
+          service areas. Active eligible accounts can preview matched moving
+          enquiries while completing public profile checks. The preview
+          withholds customer contact details and exact addresses until you
+          unlock. Enquiry volume and bookings are not guaranteed.
+        </p>
+        <p className="mt-3 leading-7 text-slate-600">
+          Manage coverage in your dashboard. Contact support with the lead
+          reference for an unsuitable or invalid enquiry so the record can be
+          reviewed. Any charge adjustment depends on that review; there is no
+          automatic booking guarantee.
+        </p>
+        <Link
+          href="/mover/login?mode=signup"
+          className="mt-4 inline-block py-3 font-semibold text-teal-700 underline"
+        >
+          Register your moving company
+        </Link>
+      </section>
       <section className="bg-[linear-gradient(180deg,#ffffff_0%,#f5f8fc_18%,#eef5fb_100%)]">
         <div className="container-shell py-12 sm:py-14 lg:py-20">
           <div className="overflow-hidden rounded-[34px] border border-slate-200 bg-[linear-gradient(135deg,#061525_0%,#0e2740_48%,#17344d_100%)] text-white shadow-[0_32px_100px_-45px_rgba(15,23,42,0.72)]">
@@ -168,8 +232,10 @@ export default function MoverPricingPage() {
                   Instant lead access with one clear invoice at month end.
                 </h1>
                 <p className="mt-5 max-w-3xl text-sm leading-7 text-slate-300 sm:text-base">
-                  Match &apos;n Move is free to join for movers. Leads no longer require a payment at unlock time. Your team
-                  can open the lead immediately, and the month&apos;s total is invoiced later in one simple billing cycle.
+                  Match &apos;n Move is free to join for movers. Leads no longer
+                  require a payment at unlock time. Your team can open the lead
+                  immediately, and the month&apos;s total is invoiced later in
+                  one simple billing cycle.
                 </p>
 
                 <div className="mt-7 flex flex-col gap-3 sm:flex-row">
@@ -191,12 +257,21 @@ export default function MoverPricingPage() {
 
               <div className="grid gap-4">
                 {pricingLevers.map((item) => (
-                  <div key={item.title} className="rounded-[26px] border border-white/10 bg-white/[0.07] p-5 backdrop-blur">
+                  <div
+                    key={item.title}
+                    className="rounded-[26px] border border-white/10 bg-white/[0.07] p-5 backdrop-blur"
+                  >
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                      <h2 className="text-lg font-semibold text-white">{item.title}</h2>
-                      <p className="text-sm font-bold uppercase tracking-[0.16em] text-sky-200">{item.price}</p>
+                      <h2 className="text-lg font-semibold text-white">
+                        {item.title}
+                      </h2>
+                      <p className="text-sm font-bold uppercase tracking-[0.16em] text-sky-200">
+                        {item.price}
+                      </p>
                     </div>
-                    <p className="mt-3 text-sm leading-7 text-slate-300">{item.description}</p>
+                    <p className="mt-3 text-sm leading-7 text-slate-300">
+                      {item.description}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -207,12 +282,19 @@ export default function MoverPricingPage() {
             {valuePillars.map((pillar) => {
               const Icon = pillar.icon;
               return (
-                <div key={pillar.title} className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+                <div
+                  key={pillar.title}
+                  className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm"
+                >
                   <div className="inline-flex rounded-2xl bg-sky-100 p-3 text-sky-700">
                     <Icon className="h-5 w-5" />
                   </div>
-                  <h2 className="mt-4 text-xl font-black tracking-[-0.03em] text-slate-950">{pillar.title}</h2>
-                  <p className="mt-2 text-sm leading-7 text-slate-600">{pillar.description}</p>
+                  <h2 className="mt-4 text-xl font-black tracking-[-0.03em] text-slate-950">
+                    {pillar.title}
+                  </h2>
+                  <p className="mt-2 text-sm leading-7 text-slate-600">
+                    {pillar.description}
+                  </p>
                 </div>
               );
             })}
@@ -220,64 +302,98 @@ export default function MoverPricingPage() {
 
           <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(20rem,0.9fr)]">
             <div className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-orange-600">Detailed pricing structure</p>
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-orange-600">
+                Detailed pricing structure
+              </p>
               <h2 className="mt-3 text-[clamp(2rem,4vw,3.4rem)] font-black tracking-[-0.05em] text-slate-950">
                 What shapes each lead price
               </h2>
               <div className="mt-6 space-y-3">
                 {modifierRows.map((row) => (
-                  <div key={row.label} className="rounded-[26px] border border-slate-200 bg-slate-50 p-4 sm:p-5">
+                  <div
+                    key={row.label}
+                    className="rounded-[26px] border border-slate-200 bg-slate-50 p-4 sm:p-5"
+                  >
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                      <p className="font-semibold text-slate-900">{row.label}</p>
-                      <p className="text-sm font-bold uppercase tracking-[0.16em] text-orange-600">{row.amount}</p>
+                      <p className="font-semibold text-slate-900">
+                        {row.label}
+                      </p>
+                      <p className="text-sm font-bold uppercase tracking-[0.16em] text-orange-600">
+                        {row.amount}
+                      </p>
                     </div>
-                    <p className="mt-2 text-sm leading-7 text-slate-600">{row.detail}</p>
+                    <p className="mt-2 text-sm leading-7 text-slate-600">
+                      {row.detail}
+                    </p>
                   </div>
                 ))}
               </div>
             </div>
 
             <div className="rounded-[32px] border border-slate-200 bg-[linear-gradient(180deg,#fff8ef,#ffffff)] p-6 shadow-sm sm:p-7">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-orange-600">Mover-friendly policy</p>
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-orange-600">
+                Mover-friendly policy
+              </p>
               <div className="mt-4 space-y-4 text-sm leading-7 text-slate-600">
                 <p>No subscription is required to start using the platform.</p>
                 <p>No checkout step blocks the mover from opening the lead.</p>
-                <p>The lead price is shown before unlock so the team knows what will appear on the invoice.</p>
-                <p>Pricing uses fixed rules instead of vague variable charges.</p>
+                <p>
+                  The lead price is shown before unlock so the team knows what
+                  will appear on the invoice.
+                </p>
+                <p>
+                  Pricing uses fixed rules instead of vague variable charges.
+                </p>
               </div>
             </div>
           </div>
 
           <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.05fr)_minmax(20rem,0.95fr)]">
             <div className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-sky-700">Example lead prices</p>
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-sky-700">
+                Example lead prices
+              </p>
               <h2 className="mt-3 text-[clamp(2rem,4vw,3.2rem)] font-black tracking-[-0.05em] text-slate-950">
                 A quicker way to understand likely costs
               </h2>
               <div className="mt-6 grid gap-3 sm:grid-cols-2">
                 {exampleLeadPrices.map((example) => (
-                  <article key={example.title} className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
+                  <article
+                    key={example.title}
+                    className="rounded-[24px] border border-slate-200 bg-slate-50 p-4"
+                  >
                     <div className="flex items-start justify-between gap-4">
-                      <h3 className="font-semibold text-slate-900">{example.title}</h3>
+                      <h3 className="font-semibold text-slate-900">
+                        {example.title}
+                      </h3>
                       <p className="shrink-0 rounded-full bg-white px-3 py-1 text-sm font-black text-orange-600 shadow-sm">
                         {example.price}
                       </p>
                     </div>
-                    <p className="mt-3 text-sm leading-7 text-slate-600">{example.detail}</p>
+                    <p className="mt-3 text-sm leading-7 text-slate-600">
+                      {example.detail}
+                    </p>
                   </article>
                 ))}
               </div>
             </div>
 
             <div className="rounded-[32px] border border-slate-200 bg-[linear-gradient(145deg,#0f172a,#17324f)] p-6 text-white shadow-sm sm:p-7">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-200">Cost control</p>
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-200">
+                Cost control
+              </p>
               <h2 className="mt-3 text-[clamp(1.9rem,4vw,3rem)] font-black tracking-[-0.05em] text-white">
                 Movers stay in control before they open a lead.
               </h2>
               <div className="mt-6 space-y-3">
                 {moverControls.map((control) => (
-                  <div key={control} className="rounded-[22px] border border-white/10 bg-white/[0.06] px-4 py-4">
-                    <p className="text-sm leading-7 text-slate-200">{control}</p>
+                  <div
+                    key={control}
+                    className="rounded-[22px] border border-white/10 bg-white/[0.06] px-4 py-4"
+                  >
+                    <p className="text-sm leading-7 text-slate-200">
+                      {control}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -286,19 +402,28 @@ export default function MoverPricingPage() {
 
           <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,1fr)]">
             <div className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm sm:p-7">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-sky-700">How billing works</p>
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-sky-700">
+                How billing works
+              </p>
               <h2 className="mt-3 text-[clamp(2rem,4vw,3.2rem)] font-black tracking-[-0.05em] text-slate-950">
                 A straightforward unlock-now, invoice-later flow
               </h2>
               <div className="mt-6 space-y-3">
                 {invoiceFlow.map((step, index) => (
-                  <div key={step.title} className="flex gap-4 rounded-[26px] border border-slate-200 bg-slate-50 px-4 py-4">
+                  <div
+                    key={step.title}
+                    className="flex gap-4 rounded-[26px] border border-slate-200 bg-slate-50 px-4 py-4"
+                  >
                     <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-sm font-black text-white">
                       {String(index + 1).padStart(2, "0")}
                     </div>
                     <div>
-                      <h3 className="font-semibold text-slate-900">{step.title}</h3>
-                      <p className="mt-2 text-sm leading-7 text-slate-600">{step.description}</p>
+                      <h3 className="font-semibold text-slate-900">
+                        {step.title}
+                      </h3>
+                      <p className="mt-2 text-sm leading-7 text-slate-600">
+                        {step.description}
+                      </p>
                     </div>
                   </div>
                 ))}
@@ -306,7 +431,9 @@ export default function MoverPricingPage() {
             </div>
 
             <div className="rounded-[32px] border border-slate-200 bg-[linear-gradient(180deg,#081a2b,#102845)] p-6 text-white shadow-sm sm:p-7">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-sky-200">Security and trust</p>
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-sky-200">
+                Security and trust
+              </p>
               <h2 className="mt-3 text-[clamp(2rem,4vw,3.2rem)] font-black tracking-[-0.05em] text-white">
                 The billing trail stays easy to verify.
               </h2>
@@ -314,14 +441,21 @@ export default function MoverPricingPage() {
                 {securityLayers.map((layer) => {
                   const Icon = layer.icon;
                   return (
-                    <div key={layer.title} className="rounded-[26px] border border-white/10 bg-white/[0.06] p-4">
+                    <div
+                      key={layer.title}
+                      className="rounded-[26px] border border-white/10 bg-white/[0.06] p-4"
+                    >
                       <div className="flex items-start gap-4">
                         <div className="rounded-2xl bg-white/10 p-3 text-sky-100">
                           <Icon className="h-5 w-5" />
                         </div>
                         <div>
-                          <h3 className="font-semibold text-white">{layer.title}</h3>
-                          <p className="mt-2 text-sm leading-7 text-slate-300">{layer.description}</p>
+                          <h3 className="font-semibold text-white">
+                            {layer.title}
+                          </h3>
+                          <p className="mt-2 text-sm leading-7 text-slate-300">
+                            {layer.description}
+                          </p>
                         </div>
                       </div>
                     </div>

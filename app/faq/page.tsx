@@ -9,7 +9,7 @@ import {
   MapPinned,
   Search,
   ShieldCheck,
-  Sparkles
+  Sparkles,
 } from "lucide-react";
 import { SiteShell } from "@/components/site-shell";
 import { SITE_EMAILS } from "@/lib/site-emails";
@@ -30,79 +30,91 @@ const faqItems: FaqItem[] = [
   {
     id: "what-is-matchnmove",
     question: "Who or what is Match 'n Move?",
-    blurb: "A quick overview of how Match 'n Move helps people compare mover quotes in one place.",
+    blurb:
+      "A quick overview of how Match 'n Move helps people compare mover quotes in one place.",
     answer:
       "Match 'n Move is an independent quote-matching platform for people who need furniture removal pricing. Instead of contacting multiple companies one by one, you can send one request and receive quotations from moving companies through a single application. It works like a streamlined broker experience, but without a middleman fee because the service is free to use.",
     tags: ["matchnmove", "about", "broker", "quotes", "how it works"],
     followUps: [
       { id: "where-do-you-operate", label: "Service areas" },
       { id: "what-does-it-cost", label: "What it costs" },
-      { id: "are-my-details-secure", label: "Data privacy" }
-    ]
+      { id: "are-my-details-secure", label: "Data privacy" },
+    ],
   },
   {
     id: "where-do-you-operate",
     question: "In which areas is Match 'n Move operational?",
-    blurb: "Coverage across New Zealand, including local and long-distance relocations.",
+    blurb:
+      "Coverage across New Zealand, including local and long-distance relocations.",
     answer:
       "Match 'n Move operates nationwide across New Zealand, from the North Island to the South Island. The network includes companies that specialise in long-distance removals as well as smaller moving firms focused on local jobs. Once you complete the easy steps, you can compare options that suit your route and move size.",
-    tags: ["areas", "locations", "nationwide", "new zealand", "north island", "south island"],
+    tags: [
+      "areas",
+      "locations",
+      "nationwide",
+      "new zealand",
+      "north island",
+      "south island",
+    ],
     followUps: [
       { id: "what-does-it-cost", label: "Free service?" },
       { id: "when-will-i-get-quotes", label: "Quote timing" },
-      { id: "is-there-a-size-limit", label: "Move size" }
-    ]
+      { id: "is-there-a-size-limit", label: "Move size" },
+    ],
   },
   {
     id: "what-does-it-cost",
     question: "What does it cost to obtain quotations?",
-    blurb: "Using Match 'n Move to request moving quotes does not cost customers anything.",
-    answer: "Nothing. Requesting quotations through Match 'n Move is completely free for customers.",
+    blurb:
+      "Using Match 'n Move to request moving quotes does not cost customers anything.",
+    answer:
+      "Nothing. Requesting quotations through Match 'n Move is completely free for customers.",
     tags: ["cost", "price", "free", "fees", "charges"],
     followUps: [
       { id: "how-do-payments-work", label: "How payments work" },
       { id: "when-will-i-get-quotes", label: "When quotes arrive" },
-      { id: "what-is-matchnmove", label: "How it works" }
-    ]
+      { id: "what-is-matchnmove", label: "How it works" },
+    ],
   },
   {
     id: "how-do-payments-work",
     question: "Once I choose a removal company, who do I pay?",
-    blurb: "Payments go directly to the moving company you appoint, not to Match 'n Move.",
+    blurb:
+      "Payments go directly to the moving company you appoint, not to Match 'n Move.",
     answer:
       "Once you select the quotation that best suits your needs, you deal directly with that moving company for payment and next steps. Match 'n Move steps back once the connection is made, although you are always welcome to share feedback or suggestions with the team afterward.",
     tags: ["payment", "pay", "invoice", "removal company", "bookings"],
     followUps: [
       { id: "what-does-it-cost", label: "Service cost" },
       { id: "are-my-details-secure", label: "Privacy" },
-      { id: "how-often-can-i-use-it", label: "Use it again?" }
-    ]
+      { id: "how-often-can-i-use-it", label: "Use it again?" },
+    ],
   },
   {
     id: "are-my-details-secure",
     question: "Will my personal details be secure?",
-    blurb: "Your details are only shared with relevant moving companies listed on Match 'n Move.",
+    blurb:
+      "Your details are only shared with relevant moving companies listed on Match 'n Move.",
     answer:
       "Your personal details are only sent to companies listed on Match 'n Move that are relevant to your request. They are not distributed to unrelated companies or individuals. For full detail on how information is handled, you can also review the Terms & Conditions and Privacy Policy.",
     tags: ["privacy", "secure", "security", "details", "personal information"],
     followUps: [
       { id: "what-is-matchnmove", label: "What is Match 'n Move?" },
       { id: "when-will-i-get-quotes", label: "Quote timing" },
-      { id: "how-do-payments-work", label: "Payments" }
-    ]
+      { id: "how-do-payments-work", label: "Payments" },
+    ],
   },
   {
     id: "when-will-i-get-quotes",
     question: "How soon can I expect my quotations?",
-    blurb: "Most moving companies are asked to respond within 24 hours.",
-    answer:
-      `Match 'n Move asks moving companies to respond to quotation requests within 24 hours. If you have not received quotations within 24 to 48 hours, you can contact the team at ${SITE_EMAILS.feedback} so they can help follow up.`,
+    blurb: "Responses depend on company availability.",
+    answer: `Response times and the number of quotes vary with coverage and availability. Providers contact you directly. If you need help with a request, contact ${SITE_EMAILS.feedback} so they can help follow up.`,
     tags: ["how soon", "24 hours", "48 hours", "quote timing", "response time"],
     followUps: [
       { id: "where-do-you-operate", label: "Coverage" },
       { id: "what-does-it-cost", label: "Any cost?" },
-      { id: "are-my-details-secure", label: "Are details safe?" }
-    ]
+      { id: "are-my-details-secure", label: "Are details safe?" },
+    ],
   },
   {
     id: "how-often-can-i-use-it",
@@ -114,22 +126,23 @@ const faqItems: FaqItem[] = [
     followUps: [
       { id: "how-do-payments-work", label: "Payments" },
       { id: "when-will-i-get-quotes", label: "Quote timing" },
-      { id: "is-there-a-size-limit", label: "Move size" }
-    ]
+      { id: "is-there-a-size-limit", label: "Move size" },
+    ],
   },
   {
     id: "is-there-a-size-limit",
     question: "Is there a limit on the size of my move?",
-    blurb: "Quotes are available for both small and large household or office moves.",
+    blurb:
+      "Quotes are available for both small and large household or office moves.",
     answer:
       "There is no strict size limit, as long as the request relates to the removal of household or office furniture and goods. Whether your move is big or small, you can still request a quote through the platform.",
     tags: ["size", "small move", "large move", "office", "household"],
     followUps: [
       { id: "where-do-you-operate", label: "Where available?" },
       { id: "how-often-can-i-use-it", label: "Use it again?" },
-      { id: "when-will-i-get-quotes", label: "When quotes arrive" }
-    ]
-  }
+      { id: "when-will-i-get-quotes", label: "When quotes arrive" },
+    ],
+  },
 ];
 
 const featuredFaqIds = [
@@ -138,30 +151,34 @@ const featuredFaqIds = [
   "what-does-it-cost",
   "how-do-payments-work",
   "are-my-details-secure",
-  "when-will-i-get-quotes"
+  "when-will-i-get-quotes",
 ] as const;
 
 const helpfulTips = [
   {
     title: "Be specific in your request",
-    copy: "Accurate inventory details, access notes, and dates help movers return more reliable quotes faster."
+    copy: "Accurate inventory details, access notes, and dates help movers return more reliable quotes faster.",
   },
   {
     title: "Compare more than price",
-    copy: "Response speed, service area fit, and communication quality can matter just as much as the number on the quote."
+    copy: "Response speed, service area fit, and communication quality can matter just as much as the number on the quote.",
   },
   {
     title: "Book early for busy periods",
-    copy: "Peak seasons and popular moving dates can affect availability and pricing, so earlier requests usually create better options."
-  }
+    copy: "Peak seasons and popular moving dates can affect availability and pricing, so earlier requests usually create better options.",
+  },
 ] as const;
 
 export default function FAQPage() {
   const [query, setQuery] = useState("");
   const [openId, setOpenId] = useState<string>(faqItems[0]?.id ?? "");
-  const [expandedFeaturedId, setExpandedFeaturedId] = useState<string | null>(null);
+  const [expandedFeaturedId, setExpandedFeaturedId] = useState<string | null>(
+    null,
+  );
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
-  const [expandedHistoryId, setExpandedHistoryId] = useState<string | null>(null);
+  const [expandedHistoryId, setExpandedHistoryId] = useState<string | null>(
+    null,
+  );
   const [isMobilePlaceholder, setIsMobilePlaceholder] = useState(false);
 
   const deferredQuery = useDeferredValue(query.trim().toLowerCase());
@@ -171,7 +188,7 @@ export default function FAQPage() {
       featuredFaqIds
         .map((id) => faqItems.find((item) => item.id === id))
         .filter((item): item is FaqItem => Boolean(item)),
-    []
+    [],
   );
 
   const filteredFaqs = useMemo(() => {
@@ -180,20 +197,28 @@ export default function FAQPage() {
     }
 
     return faqItems.filter((item) => {
-      const haystack = `${item.question} ${item.answer} ${item.blurb} ${item.tags.join(" ")}`.toLowerCase();
+      const haystack =
+        `${item.question} ${item.answer} ${item.blurb} ${item.tags.join(" ")}`.toLowerCase();
       return haystack.includes(deferredQuery);
     });
   }, [deferredQuery]);
 
   const activeItem = deferredQuery
-    ? filteredFaqs.find((item) => item.id === openId) ?? filteredFaqs[0]
-    : faqItems.find((item) => item.id === openId) ?? featuredFaqs[0] ?? faqItems[0];
+    ? (filteredFaqs.find((item) => item.id === openId) ?? filteredFaqs[0])
+    : (faqItems.find((item) => item.id === openId) ??
+      featuredFaqs[0] ??
+      faqItems[0]);
 
   const handleQuickSearch = (item: FaqItem) => {
     setQuery(item.question);
     setOpenId(item.id);
     setExpandedFeaturedId((current) => (current === item.id ? null : item.id));
-    setSearchHistory((current) => [item.id, ...current.filter((historyId) => historyId !== item.id)].slice(0, 6));
+    setSearchHistory((current) =>
+      [item.id, ...current.filter((historyId) => historyId !== item.id)].slice(
+        0,
+        6,
+      ),
+    );
   };
 
   const jumpToQuickAnswer = () => {
@@ -205,18 +230,26 @@ export default function FAQPage() {
       }
 
       const topOffset = window.innerWidth >= 640 ? 32 : 24;
-      const top = quickAnswer.getBoundingClientRect().top + window.scrollY - topOffset;
+      const top =
+        quickAnswer.getBoundingClientRect().top + window.scrollY - topOffset;
       window.scrollTo({ top, behavior: "smooth" });
     }, 0);
   };
 
   const handleSearchPreviewClick = (item: FaqItem) => {
     setOpenId(item.id);
-    setSearchHistory((current) => [item.id, ...current.filter((historyId) => historyId !== item.id)].slice(0, 6));
+    setSearchHistory((current) =>
+      [item.id, ...current.filter((historyId) => historyId !== item.id)].slice(
+        0,
+        6,
+      ),
+    );
     jumpToQuickAnswer();
   };
 
-  const searchPreviewItems = deferredQuery ? filteredFaqs.slice(0, 4) : featuredFaqs.slice(0, 3);
+  const searchPreviewItems = deferredQuery
+    ? filteredFaqs.slice(0, 4)
+    : featuredFaqs.slice(0, 3);
   const historyItems = searchHistory
     .map((id) => faqItems.find((item) => item.id === id))
     .filter((item): item is FaqItem => Boolean(item));
@@ -226,7 +259,9 @@ export default function FAQPage() {
         const item = faqItems.find((faqItem) => faqItem.id === followUp.id);
         return item ? { item, label: followUp.label } : null;
       })
-      .filter((entry): entry is { item: FaqItem; label: string } => Boolean(entry)) ?? [];
+      .filter((entry): entry is { item: FaqItem; label: string } =>
+        Boolean(entry),
+      ) ?? [];
 
   const updateQuery = (nextQuery: string) => {
     setQuery(nextQuery);
@@ -237,7 +272,8 @@ export default function FAQPage() {
     }
 
     const nextMatch = faqItems.find((item) => {
-      const haystack = `${item.question} ${item.answer} ${item.blurb} ${item.tags.join(" ")}`.toLowerCase();
+      const haystack =
+        `${item.question} ${item.answer} ${item.blurb} ${item.tags.join(" ")}`.toLowerCase();
       return haystack.includes(normalizedQuery);
     });
 
@@ -246,7 +282,12 @@ export default function FAQPage() {
     }
 
     setOpenId(nextMatch.id);
-    setSearchHistory((current) => [nextMatch.id, ...current.filter((historyId) => historyId !== nextMatch.id)].slice(0, 6));
+    setSearchHistory((current) =>
+      [
+        nextMatch.id,
+        ...current.filter((historyId) => historyId !== nextMatch.id),
+      ].slice(0, 6),
+    );
   };
 
   useEffect(() => {
@@ -282,8 +323,9 @@ export default function FAQPage() {
               Search the questions people ask before they move.
             </h1>
             <p className="mx-auto mt-5 max-w-2xl text-sm leading-7 text-slate-200 sm:text-base">
-              Match &apos;n Move often receives questions about quotes, timing, privacy, and how the platform works. Start
-              typing and the most relevant answers appear right away.
+              Match &apos;n Move often receives questions about quotes, timing,
+              privacy, and how the platform works. Start typing and the most
+              relevant answers appear right away.
             </p>
           </div>
 
@@ -307,7 +349,11 @@ export default function FAQPage() {
                           id="faq-search"
                           value={query}
                           onChange={(event) => updateQuery(event.target.value)}
-                          placeholder={isMobilePlaceholder ? "Try \"quote timing\"" : "Try \"how soon can I expect quotations?\""}
+                          placeholder={
+                            isMobilePlaceholder
+                              ? 'Try "quote timing"'
+                              : 'Try "how soon can I expect quotations?"'
+                          }
                           className="w-full min-w-0 border-0 bg-transparent p-0 text-base font-semibold text-slate-950 outline-none placeholder:text-base placeholder:font-normal placeholder:text-slate-400 sm:mt-1"
                         />
                       </div>
@@ -350,10 +396,16 @@ export default function FAQPage() {
                                 <div className="flex items-start justify-between gap-4">
                                   <div>
                                     <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                                      {deferredQuery ? `Match 0${index + 1}` : `Popular 0${index + 1}`}
+                                      {deferredQuery
+                                        ? `Match 0${index + 1}`
+                                        : `Popular 0${index + 1}`}
                                     </p>
-                                    <p className="mt-2 text-base font-bold leading-6 text-slate-950 sm:text-lg">{item.question}</p>
-                                    <p className="mt-2 text-sm leading-6 text-slate-500">{item.blurb}</p>
+                                    <p className="mt-2 text-base font-bold leading-6 text-slate-950 sm:text-lg">
+                                      {item.question}
+                                    </p>
+                                    <p className="mt-2 text-sm leading-6 text-slate-500">
+                                      {item.blurb}
+                                    </p>
                                   </div>
                                   <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-slate-300" />
                                 </div>
@@ -362,9 +414,13 @@ export default function FAQPage() {
                           })
                         ) : (
                           <div className="rounded-[22px] border border-dashed border-slate-300 bg-[linear-gradient(135deg,#ffffff_0%,#f8fbff_100%)] px-5 py-6 text-center">
-                            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-400">No direct matches</p>
+                            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-400">
+                              No direct matches
+                            </p>
                             <p className="mt-3 text-sm leading-7 text-slate-600">
-                              Try a broader term like &quot;cost&quot;, &quot;areas&quot;, &quot;secure&quot;, or &quot;quotes&quot;.
+                              Try a broader term like &quot;cost&quot;,
+                              &quot;areas&quot;, &quot;secure&quot;, or
+                              &quot;quotes&quot;.
                             </p>
                           </div>
                         )}
@@ -378,22 +434,34 @@ export default function FAQPage() {
                     <div className="w-fit rounded-2xl bg-emerald-50 p-3 text-emerald-700">
                       <ShieldCheck className="h-5 w-5" />
                     </div>
-                    <p className="mt-3 text-sm font-semibold text-slate-950">Free to use</p>
-                    <p className="mt-1 text-sm leading-6 text-slate-500">No customer fees to request quotes.</p>
+                    <p className="mt-3 text-sm font-semibold text-slate-950">
+                      Free to use
+                    </p>
+                    <p className="mt-1 text-sm leading-6 text-slate-500">
+                      No customer fees to request quotes.
+                    </p>
                   </div>
                   <div className="rounded-[24px] border border-slate-200 bg-white px-4 py-4">
                     <div className="w-fit rounded-2xl bg-sky-50 p-3 text-sky-700">
                       <MapPinned className="h-5 w-5" />
                     </div>
-                    <p className="mt-3 text-sm font-semibold text-slate-950">NZ-wide network</p>
-                    <p className="mt-1 text-sm leading-6 text-slate-500">Local and long-distance movers.</p>
+                    <p className="mt-3 text-sm font-semibold text-slate-950">
+                      NZ-wide network
+                    </p>
+                    <p className="mt-1 text-sm leading-6 text-slate-500">
+                      Local and long-distance movers.
+                    </p>
                   </div>
                   <div className="rounded-[24px] border border-slate-200 bg-white px-4 py-4">
                     <div className="w-fit rounded-2xl bg-orange-50 p-3 text-orange-600">
                       <Clock3 className="h-5 w-5" />
                     </div>
-                    <p className="mt-3 text-sm font-semibold text-slate-950">Fast responses</p>
-                    <p className="mt-1 text-sm leading-6 text-slate-500">Most quotes arrive within 24 hours.</p>
+                    <p className="mt-3 text-sm font-semibold text-slate-950">
+                      Fast responses
+                    </p>
+                    <p className="mt-1 text-sm leading-6 text-slate-500">
+                      Response times vary with provider availability.
+                    </p>
                   </div>
                 </div>
               </div>
@@ -418,17 +486,23 @@ export default function FAQPage() {
                     <h2 className="text-[clamp(1.65rem,8vw,3.6rem)] font-black leading-[1] tracking-[-0.03em] text-slate-950 sm:leading-[0.95] sm:tracking-[-0.05em]">
                       {activeItem.question}
                     </h2>
-                    <p className="mt-3 text-sm leading-7 text-slate-600 sm:text-base">{activeItem.blurb}</p>
+                    <p className="mt-3 text-sm leading-7 text-slate-600 sm:text-base">
+                      {activeItem.blurb}
+                    </p>
                   </div>
                   <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-600">
-                    {deferredQuery ? "Updated from search" : "Open a popular question"}
+                    {deferredQuery
+                      ? "Updated from search"
+                      : "Open a popular question"}
                   </div>
                 </div>
               </div>
 
               <div className="grid gap-5 px-4 py-5 sm:gap-6 sm:px-7 sm:py-7 lg:grid-cols-[minmax(0,1fr)_240px] lg:items-start">
                 <div>
-                  <p className="max-w-4xl text-sm leading-7 text-slate-600 sm:text-base">{activeItem.answer}</p>
+                  <p className="max-w-4xl text-sm leading-7 text-slate-600 sm:text-base">
+                    {activeItem.answer}
+                  </p>
                   <div className="mt-5 flex flex-wrap gap-2">
                     {followUpItems.map(({ item, label }) => (
                       <button
@@ -439,7 +513,12 @@ export default function FAQPage() {
                           setOpenId(item.id);
                           setExpandedHistoryId(null);
                           setSearchHistory((current) =>
-                            [item.id, ...current.filter((historyId) => historyId !== item.id)].slice(0, 6)
+                            [
+                              item.id,
+                              ...current.filter(
+                                (historyId) => historyId !== item.id,
+                              ),
+                            ].slice(0, 6),
                           );
                         }}
                         className="inline-flex items-center rounded-full border border-sky-100 bg-sky-50 px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-sky-700 transition hover:border-sky-200 hover:bg-sky-100"
@@ -451,7 +530,9 @@ export default function FAQPage() {
                 </div>
 
                 <div className="rounded-[26px] border border-slate-200 bg-[linear-gradient(135deg,#ffffff_0%,#f8fbff_100%)] p-5">
-                  <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-slate-400">Need next steps?</p>
+                  <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                    Need next steps?
+                  </p>
                   <p className="mt-3 text-xl font-black leading-tight tracking-[-0.03em] text-slate-950">
                     Start your quote request or contact the team directly.
                   </p>
@@ -479,7 +560,9 @@ export default function FAQPage() {
             <div>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                  <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">Top searches</p>
+                  <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">
+                    Top searches
+                  </p>
                   <h2 className="mt-3 text-[clamp(1.75rem,8vw,4rem)] font-black leading-[1] tracking-[-0.03em] text-slate-950 sm:leading-[0.95] sm:tracking-[-0.05em]">
                     Popular questions, laid out to explore fast.
                   </h2>
@@ -491,7 +574,12 @@ export default function FAQPage() {
 
               <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {featuredFaqs.map((item, index) => (
-                  <button key={item.id} type="button" onClick={() => handleQuickSearch(item)} className="group text-left">
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => handleQuickSearch(item)}
+                    className="group text-left"
+                  >
                     <article className="relative flex h-full min-h-[250px] flex-col overflow-hidden rounded-[22px] border border-slate-200 bg-[linear-gradient(145deg,#ffffff_0%,#f5f9ff_100%)] p-4 shadow-[0_24px_70px_-50px_rgba(15,23,42,0.28)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_30px_70px_-44px_rgba(15,23,42,0.34)] sm:min-h-[320px] sm:rounded-[28px] sm:p-6">
                       <div className="absolute inset-x-0 top-0 h-1 bg-[linear-gradient(90deg,#38bdf8,#22c55e,#f97316)] opacity-90" />
                       <div className="flex items-start justify-between gap-4">
@@ -503,7 +591,9 @@ export default function FAQPage() {
                       <h3 className="mt-5 max-w-full break-words text-[clamp(1.2rem,2.4vw,1.85rem)] font-black leading-[1.05] tracking-[-0.035em] text-slate-950">
                         {item.question}
                       </h3>
-                      <p className="mt-4 text-sm leading-7 text-slate-600">{item.blurb}</p>
+                      <p className="mt-4 text-sm leading-7 text-slate-600">
+                        {item.blurb}
+                      </p>
 
                       <div
                         className={`mt-5 overflow-hidden rounded-[22px] border transition-all duration-500 ${
@@ -513,14 +603,20 @@ export default function FAQPage() {
                         }`}
                       >
                         <div className="faq-reveal-scroll max-h-72 overflow-y-auto px-4 py-4 pr-3">
-                          <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-sky-200">Quick reveal</p>
-                          <p className="mt-3 text-sm leading-7 text-slate-200">{item.answer}</p>
+                          <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-sky-200">
+                            Quick reveal
+                          </p>
+                          <p className="mt-3 text-sm leading-7 text-slate-200">
+                            {item.answer}
+                          </p>
                         </div>
                       </div>
 
                       <div className="mt-auto pt-5">
                         <span className="inline-flex items-center rounded-full border border-slate-200 bg-white/85 px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-600">
-                          {expandedFeaturedId === item.id ? "Tap again to collapse" : "Tap to reveal answer"}
+                          {expandedFeaturedId === item.id
+                            ? "Tap again to collapse"
+                            : "Tap to reveal answer"}
                         </span>
                       </div>
                     </article>
@@ -531,31 +627,45 @@ export default function FAQPage() {
 
             <div className="flex flex-col gap-5">
               <div className="overflow-hidden rounded-[24px] border border-slate-200 bg-[linear-gradient(145deg,#0f172a,#183552)] p-4 text-white shadow-[0_28px_74px_-44px_rgba(15,23,42,0.75)] sm:rounded-[30px] sm:p-7">
-                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-200">Helpful tips</p>
+                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-200">
+                  Helpful tips
+                </p>
                 <h2 className="mt-3 text-[clamp(1.65rem,8vw,3rem)] font-black leading-[1] tracking-[-0.03em] text-white sm:leading-[0.95] sm:tracking-[-0.05em]">
                   A smoother quote request starts with better detail.
                 </h2>
 
                 <div className="mt-6 space-y-3">
                   {helpfulTips.map((tip, index) => (
-                    <article key={tip.title} className="rounded-[24px] border border-white/10 bg-white/[0.06] px-4 py-4">
-                      <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-slate-400">Tip 0{index + 1}</p>
-                      <p className="mt-2 text-base font-semibold text-white">{tip.title}</p>
-                      <p className="mt-2 text-sm leading-6 text-slate-300">{tip.copy}</p>
+                    <article
+                      key={tip.title}
+                      className="rounded-[24px] border border-white/10 bg-white/[0.06] px-4 py-4"
+                    >
+                      <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                        Tip 0{index + 1}
+                      </p>
+                      <p className="mt-2 text-base font-semibold text-white">
+                        {tip.title}
+                      </p>
+                      <p className="mt-2 text-sm leading-6 text-slate-300">
+                        {tip.copy}
+                      </p>
                     </article>
                   ))}
                 </div>
               </div>
 
               <div className="overflow-hidden rounded-[24px] border border-slate-200 bg-[linear-gradient(135deg,#ffffff_0%,#f7fbff_100%)] p-4 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.32)] sm:rounded-[30px] sm:p-7">
-                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">Still need help?</p>
+                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">
+                  Still need help?
+                </p>
                 <h2 className="mt-3 text-[clamp(1.6rem,7vw,2.8rem)] font-black leading-[1] tracking-[-0.025em] text-slate-950 sm:leading-[0.98] sm:tracking-[-0.04em]">
                   Start the process or talk with the team directly.
                 </h2>
                 <p className="mt-4 text-sm leading-7 text-slate-600 sm:text-base">
-                  If you&apos;re ready to receive moving quotations from trusted removal companies, begin with the easy
-                  steps. If you&apos;re exploring partnership opportunities or need extra help, contact Match &apos;n Move
-                  directly.
+                  If you&apos;re ready to receive moving quotations from trusted
+                  removal companies, begin with the easy steps. If you&apos;re
+                  exploring partnership opportunities or need extra help,
+                  contact Match &apos;n Move directly.
                 </p>
 
                 <div className="mt-6 flex flex-col gap-3">
@@ -575,9 +685,16 @@ export default function FAQPage() {
                 </div>
 
                 <div className="mt-6 rounded-[24px] border border-slate-200 bg-white px-4 py-4">
-                  <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-slate-400">Support email</p>
-                  <p className="mt-2 break-all text-lg font-semibold text-slate-950">{SITE_EMAILS.feedback}</p>
-                  <p className="mt-2 text-sm leading-6 text-slate-500">Best for feedback, follow-ups, and quote delays beyond 24 to 48 hours.</p>
+                  <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                    Support email
+                  </p>
+                  <p className="mt-2 break-all text-lg font-semibold text-slate-950">
+                    {SITE_EMAILS.feedback}
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-slate-500">
+                    Best for feedback, follow-ups, and quote delays beyond 24 to
+                    48 hours.
+                  </p>
                 </div>
               </div>
             </div>
@@ -586,13 +703,16 @@ export default function FAQPage() {
           <div className="mt-8 overflow-hidden rounded-[24px] border border-slate-200 bg-white/95 p-4 shadow-[0_28px_80px_-52px_rgba(15,23,42,0.35)] sm:rounded-[32px] sm:p-7">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">FAQ search history</p>
+                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-700">
+                  FAQ search history
+                </p>
                 <h2 className="mt-3 text-[clamp(1.65rem,8vw,3.4rem)] font-black leading-[1] tracking-[-0.03em] text-slate-950 sm:leading-[0.95] sm:tracking-[-0.05em]">
                   Recent topics you looked up.
                 </h2>
               </div>
               <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-600">
-                {historyItems.length} item{historyItems.length === 1 ? "" : "s"} saved
+                {historyItems.length} item{historyItems.length === 1 ? "" : "s"}{" "}
+                saved
               </div>
             </div>
 
@@ -602,46 +722,64 @@ export default function FAQPage() {
                   const isExpanded = expandedHistoryId === item.id;
 
                   return (
-                  <article
-                    key={item.id}
-                    className="overflow-hidden rounded-[28px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)]"
-                  >
-                    <div className="flex items-start justify-between gap-4 px-5 py-5 sm:px-6">
-                      <div>
-                        <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                          Recent search 0{index + 1}
-                        </p>
-                        <p className="mt-2 text-lg font-bold leading-7 text-slate-950 sm:text-[1.35rem]">{item.question}</p>
-                        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">{item.blurb}</p>
+                    <article
+                      key={item.id}
+                      className="overflow-hidden rounded-[28px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)]"
+                    >
+                      <div className="flex items-start justify-between gap-4 px-5 py-5 sm:px-6">
+                        <div>
+                          <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                            Recent search 0{index + 1}
+                          </p>
+                          <p className="mt-2 text-lg font-bold leading-7 text-slate-950 sm:text-[1.35rem]">
+                            {item.question}
+                          </p>
+                          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
+                            {item.blurb}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          aria-label={
+                            isExpanded
+                              ? `Collapse ${item.question}`
+                              : `Show full answer for ${item.question}`
+                          }
+                          onClick={() => {
+                            setExpandedHistoryId(isExpanded ? null : item.id);
+                            setOpenId(item.id);
+                            setQuery(item.question);
+                          }}
+                          className="mt-1 inline-flex shrink-0 rounded-2xl border border-slate-200 bg-white p-2 text-slate-500 transition duration-300 hover:border-slate-300 hover:text-slate-800"
+                        >
+                          <ChevronDown
+                            className={`h-5 w-5 transition duration-300 ${isExpanded ? "rotate-0" : "-rotate-90"}`}
+                          />
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        aria-label={isExpanded ? `Collapse ${item.question}` : `Show full answer for ${item.question}`}
-                        onClick={() => {
-                          setExpandedHistoryId(isExpanded ? null : item.id);
-                          setOpenId(item.id);
-                          setQuery(item.question);
-                        }}
-                        className="mt-1 inline-flex shrink-0 rounded-2xl border border-slate-200 bg-white p-2 text-slate-500 transition duration-300 hover:border-slate-300 hover:text-slate-800"
-                      >
-                        <ChevronDown className={`h-5 w-5 transition duration-300 ${isExpanded ? "rotate-0" : "-rotate-90"}`} />
-                      </button>
-                    </div>
 
-                    {isExpanded ? (
-                      <div className="border-t border-slate-200 bg-white/70 px-5 py-5 sm:px-6">
-                        <p className="max-w-4xl text-sm leading-7 text-slate-600 sm:text-base">{item.answer}</p>
-                      </div>
-                    ) : null}
-                  </article>
-                );
+                      {isExpanded ? (
+                        <div className="border-t border-slate-200 bg-white/70 px-5 py-5 sm:px-6">
+                          <p className="max-w-4xl text-sm leading-7 text-slate-600 sm:text-base">
+                            {item.answer}
+                          </p>
+                        </div>
+                      ) : null}
+                    </article>
+                  );
                 })
               ) : (
                 <div className="rounded-[24px] border border-dashed border-slate-300 bg-[linear-gradient(135deg,#ffffff_0%,#f8fbff_100%)] p-5 text-center sm:rounded-[30px] sm:p-8">
-                  <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">No history yet</p>
-                  <h3 className="mt-3 text-2xl font-black tracking-[-0.03em] text-slate-950 sm:text-3xl sm:tracking-[-0.04em]">Search a question and it will appear here.</h3>
+                  <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">
+                    No history yet
+                  </p>
+                  <h3 className="mt-3 text-2xl font-black tracking-[-0.03em] text-slate-950 sm:text-3xl sm:tracking-[-0.04em]">
+                    Search a question and it will appear here.
+                  </h3>
                   <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-slate-600 sm:text-base">
-                    Once someone searches in the FAQ bar or opens a suggested result, we keep that topic here for easy revisiting later on the page.
+                    Once someone searches in the FAQ bar or opens a suggested
+                    result, we keep that topic here for easy revisiting later on
+                    the page.
                   </p>
                 </div>
               )}
