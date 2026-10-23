@@ -92,21 +92,30 @@ enum SpreadsheetDeliveryStatus {
 }
 
 model User {
-  id                     String                  @id @default(cuid())
-  name                   String?
-  email                  String                  @unique
-  passwordHash           String
-  emailVerifiedAt        DateTime?
-  role                   UserRole                @default(MOVER)
-  preferredLocale        String                  @default("en-NZ")
-  adminMfaSecret         String?
-  adminMfaEnabledAt      DateTime?
-  createdAt              DateTime                @default(now())
-  updatedAt              DateTime                @updatedAt
-  moverCompany           MoverCompany?
-  cleanerCompany         CleanerCompany?
-  authTokens             AuthToken[]
-  phoneVerificationCodes PhoneVerificationCode[]
+  id                      String                  @id @default(cuid())
+  name                    String?
+  email                   String                  @unique
+  passwordHash            String
+  emailVerifiedAt         DateTime?
+  role                    UserRole                @default(MOVER)
+  preferredLocale         String                  @default("en-NZ")
+  adminMfaSecret          String?
+  adminMfaEnabledAt       DateTime?
+  createdAt               DateTime                @default(now())
+  updatedAt               DateTime                @updatedAt
+  adminRole               AdminRole?
+  adminDisabledAt         DateTime?
+  sessionVersion          Int                     @default(0)
+  lastSignInAt            DateTime?
+  canSendRecruitment      Boolean                 @default(false)
+  canViewRecruitmentLeads Boolean                 @default(false)
+  assignedProspects       MoverProspect[]
+  recruitmentTasks        RecruitmentTask[]
+  outreachMessages        OutreachMessage[]
+  moverCompany            MoverCompany?
+  cleanerCompany          CleanerCompany?
+  authTokens              AuthToken[]
+  phoneVerificationCodes  PhoneVerificationCode[]
 }
 
 model CleanerCompany {
@@ -180,6 +189,7 @@ model MoverCompany {
   phoneVerificationCodes       PhoneVerificationCode[]
   verificationAudits           VerificationAudit[]
   pushSubscriptions            MoverPushSubscription[]
+  recruitmentProspect          MoverProspect?
 
   @@index([status, updatedAt])
   @@index([nzbnVerificationStatus, updatedAt])
@@ -248,37 +258,40 @@ model VerificationAudit {
 }
 
 model QuoteRequest {
-  id                  String                   @id @default(cuid())
-  submissionKey       String?                  @unique
-  name                String
-  email               String
-  phone               String
-  movingWhat          String?
-  fromPropertyType    String
-  toPropertyType      String
-  bedrooms            String
-  fromAddress         String
-  fromCity            String
-  fromRegion          String
-  fromPostcode        String
-  fromCountry         String
-  toAddress           String
-  toCity              String
-  toRegion            String
-  toPostcode          String
-  toCountry           String
-  moveDate            DateTime?
-  dateFlexible        Boolean                  @default(false)
-  transcriptRaw       Json?
-  transcriptFields    Json?
-  transcriptionState  String?
-  sharingConsentAt    DateTime?
-  consentVersion      String?
-  submittedLocale     String                   @default("en-NZ")
-  createdAt           DateTime                 @default(now())
-  leads               Lead[]
-  cleaningRequest     CleaningRequest?
-  spreadsheetDelivery LeadSpreadsheetDelivery?
+  id                        String                   @id @default(cuid())
+  submissionKey             String?                  @unique
+  name                      String
+  email                     String
+  phone                     String
+  movingWhat                String?
+  fromPropertyType          String
+  toPropertyType            String
+  bedrooms                  String
+  fromAddress               String
+  fromCity                  String
+  fromRegion                String
+  fromPostcode              String
+  fromCountry               String
+  toAddress                 String
+  toCity                    String
+  toRegion                  String
+  toPostcode                String
+  toCountry                 String
+  moveDate                  DateTime?
+  dateFlexible              Boolean                  @default(false)
+  transcriptRaw             Json?
+  transcriptFields          Json?
+  transcriptionState        String?
+  sharingConsentAt          DateTime?
+  consentVersion            String?
+  submittedLocale           String                   @default("en-NZ")
+  createdAt                 DateTime                 @default(now())
+  leads                     Lead[]
+  cleaningRequest           CleaningRequest?
+  spreadsheetDelivery       LeadSpreadsheetDelivery?
+  recruitmentSharingAllowed Boolean                  @default(false)
+  outreachMessages          OutreachMessage[]
+  recruitmentTasks          RecruitmentTask[]
 
   @@index([createdAt])
 }
@@ -603,4 +616,165 @@ model EmailDelivery {
   @@index([status, nextAttemptAt])
   @@index([recipient, createdAt])
   @@index([kind, status])
+}
+
+enum AdminRole {
+  OWNER
+  RECRUITMENT_ADMIN
+}
+
+enum RecruitmentStatus {
+  NOT_CONTACTED
+  CONTACTED
+  FOLLOW_UP_REQUIRED
+  INTERESTED
+  REGISTRATION_STARTED
+  REGISTERED
+  ACTIVE_MOVER
+  NOT_INTERESTED
+  DO_NOT_CONTACT
+}
+
+model AdminInvitation {
+  id          String    @id @default(cuid())
+  email       String    @unique
+  name        String
+  role        AdminRole @default(RECRUITMENT_ADMIN)
+  tokenHash   String?   @unique
+  expiresAt   DateTime?
+  acceptedAt  DateTime?
+  revokedAt   DateTime?
+  invitedById String?
+  sentAt      DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model MoverProspect {
+  id                  String                @id @default(cuid())
+  companyName         String
+  normalizedName      String
+  email               String                @unique
+  contactName         String?
+  phone               String?
+  website             String?
+  operatingRegion     String?
+  serviceAreas        String[]
+  serviceTypes        String[]
+  longDistance        Boolean               @default(false)
+  assignedAdminId     String
+  assignedAdmin       User                  @relation(fields: [assignedAdminId], references: [id], onDelete: Restrict)
+  status              RecruitmentStatus     @default(NOT_CONTACTED)
+  consentBasis        String                @default("UNKNOWN")
+  consentEvidence     String?               @db.Text
+  consentRecordedAt   DateTime?
+  consentRecordedBy   String?
+  notes               String?               @db.Text
+  version             Int                   @default(0)
+  lastContactedAt     DateTime?
+  nextFollowUpAt      DateTime?
+  respondedAt         DateTime?
+  interestedAt        DateTime?
+  registeredAt        DateTime?
+  activatedAt         DateTime?
+  firstPaidLeadAt     DateTime?
+  recruitedById       String?
+  moverCompanyId      String?               @unique
+  moverCompany        MoverCompany?         @relation(fields: [moverCompanyId], references: [id], onDelete: Restrict)
+  duplicateOfId       String?
+  duplicateReviewNote String?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  messages            OutreachMessage[]
+  tasks               RecruitmentTask[]
+  activities          RecruitmentActivity[]
+
+  @@index([assignedAdminId, status, nextFollowUpAt])
+  @@index([normalizedName])
+  @@index([recruitedById, registeredAt])
+}
+
+model OutreachMessage {
+  id                    String        @id @default(cuid())
+  prospectId            String
+  prospect              MoverProspect @relation(fields: [prospectId], references: [id], onDelete: Restrict)
+  quoteRequestId        String
+  quoteRequest          QuoteRequest  @relation(fields: [quoteRequestId], references: [id], onDelete: Restrict)
+  adminId               String
+  sequence              Int           @default(0)
+  followUpToId          String?       @unique
+  admin                 User          @relation(fields: [adminId], references: [id], onDelete: Restrict)
+  status                String        @default("DRAFT")
+  subject               String
+  introduction          String        @db.Text
+  text                  String        @db.Text
+  html                  String        @db.Text
+  attributionHash       String        @unique
+  attributionExpiresAt  DateTime
+  attributionConsumedAt DateTime?
+  unsubscribeHash       String        @unique
+  emailDeliveryId       String?       @unique
+  approvedAt            DateTime?
+  sentAt                DateTime?
+  failedAt              DateTime?
+  lastError             String?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  @@unique([prospectId, quoteRequestId, sequence])
+  @@index([adminId, sentAt])
+  @@index([status, createdAt])
+}
+
+model RecruitmentTask {
+  id              String         @id @default(cuid())
+  dedupeKey       String?        @unique
+  title           String
+  description     String?        @db.Text
+  assignedAdminId String
+  assignedAdmin   User           @relation(fields: [assignedAdminId], references: [id], onDelete: Restrict)
+  prospectId      String?
+  prospect        MoverProspect? @relation(fields: [prospectId], references: [id], onDelete: Restrict)
+  quoteRequestId  String?
+  quoteRequest    QuoteRequest?  @relation(fields: [quoteRequestId], references: [id], onDelete: Restrict)
+  priority        String         @default("NORMAL")
+  dueAt           DateTime
+  completedAt     DateTime?
+  cancelledAt     DateTime?
+  createdAt       DateTime       @default(now())
+
+  @@index([assignedAdminId, completedAt, dueAt])
+}
+
+model RecruitmentActivity {
+  id         String        @id @default(cuid())
+  prospectId String
+  prospect   MoverProspect @relation(fields: [prospectId], references: [id], onDelete: Restrict)
+  actorId    String?
+  action     String
+  meta       Json?
+  createdAt  DateTime      @default(now())
+
+  @@index([prospectId, createdAt])
+  @@index([actorId, action, createdAt])
+}
+
+model ContactSuppression {
+  email     String   @id
+  reason    String
+  source    String
+  createdAt DateTime @default(now())
+}
+
+model RecruitmentSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+model RecruitmentProviderEvent {
+  id        String   @id
+  type      String
+  email     String
+  createdAt DateTime @default(now())
 }

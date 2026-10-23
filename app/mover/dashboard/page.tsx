@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { MoverDashboardExperience } from "@/components/mover-dashboard-experience";
-import { isConfiguredAdminEmail } from "@/lib/admin-auth";
+import { isAnyAdminUser } from "@/lib/admin-auth";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { LEAD_PRICING } from "@/lib/lead-pricing";
@@ -49,8 +49,8 @@ export default async function MoverDashboardPage({
     const returnPath = getDashboardReturnPath(resolvedSearchParams);
     redirect(`/mover/login?mode=login&next=${encodeURIComponent(returnPath)}`);
   }
-  if (session.user.role === "ADMIN" || isConfiguredAdminEmail(session.user.email)) {
-    redirect(session.user.mfaVerified ? "/admin/verification" : "/admin/mfa?next=/admin/verification");
+  if (isAnyAdminUser(session.user)) {
+    redirect(session.user.mfaVerified ? "/admin/recruitment" : "/admin/mfa?next=/admin/recruitment");
   }
   if (session.user.role === "CLEANER") redirect("/cleaner/dashboard");
 

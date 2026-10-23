@@ -11,6 +11,8 @@ type AdminUser = {
   email: string;
   role: string;
   mfaVerified?: boolean;
+  adminRole?: string | null;
+  adminDisabledAt?: Date | null;
 };
 
 export function getConfiguredAdminEmails() {
@@ -27,8 +29,13 @@ export function isConfiguredAdminEmail(email: string) {
 }
 
 export function isAdminUser(user: AdminUser | null | undefined): user is AdminUser {
-  if (!user) return false;
+  if (!user || user.adminDisabledAt || user.adminRole === "RECRUITMENT_ADMIN") return false;
+  if (user.adminRole === "OWNER") return true;
   return user.role === "ADMIN" || isConfiguredAdminEmail(user.email);
+}
+
+export function isAnyAdminUser(user: AdminUser | null | undefined): boolean {
+  return Boolean(user && !user.adminDisabledAt && (user.adminRole === "RECRUITMENT_ADMIN" || isAdminUser(user)));
 }
 
 function extractBearerToken(req: NextRequest) {

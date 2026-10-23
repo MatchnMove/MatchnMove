@@ -12,6 +12,7 @@ const links: Array<{ id: AdminArea; href: string; label: string }> = [
 export function AdminNavigation({ current }: { current: AdminArea }) {
   return (
     <nav aria-label="Admin sections" className="flex max-w-full gap-2 overflow-x-auto pb-1">
+      <Link href="/admin/recruitment" className="inline-flex min-h-10 shrink-0 items-center rounded-xl bg-teal-700 px-4 text-sm font-bold text-white">Recruitment</Link>
       {links.map((link) => {
         const active = link.id === current;
 

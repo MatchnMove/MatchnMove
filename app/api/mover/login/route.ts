@@ -5,7 +5,7 @@ import { sendSignInCodeEmail } from "@/lib/mover-auth";
 import { hashPassword, needsPasswordRehash, verifyPassword } from "@/lib/password";
 import { getClientIp, rateLimit } from "@/lib/rate-limit";
 import { getDatabaseUnavailableMessage, logRuntimeWarning } from "@/lib/runtime-errors";
-import { isAdminUser } from "@/lib/admin-auth";
+import { isAnyAdminUser } from "@/lib/admin-auth";
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
@@ -20,10 +20,10 @@ export async function POST(req: NextRequest) {
     }
 
     const user = await prisma.user.findUnique({ where: { email: parsed.data.email } });
-    if (!user) return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+    if (!user || user.adminDisabledAt) return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     const ok = await verifyPassword(parsed.data.password, user.passwordHash);
     if (!ok) return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
-    if (user.role === "CLEANER") {
+    if (user.role === "CLEANER" && !user.adminRole) {
       return NextResponse.json({ error: "This is a cleaner account. Sign in through the cleaner portal." }, { status: 403 });
     }
 
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
       ok: true,
       emailCodeRequired: true,
       email: user.email,
-      adminMfaRequired: isAdminUser({ ...user, mfaVerified: false }),
+      adminMfaRequired: isAnyAdminUser({ ...user, mfaVerified: false }),
     });
   } catch (error) {
     logRuntimeWarning("Mover login unavailable", error);

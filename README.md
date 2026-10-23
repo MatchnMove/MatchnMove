@@ -3,6 +3,7 @@
 Full-stack quote marketplace for moving companies built with **Next.js App Router + TypeScript + Tailwind + Prisma + Postgres + custom JWT auth + Stripe**.
 
 ## Features
+- Multi-user recruitment workspace, team invitations, assigned mover CRM and approved lead-based outreach. See [recruitment setup and deployment](docs/recruitment-workspace.md).
 - Public marketing site: home, quote flow, contact, about, faq, terms, thank-you pages.
 - 3-step quote request flow.
 - API endpoints for quote submission, contact form, mover leads, lead unlock, Stripe webhook.

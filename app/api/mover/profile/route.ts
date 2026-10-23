@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { syncRecruitmentOutcomes } from "@/lib/recruitment-outreach";
 import { rateLimit } from "@/lib/rate-limit";
 import { prisma } from "@/lib/db";
 import { sendVerificationReviewSubmitted } from "@/lib/email";
@@ -183,5 +184,6 @@ export async function PATCH(req: NextRequest) {
     revalidateAboutPage();
   }
 
+  await syncRecruitmentOutcomes(updatedMover.id).catch(() => console.error("Recruitment activation sync deferred to scheduler"));
   return NextResponse.json(serialiseProfile(updatedMover));
 }

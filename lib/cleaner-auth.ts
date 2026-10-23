@@ -1,6 +1,7 @@
 import { randomBytes, randomInt } from "crypto";
 import { AuthTokenType, Prisma } from "@prisma/client";
-import { createSessionToken, setSessionCookie, auth } from "@/lib/auth";
+import { auth } from "@/lib/auth";
+import { establishMoverSession } from "@/lib/mover-auth";
 import { issueAuthToken, purgeAuthTokens } from "@/lib/auth-token";
 import { prisma } from "@/lib/db";
 import { sendCleanerPasswordResetEmail, sendCleanerSignInCodeEmail, sendCleanerVerificationEmail } from "@/lib/email";
@@ -12,13 +13,7 @@ const authenticatedCleanerInclude = Prisma.validator<Prisma.CleanerCompanyInclud
 });
 
 export async function establishCleanerSession(user: { id: string; email: string; role: string }) {
-  const token = createSessionToken({
-    userId: user.id,
-    email: user.email,
-    role: user.role,
-    mfaVerified: true,
-  });
-  await setSessionCookie(token);
+  await establishMoverSession(user);
 }
 
 export async function requireAuthenticatedCleaner() {

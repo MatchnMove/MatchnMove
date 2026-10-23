@@ -40,6 +40,7 @@ export const quoteSchema = z.object({
   dateFlexible: z.boolean().default(false),
   movingWhat: z.string().trim().max(2000).optional().nullable(),
   cleaningSelected: z.boolean().default(false),
+  recruitmentSharingAllowed: z.boolean().default(false),
   cleaningNotes: z.string().trim().max(2000).optional().nullable(),
   sharingConsent: z.literal(true, {
     errorMap: () => ({ message: "Consent is required before this request can be shared" }),

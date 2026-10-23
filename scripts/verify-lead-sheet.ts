@@ -27,6 +27,7 @@ const row = buildLeadSpreadsheetRow({
   transcriptFields: null,
   transcriptionState: "manual",
   sharingConsentAt: new Date("2026-06-09T00:00:00.000Z"),
+  recruitmentSharingAllowed: false,
   consentVersion: "2026-09-cleaning-v1",
   submittedLocale: "en-NZ",
   createdAt: new Date("2026-06-09T00:00:00.000Z"),

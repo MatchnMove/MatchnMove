@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { isAdminUser } from "@/lib/admin-auth";
+import { isAnyAdminUser } from "@/lib/admin-auth";
 import { prisma } from "@/lib/db";
 import { resolveLocale } from "@/lib/i18n/config";
 
@@ -40,7 +40,7 @@ export async function GET() {
     return NextResponse.json({ authenticated: false }, { headers: privateNoStoreHeaders });
   }
 
-  const isAdmin = isAdminUser({ ...session.user, email: user.email });
+  const isAdmin = isAnyAdminUser({ ...session.user, email: user.email });
   const accountType = isAdmin
     ? "admin"
     : user.role === "CLEANER"

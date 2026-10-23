@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message || "Invalid reset details." }, { status: 400 });
   const record = await consumeAuthTokenForRole(parsed.data.token, AuthTokenType.RESET_PASSWORD, "CLEANER");
   if (!record) return NextResponse.json({ error: "This reset link is invalid or has expired." }, { status: 400 });
-  await prisma.user.update({ where: { id: record.userId }, data: { passwordHash: await hashPassword(parsed.data.password) } });
+  await prisma.user.update({ where: { id: record.userId }, data: { passwordHash: await hashPassword(parsed.data.password), sessionVersion: { increment: 1 } } });
   await purgeAuthTokens(record.userId, AuthTokenType.RESET_PASSWORD);
   return NextResponse.json({ ok: true });
 }

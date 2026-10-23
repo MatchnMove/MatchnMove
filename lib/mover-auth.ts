@@ -4,9 +4,11 @@ import { prisma } from "@/lib/db";
 import { createSessionToken, setSessionCookie } from "@/lib/auth";
 import { issueAuthToken, purgeAuthTokens } from "@/lib/auth-token";
 import { sendMoverPasswordResetEmail, sendMoverSignInCodeEmail, sendMoverVerificationEmail } from "@/lib/email";
-import { isConfiguredAdminEmail } from "@/lib/admin-auth";
+import { isAnyAdminUser } from "@/lib/admin-auth";
 import { sanitiseNzServiceAreas } from "@/lib/nz-regions";
 import { hashPassword } from "@/lib/password";
+import { cookies } from "next/headers";
+import { claimRegistrationAttribution } from "@/lib/recruitment-outreach";
 
 type MoverAccountInput = {
   name: string;
@@ -21,24 +23,25 @@ function normalizeServiceAreas(serviceAreas: string[]) {
   return sanitiseNzServiceAreas(serviceAreas);
 }
 
-function isAdminAccount(user: { email: string; role: string }) {
-  return user.role === "ADMIN" || isConfiguredAdminEmail(user.email);
-}
-
 export async function establishMoverSession(
   user: { id: string; email: string; role: string },
   mfaVerified = false,
 ) {
+  const current = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+  if (current.adminDisabledAt) throw new Error("Account access is disabled");
   const token = createSessionToken({
     userId: user.id,
     email: user.email,
     role: user.role,
-    mfaVerified: isAdminAccount(user) ? mfaVerified : true,
+    mfaVerified: isAnyAdminUser(current) ? mfaVerified : true,
+    sessionVersion: current.sessionVersion,
   });
   await setSessionCookie(token);
+  await prisma.user.update({ where: { id: user.id }, data: { lastSignInAt: new Date() } });
 }
 
 export async function createMoverAccount(input: MoverAccountInput) {
+  const attributionToken = (await cookies()).get("mm_recruitment")?.value;
   const passwordToHash = input.password || randomBytes(24).toString("hex");
   const passwordHash = await hashPassword(passwordToHash);
   const email = input.email.trim().toLowerCase();
@@ -53,7 +56,7 @@ export async function createMoverAccount(input: MoverAccountInput) {
       }
     });
 
-    await tx.moverCompany.create({
+    const company = await tx.moverCompany.create({
       data: {
         userId: createdUser.id,
         companyName: input.companyName.trim(),
@@ -63,10 +66,12 @@ export async function createMoverAccount(input: MoverAccountInput) {
       }
     });
 
+    await claimRegistrationAttribution(tx, attributionToken, createdUser.id, email, company.id);
     return createdUser;
-  });
+  }, { maxWait: 10000, timeout: 20000 });
 
   await establishMoverSession(user);
+  if (attributionToken) (await cookies()).delete("mm_recruitment");
   return user;
 }
 

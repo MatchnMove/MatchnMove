@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   const passwordHash = await hashPassword(parsed.data.password);
   await prisma.user.update({
     where: { id: tokenRecord.userId },
-    data: { passwordHash }
+    data: { passwordHash, sessionVersion: { increment: 1 } }
   });
   await purgeAuthTokens(tokenRecord.userId, AuthTokenType.RESET_PASSWORD);
 

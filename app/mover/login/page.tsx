@@ -64,7 +64,7 @@ function getNetworkErrorMessage(action: string) {
 }
 
 function getAdminRedirectPath(value: string) {
-  return value.startsWith("/admin/") ? value : "/admin/verification";
+  return value.startsWith("/admin/") ? value : "/admin/recruitment";
 }
 
 export default function MoverLoginPage() {

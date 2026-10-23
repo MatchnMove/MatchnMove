@@ -6,7 +6,8 @@ import { createAdminAccount, createMoverAccount, ensureMoverCompanyProfile, esta
 import { revalidatePublicSite } from "@/lib/public-cache";
 import { getClientIp, rateLimit } from "@/lib/rate-limit";
 import { getDatabaseUnavailableMessage, logRuntimeWarning } from "@/lib/runtime-errors";
-import { isAdminUser, isConfiguredAdminEmail } from "@/lib/admin-auth";
+import { isAnyAdminUser, isConfiguredAdminEmail } from "@/lib/admin-auth";
+import { syncRecruitmentOutcomes } from "@/lib/recruitment-outreach";
 
 const googleClient = new OAuth2Client();
 
@@ -68,7 +69,8 @@ export async function POST(req: NextRequest) {
       include: { moverCompany: true },
     });
 
-    if (existingUser?.role === "CLEANER") {
+    if (existingUser?.adminDisabledAt) return NextResponse.json({ error: "Account access is disabled." }, { status: 403 });
+    if (existingUser?.role === "CLEANER" && !existingUser.adminRole) {
       return NextResponse.json({ error: "This Google email belongs to a cleaner account. Use the cleaner portal." }, { status: 403 });
     }
 
@@ -80,7 +82,7 @@ export async function POST(req: NextRequest) {
         });
         return NextResponse.json({
           ok: true,
-          adminMfaRequired: isAdminUser({ ...adminUser, mfaVerified: false }),
+          adminMfaRequired: isAnyAdminUser({ ...adminUser, mfaVerified: false }),
         });
       }
 
@@ -98,6 +100,8 @@ export async function POST(req: NextRequest) {
       });
 
       revalidatePublicSite();
+      const company = await prisma.moverCompany.findUnique({ where: { userId: newUser.id }, select: { id: true } });
+      if (company) await syncRecruitmentOutcomes(company.id).catch(() => console.error("Recruitment registration sync deferred to scheduler"));
       return NextResponse.json({ ok: true, onboarding: true });
     }
 
@@ -114,7 +118,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const adminMfaRequired = isAdminUser({ ...sessionUser, mfaVerified: false });
+    const adminMfaRequired = isAnyAdminUser({ ...sessionUser, mfaVerified: false });
     if (!existingUser.moverCompany && !adminMfaRequired) {
       await ensureMoverCompanyProfile({
         userId: existingUser.id,

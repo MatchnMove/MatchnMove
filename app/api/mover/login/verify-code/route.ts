@@ -1,7 +1,7 @@
 import { AuthTokenType } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { consumeAuthTokenForUser, purgeAuthTokens } from "@/lib/auth-token";
-import { isAdminUser } from "@/lib/admin-auth";
+import { isAnyAdminUser } from "@/lib/admin-auth";
 import { prisma } from "@/lib/db";
 import { establishMoverSession } from "@/lib/mover-auth";
 import { getClientIp, rateLimit } from "@/lib/rate-limit";
@@ -23,10 +23,10 @@ export async function POST(req: NextRequest) {
     const user = await prisma.user.findUnique({
       where: { email: parsed.data.email },
     });
-    if (!user) {
+    if (!user || user.adminDisabledAt) {
       return NextResponse.json({ error: "That sign-in code is invalid or has expired." }, { status: 400 });
     }
-    if (user.role === "CLEANER") {
+    if (user.role === "CLEANER" && !user.adminRole) {
       return NextResponse.json({ error: "Use the cleaner portal to finish signing in." }, { status: 403 });
     }
 
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       ok: true,
-      adminMfaRequired: isAdminUser({ ...user, mfaVerified: false }),
+      adminMfaRequired: isAnyAdminUser({ ...user, mfaVerified: false }),
     });
   } catch (error) {
     logRuntimeWarning("Mover sign-in code verification unavailable", error);

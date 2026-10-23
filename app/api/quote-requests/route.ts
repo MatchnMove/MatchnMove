@@ -13,7 +13,7 @@ import { quoteSchema } from "@/lib/validators";
 import { getClientIp, rateLimit } from "@/lib/rate-limit";
 import { revalidateAboutPage } from "@/lib/public-cache";
 
-const CONSENT_VERSION = "2026-09-cleaning-v1";
+const CONSENT_VERSION = "2026-10-recruitment-v2";
 
 function getBaseUrl(request: NextRequest) {
   return (process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || request.nextUrl.origin).replace(/\/$/, "");
@@ -188,6 +188,7 @@ export async function POST(req: NextRequest) {
           submissionKey: clientRequestId || null,
           moveDate,
           sharingConsentAt: consentAt,
+          recruitmentSharingAllowed: data.recruitmentSharingAllowed,
           consentVersion: CONSENT_VERSION,
           submittedLocale: resolveLocale(locale),
           transcriptRaw:

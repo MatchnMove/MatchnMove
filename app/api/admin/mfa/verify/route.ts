@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { isAdminUser } from "@/lib/admin-auth";
+import { isAnyAdminUser } from "@/lib/admin-auth";
 import { decryptAdminMfaSecret, verifyAdminMfaCode } from "@/lib/admin-mfa";
 import { prisma } from "@/lib/db";
 import { establishMoverSession } from "@/lib/mover-auth";
@@ -8,7 +8,7 @@ import { rateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
-  if (!isAdminUser(session?.user)) {
+  if (!session?.user || !isAnyAdminUser(session.user)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

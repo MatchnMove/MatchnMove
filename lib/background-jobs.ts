@@ -4,6 +4,7 @@ import { processDocumentExpiry } from "@/lib/document-expiry";
 import { processLeadSpreadsheetQueue } from "@/lib/lead-spreadsheet";
 import { processCleanerBillingJobs } from "@/lib/cleaner-billing-jobs";
 import { processMoverPushQueue } from "@/lib/mover-push";
+import { syncRecruitmentOutcomes } from "@/lib/recruitment-outreach";
 
 type BackgroundJobState = {
   started: boolean;
@@ -45,6 +46,7 @@ async function runBackgroundJobTick(state: BackgroundJobState) {
   state.running = true;
 
   try {
+    await syncRecruitmentOutcomes();
     const limit = getNumberEnv("BACKGROUND_JOBS_PROCESS_LIMIT", DEFAULT_PROCESS_LIMIT, 1);
     const [email, leads, documents, spreadsheet, cleanerBilling, push] = await Promise.all([
       processEmailQueue(limit),

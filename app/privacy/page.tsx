@@ -63,6 +63,10 @@ export default function PrivacyPage() {
             </div>
 
             <div className="mt-6 rounded-2xl border border-sky-200 bg-sky-50 p-5 sm:p-6">
+              <h2 className="text-lg font-semibold text-slate-900">Optional mover recruitment summaries</h2>
+              <p className="mt-3 text-sm leading-7 text-slate-600">If you separately opt in when requesting quotes, our recruitment team may show prospective moving partners only your origin and destination regions, moving date, property type and bedroom count. These invitations never include your name, email, phone number, exact addresses or free-form notes. Full customer details continue to require authorised platform access. This optional choice does not affect your quote request. Contact us to withdraw permission; we will stop using your summary in future invitations.</p>
+            </div>
+            <div className="mt-6 rounded-2xl border border-sky-200 bg-sky-50 p-5 sm:p-6">
               <h2 className="text-lg font-semibold text-slate-900">How cleaning lead privacy works</h2>
               <div className="mt-3 space-y-3 text-sm leading-7 text-slate-600">
                 <p>

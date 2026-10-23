@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import type { ReactNode } from "react";
 import {
   AlertTriangle,
@@ -496,6 +497,7 @@ export function AdminQuoteFlowPanel({ movers, summary, recentUnmatchedQuotes, in
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
                             <p className="break-all font-mono text-xs font-bold text-slate-500">{item.quoteRequestId}</p>
+                            <Link href={`/admin/recruitment/leads?lead=${encodeURIComponent(item.quoteRequestId)}`} className="rounded-full bg-teal-50 px-3 py-1 text-xs font-bold text-teal-700 hover:bg-teal-100">Create Mover Invitation</Link>
                             {item.redistributionRound > 0 ? <span className="rounded-full bg-orange-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-orange-800">Redistributed · round {item.redistributionRound}</span> : null}
                           </div>
                           <h3 className="mt-2 flex flex-wrap items-center gap-2 text-base font-black text-slate-950">

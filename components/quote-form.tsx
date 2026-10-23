@@ -212,6 +212,7 @@ export function QuoteForm() {
   const [extra, setExtra] = useState<ExtraDetails>(initExtra);
   const [errors, setErrors] = useState<Errors>({});
   const [sharingConsent, setSharingConsent] = useState(false);
+  const [recruitmentSharingAllowed, setRecruitmentSharingAllowed] = useState(false);
   const [cleaningSelected, setCleaningSelected] = useState(false);
   const [cleaningNotesExpanded, setCleaningNotesExpanded] = useState(false);
   const [cleaningNotes, setCleaningNotes] = useState("");
@@ -607,6 +608,7 @@ export function QuoteForm() {
         cleaningSelected,
         cleaningNotes: cleaningSelected ? cleaningNotes.trim() || undefined : undefined,
         sharingConsent,
+        recruitmentSharingAllowed,
         // Keep locality separate from the free-form street address. Cleaner
         // previews must never treat a manually entered address as a city.
         fromCity: form.fromCity.trim() || "Not provided",
@@ -1119,6 +1121,10 @@ export function QuoteForm() {
                     {t("quote.consent.support")}
                   </span>
                 </span>
+              </label>
+              <label className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                <input type="checkbox" className="mt-1 h-4 w-4" checked={recruitmentSharingAllowed} onChange={(event) => setRecruitmentSharingAllowed(event.target.checked)} />
+                <span className="text-sm leading-6 text-slate-600">Optional: allow Match &apos;n Move to invite relevant moving companies using a general summary of this request (regions, date and home size). Your name, contact details and exact addresses will remain private. <a className="underline" href="/privacy" target="_blank" rel="noreferrer">Privacy details</a></span>
               </label>
               {submitError && <p className="text-sm text-red-600">{submitError}</p>}
               <div className="flex flex-col gap-3 sm:flex-row">

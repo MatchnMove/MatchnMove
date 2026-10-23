@@ -4,6 +4,7 @@ import Stripe from "stripe";
 import { prisma } from "@/lib/db";
 import { syncCleanerStripeInvoice } from "@/lib/cleaner-stripe-invoicing";
 import { stripe } from "@/lib/stripe";
+import { syncRecruitmentOutcomes } from "@/lib/recruitment-outreach";
 
 async function updateCustomerDefaultPaymentMethod(customerId: string, paymentMethodId: string) {
   if (!stripe) return;
@@ -122,6 +123,7 @@ export async function POST(req: NextRequest) {
         });
         await prisma.lead.update({ where: { id: leadId }, data: { status: "PURCHASED", purchasedAt: new Date() } });
         await prisma.auditLog.create({ data: { leadId, action: "lead_unlocked", meta: { checkoutId: session.id } } });
+        if (moverCompanyId) await syncRecruitmentOutcomes(moverCompanyId).catch(() => console.error("Recruitment purchase sync deferred to scheduler"));
       }
     }
   }

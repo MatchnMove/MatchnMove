@@ -3,6 +3,7 @@ import { AuthTokenType } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { consumeAuthToken, purgeAuthTokens } from "@/lib/auth-token";
 import { revalidateAboutPage, revalidatePublicMovers } from "@/lib/public-cache";
+import { syncRecruitmentOutcomes } from "@/lib/recruitment-outreach";
 
 export async function POST(req: NextRequest) {
   const body = (await req.json().catch(() => ({}))) as { token?: string };
@@ -20,6 +21,8 @@ export async function POST(req: NextRequest) {
     data: { emailVerifiedAt: new Date() }
   });
   await purgeAuthTokens(tokenRecord.userId, AuthTokenType.VERIFY_EMAIL);
+  const company = await prisma.moverCompany.findUnique({ where: { userId: tokenRecord.userId }, select: { id: true } });
+  if (company) await syncRecruitmentOutcomes(company.id).catch(() => console.error("Recruitment registration sync deferred to scheduler"));
   revalidatePublicMovers();
   revalidateAboutPage();
 

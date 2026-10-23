@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import QRCode from "qrcode";
 import { auth } from "@/lib/auth";
-import { isAdminUser } from "@/lib/admin-auth";
+import { isAnyAdminUser } from "@/lib/admin-auth";
 import {
   createAdminMfaSecret,
   decryptAdminMfaSecret,
@@ -14,7 +14,7 @@ import { getRuntimeErrorMessage, logRuntimeWarning } from "@/lib/runtime-errors"
 export async function GET() {
   try {
     const session = await auth();
-    if (!isAdminUser(session?.user)) {
+    if (!session?.user || !isAnyAdminUser(session.user)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

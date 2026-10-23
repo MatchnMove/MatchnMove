@@ -6,8 +6,7 @@ import { LanguageProvider } from "@/components/language-provider";
 import { LOCALE_COOKIE, resolveLocale } from "@/lib/i18n/config";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_PHONE, SITE_URL, absoluteUrl } from "@/lib/seo";
 import { SITE_EMAILS } from "@/lib/site-emails";
-import { GoogleAnalytics } from "./google-analytics";
-import { MicrosoftClarity } from "./microsoft-clarity";
+import { PrivateAnalyticsBoundary } from "@/components/private-analytics-boundary";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -146,13 +145,11 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     <html lang={initialLocale} suppressHydrationWarning>
       <body>
         <LanguageProvider initialLocale={initialLocale} localeWasExplicit={Boolean(localeCookie)}>
-          <GoogleAnalytics measurementId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID} />
-          <MicrosoftClarity />
           <script
             type="application/ld+json"
             dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
           />
-          {children}
+          <PrivateAnalyticsBoundary measurementId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID}>{children}</PrivateAnalyticsBoundary>
         </LanguageProvider>
       </body>
     </html>

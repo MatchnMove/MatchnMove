@@ -112,6 +112,8 @@ type VerificationDecisionInput = {
 };
 
 type EmailKind =
+  | "admin_team_invitation"
+  | "recruitment_invitation"
   | "contact_notification"
   | "mover_verification"
   | "mover_password_reset"
@@ -324,7 +326,7 @@ export function getContactEmailConfig() {
   return getContactNotificationConfig();
 }
 
-function getTransporter() {
+function getTransporter(bounded = false) {
   const config = getSmtpConfig();
   const requireTls = !config.secure && process.env.SMTP_REQUIRE_TLS !== "false";
   if (process.env.EMAIL_SMTP_POOL === "true") {
@@ -336,6 +338,7 @@ function getTransporter() {
       requireTLS: requireTls,
       name: process.env.SMTP_NAME || "matchnmove.co.nz",
       auth: config.auth,
+      ...(bounded ? { connectionTimeout: 3000, greetingTimeout: 3000, socketTimeout: 5000 } : {}),
       maxConnections: getNumberEnv("EMAIL_SMTP_MAX_CONNECTIONS", 3),
       maxMessages: getNumberEnv("EMAIL_SMTP_MAX_MESSAGES", 100),
     };
@@ -350,6 +353,7 @@ function getTransporter() {
     requireTLS: requireTls,
     name: process.env.SMTP_NAME || "matchnmove.co.nz",
     auth: config.auth,
+    ...(bounded ? { connectionTimeout: 3000, greetingTimeout: 3000, socketTimeout: 5000 } : {}),
   };
 
   return nodemailer.createTransport(options);
@@ -579,8 +583,8 @@ function getStableMessageId(emailDeliveryId: string, kind: EmailKind) {
   return `<${kind}.${emailDeliveryId}@${domain}>`;
 }
 
-async function sendViaSmtp(message: EmailMessage, emailDeliveryId: string) {
-  const transporter = getTransporter();
+export async function sendViaSmtp(message: EmailMessage, emailDeliveryId: string) {
+  const transporter = getTransporter(message.kind === "recruitment_invitation");
   return transporter.sendMail({
     from: message.from,
     to: message.to,
@@ -592,6 +596,8 @@ async function sendViaSmtp(message: EmailMessage, emailDeliveryId: string) {
     headers: {
       "Auto-Submitted": "auto-generated",
       "X-MatchnMove-Category": message.kind,
+      ...(message.kind === "recruitment_invitation" && message.text.match(/Unsubscribe: (https?:\/\/\S+)/)?.[1]
+        ? { "List-Unsubscribe": `<${message.text.match(/Unsubscribe: (https?:\/\/\S+)/)![1]}>` } : {}),
     },
   });
 }
@@ -659,7 +665,8 @@ export async function deliverQueuedEmail(emailDeliveryId: string) {
     where: { id: emailDeliveryId },
   });
 
-  if (!current || current.status === EmailDeliveryStatus.SENT) {
+  if (current?.kind === "recruitment_invitation") return { sent: false, skipped: true as const, error: "Recruitment requires manual approval through Mover Outreach." };
+  if (!current || current.status === EmailDeliveryStatus.SENT || current.status === EmailDeliveryStatus.SENDING) {
     return { sent: Boolean(current?.status === EmailDeliveryStatus.SENT), skipped: true as const };
   }
 
@@ -738,6 +745,7 @@ export async function processEmailQueue(limit = DEFAULT_PROCESS_LIMIT) {
   const staleSendingMs = getNumberEnv("EMAIL_SENDING_STALE_MS", 10 * 60_000);
   await prisma.emailDelivery.updateMany({
     where: {
+      kind: { not: "recruitment_invitation" },
       status: EmailDeliveryStatus.SENDING,
       attempts: {
         lt: getMaxAttempts(),
@@ -755,6 +763,7 @@ export async function processEmailQueue(limit = DEFAULT_PROCESS_LIMIT) {
 
   const candidates = await prisma.emailDelivery.findMany({
     where: {
+      kind: { not: "recruitment_invitation" },
       status: {
         in: [EmailDeliveryStatus.QUEUED, EmailDeliveryStatus.FAILED],
       },
@@ -1692,4 +1701,10 @@ function escapeHtml(value: string) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+}
+
+export async function sendAdminInvitationEmail(input: { email: string; text: string; html: string }) {
+  const config = getAuthEmailConfig();
+  return queueAndTrySend({ kind: "admin_team_invitation", from: config.from, to: input.email,
+    subject: "Your Match 'n Move team invitation", text: input.text, html: input.html }, config.configured);
 }
