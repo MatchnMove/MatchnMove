@@ -538,7 +538,7 @@ export default function FAQPage() {
                   </p>
                   <div className="mt-5 flex flex-col gap-3">
                     <Link
-                      href="/"
+                      href="/quote"
                       className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(135deg,#16a34a,#22c55e)] px-5 py-3 text-sm font-semibold text-white shadow-[0_18px_40px_-24px_rgba(34,197,94,0.85)] transition hover:translate-y-[-1px]"
                     >
                       Get quotes now
@@ -670,7 +670,7 @@ export default function FAQPage() {
 
                 <div className="mt-6 flex flex-col gap-3">
                   <Link
-                    href="/"
+                    href="/quote"
                     className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(135deg,#16a34a,#22c55e)] px-6 py-3 text-base font-semibold text-white shadow-[0_18px_40px_-24px_rgba(34,197,94,0.85)] transition hover:translate-y-[-1px] hover:shadow-[0_24px_48px_-24px_rgba(34,197,94,1)]"
                   >
                     Get quotes now

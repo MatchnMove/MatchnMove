@@ -1243,9 +1243,7 @@ export function QuoteForm() {
             </button>
           </div>
           <p className="text-xs leading-6 text-slate-600">
-            Encrypted server storage with a private browser cookie. Contact
-            details are not saved in browser local storage. Consent must be
-            confirmed when you submit.
+            Save securely for up to 7 days, then return using this browser to finish.
           </p>
           <p className="text-sm" role="status">
             {draftMessage}
