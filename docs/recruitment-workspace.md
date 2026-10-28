@@ -2,6 +2,20 @@
 
 Entry point: `/admin/recruitment`. This extends the existing application, PostgreSQL database, session cookie, admin authenticator flow, password hashing, SMTP transport and `EmailDelivery` records. No new runtime dependency or paid service was added.
 
+## Admin navigation and Email station
+
+All admin pages now share the same grouped sidebar and mobile menu: **Mover onboarding**, **Platform operations**, and **Team & setup**. Owner-only operations stay hidden from recruitment colleagues; access is still checked on the server. The header provides **Write email** from every admin section.
+
+Open **Email station** (`/admin/recruitment/messages`) to contact a saved company without a customer lead. Search/select a company, choose **Prepare email preview**, personalise the introduction, save, review and individually approve sending. Company detail pages also offer **Write email**. **Add company** opens the existing CRM form; company assignment, contact permission and suppression rules apply to both email types.
+
+General introductions and lead invitations share draft/history filters, follow-up reminders, limits, delivery records, registration attribution and unsubscribe handling. Colleagues need sending permission to send general introductions, but do not need lead-summary permission. They cannot list, edit or send lead-linked invitations without that separate permission. One initial general invitation is stored per company; repeated preparation reopens it. Subsequent outreach uses an explicitly prepared follow-up.
+
+Owners can edit separate **General introduction** and **Lead invitation** templates in **Email templates & settings**. For first-time setup, confirm the displayed sender is authorised, select **Verify sender connection**, add sender identification/contact details and enable individually approved sending. The connection check verifies SMTP connection and authentication only: it sends no email and does not establish inbox placement, SPF/DKIM/DMARC or provider send-as permissions. Verification is stored as an audited fingerprint of the current server/sender configuration; changing that configuration requires a new check. The existing `RECRUITMENT_EMAIL_VERIFIED=true` deployment override remains supported. Deploying this code does not automatically verify a sender, change team permissions or send company emails.
+
+Migration `20261029000000_general_recruitment_emails` makes the message's quote reference optional and adds a partial unique index for initial general invitations. Existing lead invitations and their foreign keys remain intact. This migration makes no customer data changes and fabricates no quote requests.
+
+Additional validation: `tests/admin-email-station.test.ts`, `tests/general-recruitment-database.test.ts`, and expanded recruitment HTTP tests cover role-aware navigation, general templates, lead-independent drafting and sending, sender verification, stale edits, ownership, duplicate protection, follow-ups and attribution. The database/SMTP tests require an explicitly disposable loopback database and use a local mail catcher.
+
 ## Implemented
 
 - Personal and owner dashboards, current task queues, event history, Auckland calendar date filters, team comparison and database-derived conversion reporting.

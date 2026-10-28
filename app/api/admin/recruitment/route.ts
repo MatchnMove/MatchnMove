@@ -19,6 +19,8 @@ import {
   suppressContact,
   setProspectStatus,
   settings,
+  senderAddress,
+  verifyRecruitmentSender,
 } from "@/lib/recruitment";
 import {
   manualStatuses,
@@ -208,6 +210,7 @@ export async function GET(req: NextRequest) {
         include: {
           activities: { orderBy: { createdAt: "desc" }, take: 100 },
           messages: {
+            where: actor.canViewLeads ? {} : { quoteRequestId: null },
             select: {
               id: true,
               subject: true,
@@ -291,9 +294,15 @@ export async function GET(req: NextRequest) {
         truncated: prospects.length === 500,
       };
     } else if (view === "messages") {
+      const messageStatus = query.get("status") ? z.enum(["DRAFT", "SENT", "NEEDS_REVIEW", "CANCELLED", "SENDING"]).parse(query.get("status")) : undefined;
+      const messageKind = query.get("kind") ? z.enum(["general", "lead"]).parse(query.get("kind")) : undefined;
+      if (messageKind === "lead" && !actor.canViewLeads) fail("Lead summary access has not been authorised.", 403);
       data = await prisma.outreachMessage.findMany({
         where: {
           prospect: scope,
+          ...(!actor.canViewLeads ? { quoteRequestId: null } : {}),
+          ...(messageStatus ? { status: messageStatus } : {}),
+          ...(messageKind === "general" ? { quoteRequestId: null } : messageKind === "lead" && actor.canViewLeads ? { quoteRequestId: { not: null } } : {}),
           ...(query.get("id") ? { id: query.get("id")! } : {}),
         },
         include: { prospect: { select: { companyName: true, email: true } } },
@@ -301,6 +310,17 @@ export async function GET(req: NextRequest) {
         take: 50,
         skip: (page - 1) * 50,
       });
+    } else if (view === "email_station") {
+      const config = await settings();
+      const messageScope = { prospect: scope, ...(!actor.canViewLeads ? { quoteRequestId: null } : {}) };
+      const [drafts, sent, needsReview] = await Promise.all([
+        prisma.outreachMessage.count({ where: { ...messageScope, status: "DRAFT" } }),
+        prisma.outreachMessage.count({ where: { ...messageScope, status: "SENT" } }),
+        prisma.outreachMessage.count({ where: { ...messageScope, status: "NEEDS_REVIEW" } }),
+      ]);
+      data = { template: config.generalIntroduction, senderIdentity: config.senderIdentity,
+        sendingReady: config.sendingEnabled && await emailReady() && Boolean(config.senderIdentity.trim()),
+        drafts, sent, needsReview };
     } else if (view === "tasks") {
       data = await prisma.recruitmentTask.findMany({
         where: {
@@ -332,7 +352,7 @@ export async function GET(req: NextRequest) {
       };
     } else if (view === "settings") {
       ownerOnly(actor);
-      data = { settings: await settings(), emailReady: emailReady() };
+      data = { settings: await settings(), emailReady: await emailReady(), senderAddress: senderAddress() };
     } else fail("Unknown view.", 404);
     return NextResponse.json(data, { headers });
   } catch (error) {
@@ -357,6 +377,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(await approveAndSend(actor, body.data), {
         headers,
       });
+    if (body.action === "verify_sender") {
+      z.object({ confirmed: z.literal(true) }).parse(body.data);
+      return NextResponse.json(await verifyRecruitmentSender(actor), { headers });
+    }
     if (body.action === "send_invitation") {
       const input = z
         .object({ id: z.string(), confirmed: z.literal(true) })
@@ -375,7 +399,7 @@ export async function POST(req: NextRequest) {
       const input = z
         .object({ id: z.string(), confirmed: z.literal(true) })
         .parse(body.data);
-      if (!emailReady())
+      if (!(await emailReady()))
         fail("Verify SMTP before sending account recovery email.", 503);
       const user = await locked(async (tx) => {
         await checkActor(tx, actor);
@@ -480,6 +504,10 @@ export async function POST(req: NextRequest) {
           );
         return { messages };
       }
+      if (body.action === "prepare_general") {
+        const input = z.object({ prospectId: z.string().min(1) }).parse(body.data);
+        return prepareDraft(tx, actor, input.prospectId);
+      }
       if (body.action === "edit_draft") return editDraft(tx, actor, body.data);
       if (body.action === "prepare_followup") {
         const input = z.object({ id: z.string() }).parse(body.data);
@@ -516,7 +544,7 @@ export async function POST(req: NextRequest) {
       if (body.action === "settings") {
         ownerOnly(actor);
         const config = recruitmentSettingsSchema.parse(body.data);
-        if (config.sendingEnabled && (!emailReady() || !config.senderIdentity))
+        if (config.sendingEnabled && (!(await emailReady(tx)) || !config.senderIdentity))
           fail(
             "Verify SMTP and set a sender identity before enabling outreach.",
           );

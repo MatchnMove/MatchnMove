@@ -1,7 +1,5 @@
 import { redirect } from "next/navigation";
 import { AdminCleanersPanel } from "@/components/admin-cleaners-panel";
-import { AdminLogoutButton } from "@/components/admin-logout-button";
-import { AdminNavigation } from "@/components/admin-navigation";
 import { isAdminUser } from "@/lib/admin-auth";
 import { auth } from "@/lib/auth";
 
@@ -13,7 +11,7 @@ export default async function AdminCleanersPage() {
   if (!session.user.mfaVerified) redirect("/admin/mfa?next=/admin/cleaners");
 
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-10 sm:px-6">
+    <section className="min-w-0">
       <div className="mx-auto max-w-7xl">
         <div className="mb-7 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div>
@@ -25,13 +23,9 @@ export default async function AdminCleanersPage() {
               Activate cleaning partners, review their coverage, and monitor fixed-price lead invoices.
             </p>
           </div>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <AdminNavigation current="cleaners" />
-            <AdminLogoutButton className="shrink-0" />
-          </div>
         </div>
         <AdminCleanersPanel />
       </div>
-    </main>
+    </section>
   );
 }

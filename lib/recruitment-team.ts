@@ -63,9 +63,9 @@ export async function dispatchTeamInvitation(
   id: string,
 ) {
   ownerOnly(actor);
-  if (!emailReady())
+  if (!(await emailReady()))
     fail(
-      "Verify the SMTP sender and set RECRUITMENT_EMAIL_VERIFIED before sending team invitations.",
+      "Verify the sender connection in Email templates & settings before sending team invitations.",
       503,
     );
   const token = secureToken();

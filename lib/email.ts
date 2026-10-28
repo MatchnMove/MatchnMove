@@ -359,6 +359,12 @@ function getTransporter(bounded = false) {
   return nodemailer.createTransport(options);
 }
 
+// Checks connection/authentication only. No recipient or message is submitted.
+export async function verifySmtpConnection() {
+  const transporter = getTransporter(true);
+  try { await transporter.verify(); } finally { transporter.close(); }
+}
+
 function getRetryDelayMs(attempts: number) {
   const baseMs = getNumberEnv("EMAIL_RETRY_BASE_MS", 60_000);
   const maxMs = getNumberEnv("EMAIL_RETRY_MAX_MS", 30 * 60_000);

@@ -117,7 +117,8 @@ test(
         assert.equal(personal.status, 200);
         const html = await personal.text();
         assert.ok(html.includes("Carli"));
-        assert.ok(html.includes("Mover Outreach"));
+        assert.ok(html.includes("Company directory"));
+        assert.ok(html.includes("Email station"));
         assert.equal(html.includes('id="microsoft-clarity"'), false);
         assert.equal(
           html.includes("https://www.googletagmanager.com/gtag/js"),
@@ -126,11 +127,35 @@ test(
         assert.equal(html.includes('href="/admin/recruitment/team"'), false);
         const ownerPage = await get("/admin/recruitment/team", owner);
         assert.equal(ownerPage.status, 200);
-        assert.ok((await ownerPage.text()).includes("Team Management"));
+        assert.ok((await ownerPage.text()).includes("Team &amp; access"));
       },
     );
     const carliProspect = await createProspect(carli, "CarliCompany");
     const tiaanProspect = await createProspect(tiaan, "TiaanCompany");
+    await t.test("email-only colleagues can prepare and review general invitations without lead access", async () => {
+      const emailUser = await makeUser("EmailOnly", "RECRUITMENT_ADMIN");
+      const emailOnly = await prisma.user.update({ where: { id: emailUser.id }, data: { canViewRecruitmentLeads: false } });
+      const company = await createProspect(emailOnly, "EmailCompany");
+      const result = await post("prepare_general", { prospectId: company.id }, emailOnly);
+      assert.equal(result.status, 200, await result.clone().text());
+      const draft = await result.json();
+      assert.equal(draft.quoteRequestId, null);
+      assert.equal(draft.text.includes("Moving date:"), false);
+      const repeat = await post("prepare_general", { prospectId: company.id }, emailOnly);
+      assert.equal((await repeat.json()).id, draft.id);
+      const history = await get(`/api/admin/recruitment?view=messages&id=${draft.id}`, emailOnly);
+      assert.equal(history.status, 200);
+      assert.equal((await history.json())[0].id, draft.id);
+      assert.equal((await get("/api/admin/recruitment?view=messages&kind=lead", emailOnly)).status, 403);
+      assert.equal((await get("/api/admin/recruitment?view=email_station", emailOnly)).status, 200);
+      assert.equal((await post("prepare_general", { prospectId: tiaanProspect.id }, emailOnly)).status, 404);
+      assert.equal((await post("send", { id: draft.id, updatedAt: draft.updatedAt, confirmed: true }, emailOnly)).status, 403);
+      assert.equal((await post("verify_sender", { confirmed: true }, emailOnly)).status, 403);
+      const page = await get("/admin/recruitment/messages", emailOnly);
+      const html = await page.text();
+      assert.ok(html.includes("Email station"));
+      assert.equal(html.includes('href="/admin/recruitment/leads"'), false);
+    });
     await t.test(
       "cross-admin prospect, note and task access is denied at HTTP endpoints",
       async () => {

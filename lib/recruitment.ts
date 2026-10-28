@@ -8,6 +8,7 @@ import {
   contactBlockReason,
   consentBases,
   defaultIntroduction,
+  defaultGeneralIntroduction,
   manualStatuses,
   normalizeCompany,
   normalizeEmail,
@@ -20,6 +21,8 @@ import {
   tokenHash,
 } from "@/lib/recruitment-policy";
 import { NZ_SERVICE_AREAS } from "@/lib/nz-regions";
+import { createHash } from "node:crypto";
+import { verifySmtpConnection } from "@/lib/email";
 
 export class RecruitmentError extends Error {
   constructor(
@@ -113,6 +116,7 @@ export const recruitmentSettingsSchema = z.object({
     .min(20)
     .max(1500)
     .default(defaultIntroduction),
+  generalIntroduction: z.string().trim().min(20).max(1500).default(defaultGeneralIntroduction),
 });
 export async function settings(tx: Pick<Tx, "recruitmentSetting"> = prisma) {
   const row = await tx.recruitmentSetting.findUnique({
@@ -134,15 +138,45 @@ export function senderAddress() {
     ""
   );
 }
-export function emailReady() {
+function smtpConfigured() {
   return Boolean(
     process.env.SMTP_HOST &&
       process.env.SMTP_PORT &&
       process.env.SMTP_USER &&
       process.env.SMTP_PASS &&
-      senderAddress() &&
-      process.env.RECRUITMENT_EMAIL_VERIFIED === "true",
+      senderAddress(),
   );
+}
+function senderFingerprint() {
+  return createHash("sha256").update(JSON.stringify([
+    process.env.SMTP_HOST, process.env.SMTP_PORT, process.env.SMTP_USER, process.env.SMTP_PASS,
+    process.env.SMTP_SECURE, process.env.SMTP_REQUIRE_TLS, senderAddress(), process.env.RECRUITMENT_REPLY_TO,
+  ])).digest("hex");
+}
+export async function emailReady(tx: Pick<Tx, "recruitmentSetting"> = prisma) {
+  if (!smtpConfigured()) return false;
+  if (process.env.RECRUITMENT_EMAIL_VERIFIED === "true") return true;
+  const row = await tx.recruitmentSetting.findUnique({ where: { key: "sender-verification" } });
+  return Boolean(row && typeof row.value === "object" && !Array.isArray(row.value) && row.value?.fingerprint === senderFingerprint());
+}
+export async function verifyRecruitmentSender(actor: RecruitmentActor) {
+  ownerOnly(actor);
+  await locked(tx => checkActor(tx, actor));
+  if (!smtpConfigured()) fail("Complete the email server and sender configuration before checking the connection.", 503);
+  const fingerprint = senderFingerprint();
+  try { await verifySmtpConnection(); }
+  catch { fail("The email connection could not be verified. Check the configured email service and try again.", 503); }
+  return locked(async tx => {
+    await checkActor(tx, actor);
+    if (fingerprint !== senderFingerprint()) fail("Email settings changed during verification. Run the check again.", 409);
+    await tx.recruitmentSetting.upsert({
+      where: { key: "sender-verification" },
+      create: { key: "sender-verification", value: { fingerprint, verifiedAt: new Date().toISOString(), verifiedBy: actor.id } },
+      update: { value: { fingerprint, verifiedAt: new Date().toISOString(), verifiedBy: actor.id } },
+    });
+    await audit(tx, actor.id, "recruitment_sender_verified", { sender: senderAddress() });
+    return { ok: true, message: "Email connection verified. No message was sent. You can now enable individually approved sending." };
+  });
 }
 
 const optionalText = z.string().trim().max(1000).nullable().optional();
@@ -179,12 +213,12 @@ export async function prepareDraft(
   tx: Tx,
   actor: RecruitmentActor,
   prospectId: string,
-  quoteRequestId: string,
+  quoteRequestId: string | null = null,
   followUpToId?: string,
 ) {
   const prospect = await ownedProspect(tx, actor, prospectId);
   const user = await checkActor(tx, actor);
-  if (actor.role !== "OWNER" && !user.canViewRecruitmentLeads)
+  if (quoteRequestId && actor.role !== "OWNER" && !user.canViewRecruitmentLeads)
     fail("Lead summary access has not been authorised.", 403);
   const blocked = contactBlockReason(
     prospect,
@@ -195,15 +229,15 @@ export async function prepareDraft(
     ),
   );
   if (blocked) fail(blocked);
-  const lead = await tx.quoteRequest.findFirst({
+  const lead = quoteRequestId ? await tx.quoteRequest.findFirst({
     where: {
       id: quoteRequestId,
       recruitmentSharingAllowed: true,
       sharingConsentAt: { not: null },
     },
     select: recruitmentLeadSelect,
-  });
-  if (!lead) fail("An authorised lead summary was not found.", 404);
+  }) : null;
+  if (quoteRequestId && !lead) fail("An authorised lead summary was not found.", 404);
   const parent = followUpToId
     ? await tx.outreachMessage.findFirst({
         where: { id: followUpToId, prospectId, quoteRequestId, status: "SENT" },
@@ -231,12 +265,12 @@ export async function prepareDraft(
   const introduction =
     existing?.introduction ||
     (parent
-      ? "We are following up on our invitation to join Match 'n Move. If this is relevant to your business, you can review the platform and register below. Availability of the original moving request may have changed."
-      : config.introduction);
+      ? `We are following up on our invitation to join Match 'n Move. If this is relevant to your business, you can review the platform and register below.${lead ? " Availability of the original moving request may have changed." : ""}`
+      : lead ? config.introduction : config.generalIntroduction);
   const rendered = renderRecruitmentEmail({
     companyName: prospect.companyName,
     introduction,
-    lead: safeLeadSummary(lead),
+    lead: lead ? safeLeadSummary(lead) : null,
     registrationUrl: `${baseUrl()}/api/recruitment/attribution?token=${registrationToken}`,
     unsubscribeUrl: `${baseUrl()}/recruitment/unsubscribe?token=${unsubscribeToken}`,
     sender: config.senderIdentity || "Match 'n Move",

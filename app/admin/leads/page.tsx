@@ -1,6 +1,4 @@
 import { redirect } from "next/navigation";
-import { AdminLogoutButton } from "@/components/admin-logout-button";
-import { AdminNavigation } from "@/components/admin-navigation";
 import { LeadSpreadsheetAdminPanel } from "@/components/lead-spreadsheet-admin-panel";
 import { isAdminUser } from "@/lib/admin-auth";
 import { auth } from "@/lib/auth";
@@ -12,7 +10,7 @@ export default async function AdminLeadsPage() {
   if (!session.user.mfaVerified) redirect("/admin/mfa?next=/admin/leads");
 
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-10 sm:px-6">
+    <section className="min-w-0">
       <div className="mx-auto max-w-6xl">
         <div className="mb-7 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div>
@@ -24,13 +22,9 @@ export default async function AdminLeadsPage() {
               Verify the company-owned Google Sheet, review team access, and monitor automatic lead delivery.
             </p>
           </div>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <AdminNavigation current="leads" />
-            <AdminLogoutButton className="shrink-0" />
-          </div>
         </div>
         <LeadSpreadsheetAdminPanel />
       </div>
-    </main>
+    </section>
   );
 }

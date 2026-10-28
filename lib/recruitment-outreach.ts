@@ -35,6 +35,9 @@ export async function editDraft(tx: Tx, actor: RecruitmentActor, raw: unknown) {
   });
   if (!message) fail("Draft not found.", 404);
   const prospect = await ownedProspect(tx, actor, message.prospectId);
+  const user = await checkActor(tx, actor);
+  if (message.quoteRequestId && actor.role !== "OWNER" && !user.canViewRecruitmentLeads)
+    fail("Lead summary access has not been authorised.", 403);
   if (
     message.status !== "DRAFT" ||
     message.updatedAt.toISOString() !== input.updatedAt
@@ -46,7 +49,7 @@ export async function editDraft(tx: Tx, actor: RecruitmentActor, raw: unknown) {
     );
   const quote = message.quoteRequest;
   if (
-    [quote.name, quote.email, quote.phone, quote.fromAddress, quote.toAddress]
+    quote && [quote.name, quote.email, quote.phone, quote.fromAddress, quote.toAddress]
       .filter((value) => value.length >= 3)
       .some((value) =>
         input.introduction.toLowerCase().includes(value.toLowerCase()),
@@ -63,7 +66,7 @@ export async function editDraft(tx: Tx, actor: RecruitmentActor, raw: unknown) {
   const rendered = renderRecruitmentEmail({
     companyName: prospect.companyName,
     introduction: input.introduction,
-    lead: safeLeadSummary(quote),
+    lead: quote ? safeLeadSummary(quote) : null,
     registrationUrl,
     unsubscribeUrl,
     sender: config.senderIdentity || "Match 'n Move",
@@ -82,14 +85,14 @@ async function verifySend(tx: Tx, actor: RecruitmentActor, messageId: string) {
   const user = await checkActor(tx, actor);
   if (
     actor.role !== "OWNER" &&
-    (!user.canSendRecruitment || !user.canViewRecruitmentLeads)
+    !user.canSendRecruitment
   )
     fail(
-      "The owner must enable your sending and lead-summary permissions.",
+      "The owner must enable your sending permission.",
       403,
     );
   const config = await settings(tx);
-  if (!config.sendingEnabled || !emailReady() || !config.senderIdentity.trim())
+  if (!config.sendingEnabled || !(await emailReady(tx)) || !config.senderIdentity.trim())
     fail(
       "Outreach sending is disabled or sender configuration has not been verified.",
       503,
@@ -103,6 +106,8 @@ async function verifySend(tx: Tx, actor: RecruitmentActor, messageId: string) {
     },
   });
   if (!message) fail("Invitation not found.", 404);
+  if (message.quoteRequestId && actor.role !== "OWNER" && !user.canViewRecruitmentLeads)
+    fail("The owner must enable your lead-summary permission for this invitation.", 403);
   if (!message.text.includes(config.senderIdentity))
     fail(
       "Sender details changed. Save the draft again and review the refreshed preview before sending.",
@@ -119,8 +124,8 @@ async function verifySend(tx: Tx, actor: RecruitmentActor, messageId: string) {
   );
   if (reason) fail(reason);
   if (
-    !message.quoteRequest.recruitmentSharingAllowed ||
-    !message.quoteRequest.sharingConsentAt
+    message.quoteRequestId && (!message.quoteRequest?.recruitmentSharingAllowed ||
+    !message.quoteRequest.sharingConsentAt)
   )
     fail("Customer permission for this summary is no longer available.");
   if (message.attributionExpiresAt < new Date())

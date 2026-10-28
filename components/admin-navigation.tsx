@@ -1,49 +1,37 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Building2, ChartNoAxesCombined, CheckCheck, ClipboardList, FileSpreadsheet, LayoutDashboard, Mail, Settings, ShieldCheck, Users, LifeBuoy } from "lucide-react";
+import { adminNavigationFor, currentAdminSection, type AdminNavigationActor } from "@/lib/admin-navigation";
 
-type AdminArea = "quote-flow" | "verification" | "cleaners" | "leads" | "trust";
+const icons = {
+  overview: LayoutDashboard, companies: Building2, email: Mail, tasks: ClipboardList,
+  leads: CheckCheck, reports: ChartNoAxesCombined, verification: ShieldCheck,
+  support: LifeBuoy, sheets: FileSpreadsheet, team: Users, settings: Settings,
+};
 
-const links: Array<{ id: AdminArea; href: string; label: string }> = [
-  { id: "trust", href: "/admin/trust", label: "Trust & support" },
-  { id: "quote-flow", href: "/admin/quote-flow", label: "Quote flow" },
-  {
-    id: "verification",
-    href: "/admin/verification",
-    label: "Mover verification",
-  },
-  { id: "cleaners", href: "/admin/cleaners", label: "Cleaners" },
-  { id: "leads", href: "/admin/leads", label: "Google Sheets" },
-];
-
-export function AdminNavigation({ current }: { current: AdminArea }) {
+export function AdminNavigation({ actor, onNavigate }: { actor: AdminNavigationActor; onNavigate?: () => void }) {
+  const pathname = usePathname();
+  const active = currentAdminSection(pathname, actor);
   return (
-    <nav
-      aria-label="Admin sections"
-      className="flex max-w-full gap-2 overflow-x-auto pb-1"
-    >
-      <Link
-        href="/admin/recruitment"
-        className="inline-flex min-h-10 shrink-0 items-center rounded-xl bg-teal-700 px-4 text-sm font-bold text-white"
-      >
-        Recruitment
-      </Link>
-      {links.map((link) => {
-        const active = link.id === current;
-
-        return (
-          <Link
-            key={link.id}
-            href={link.href}
-            aria-current={active ? "page" : undefined}
-            className={`inline-flex min-h-10 shrink-0 items-center justify-center rounded-xl px-4 text-sm font-bold transition ${
-              active
-                ? "bg-slate-950 text-white shadow-sm"
-                : "border border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50"
-            }`}
-          >
-            {link.label}
-          </Link>
-        );
-      })}
+    <nav aria-label="Administration" className="space-y-6">
+      {adminNavigationFor(actor).map(group => (
+        <div key={group.title}>
+          <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">{group.title}</p>
+          <div className="space-y-1">
+            {group.items.map(item => {
+              const Icon = icons[item.icon as keyof typeof icons];
+              const selected = active?.href === item.href;
+              return <Link key={item.href} href={item.href} onClick={onNavigate}
+                aria-current={selected ? "page" : undefined}
+                className={`flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal-600 ${selected ? "bg-teal-700 text-white shadow-sm" : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"}`}>
+                <Icon size={18} aria-hidden="true" className="shrink-0" />{item.label}
+              </Link>;
+            })}
+          </div>
+        </div>
+      ))}
     </nav>
   );
 }

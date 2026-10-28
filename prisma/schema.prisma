@@ -726,8 +726,8 @@ model OutreachMessage {
   id                    String        @id @default(cuid())
   prospectId            String
   prospect              MoverProspect @relation(fields: [prospectId], references: [id], onDelete: Restrict)
-  quoteRequestId        String
-  quoteRequest          QuoteRequest  @relation(fields: [quoteRequestId], references: [id], onDelete: Restrict)
+  quoteRequestId        String?
+  quoteRequest          QuoteRequest? @relation(fields: [quoteRequestId], references: [id], onDelete: Restrict)
   adminId               String
   sequence              Int           @default(0)
   followUpToId          String?       @unique

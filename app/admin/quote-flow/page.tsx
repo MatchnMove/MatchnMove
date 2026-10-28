@@ -1,6 +1,4 @@
 import { redirect } from "next/navigation";
-import { AdminLogoutButton } from "@/components/admin-logout-button";
-import { AdminNavigation } from "@/components/admin-navigation";
 import {
   AdminQuoteFlowPanel,
   type AdminMoverQuoteSummary,
@@ -161,7 +159,7 @@ export default async function AdminQuoteFlowPage() {
     : { items: [], nextCursor: null };
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,#eef4fb_0%,#f7f9fc_100%)] px-4 py-5 sm:px-6 sm:py-8">
+    <section className="min-w-0">
       <div className="mx-auto max-w-[1500px]">
         <header className="mb-5 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
           <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
@@ -171,10 +169,6 @@ export default async function AdminQuoteFlowPage() {
               <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
                 See which quote requests were assigned to each mover, whether each notification was accepted for delivery, and whether the mover viewed the lead—without accessing their account.
               </p>
-            </div>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <AdminNavigation current="quote-flow" />
-              <AdminLogoutButton className="shrink-0" />
             </div>
           </div>
         </header>
@@ -187,6 +181,6 @@ export default async function AdminQuoteFlowPage() {
           initialPage={initialPage}
         />
       </div>
-    </main>
+    </section>
   );
 }

@@ -5,20 +5,15 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowRight,
-  Building2,
-  ChartNoAxesCombined,
   Check,
   ChevronLeft,
   CircleHelp,
-  ClipboardList,
-  LayoutDashboard,
-  Mail,
   Plus,
-  Search,
-  Settings,
-  Users,
 } from "lucide-react";
-import { AdminLogoutButton } from "@/components/admin-logout-button";
+import {
+  MoverDiscovery,
+  type DiscoveredProspectForm,
+} from "@/components/mover-discovery";
 import { recruitmentDateRange } from "@/lib/recruitment-dates";
 import { NZ_SERVICE_AREAS } from "@/lib/nz-regions";
 // Runtime policy helpers contain node:crypto; keep this client module independent of server imports.
@@ -97,6 +92,7 @@ type Prospect = {
 type Message = {
   id: string;
   prospectId: string;
+  quoteRequestId: string | null;
   status: string;
   subject: string;
   introduction: string;
@@ -319,176 +315,36 @@ export function RecruitmentWorkspace({
   actor: Actor;
   section: string;
 }) {
-  const nav = [
-    {
-      id: "dashboard",
-      href: "/admin/recruitment",
-      title: actor.role === "OWNER" ? "Overview" : "My dashboard",
-      icon: LayoutDashboard,
-    },
-    {
-      id: "prospects",
-      href: "/admin/recruitment/prospects",
-      title: "Mover Outreach",
-      icon: Building2,
-    },
-    ...(actor.canViewLeads
-      ? [
-          {
-            id: "leads",
-            href: "/admin/recruitment/leads",
-            title: "Recruitment opportunities",
-            icon: Search,
-          },
-        ]
-      : []),
-    {
-      id: "messages",
-      href: "/admin/recruitment/messages",
-      title: "Email invitations",
-      icon: Mail,
-    },
-    {
-      id: "tasks",
-      href: "/admin/recruitment/tasks",
-      title: "Follow-up tasks",
-      icon: ClipboardList,
-    },
-    {
-      id: "performance",
-      href: "/admin/recruitment/performance",
-      title: actor.role === "OWNER" ? "Team performance" : "My performance",
-      icon: ChartNoAxesCombined,
-    },
-    ...(actor.role === "OWNER"
-      ? [
-          {
-            id: "team",
-            href: "/admin/recruitment/team",
-            title: "Team Management",
-            icon: Users,
-          },
-          {
-            id: "settings",
-            href: "/admin/recruitment/settings",
-            title: "Outreach settings",
-            icon: Settings,
-          },
-        ]
-      : []),
-  ];
+  const titles: Record<string, string> = {
+    dashboard: actor.role === "OWNER" ? "Onboarding overview" : "My onboarding overview",
+    prospects: "Company directory", leads: "Lead opportunities", messages: "Email station",
+    tasks: "Follow-ups", performance: "Recruitment reports", team: "Team & access", settings: "Email templates & settings",
+  };
   return (
-    <main className="min-h-screen bg-[#f5f7f9] text-slate-900">
-      <div className="border-b border-slate-200 bg-white px-5 py-4 sm:px-8">
-        <div className="mx-auto flex max-w-[1500px] items-center justify-between gap-3">
-          <Link
-            href="/admin/recruitment"
-            className="text-xl font-black tracking-tight"
-          >
-            Match <span className="text-teal-700">&apos;n</span> Move{" "}
-            <span className="ml-2 hidden text-xs font-semibold uppercase tracking-widest text-slate-400 sm:inline">
-              Team workspace
-            </span>
-          </Link>
-          <div className="flex items-center gap-4">
-            <span className="hidden text-sm text-slate-500 sm:block">
-              {actor.name}
-            </span>
-            <AdminLogoutButton />
-          </div>
-        </div>
-      </div>
-      <div className="mx-auto grid max-w-[1500px] lg:grid-cols-[245px_1fr]">
-        <aside className="border-b border-slate-200 bg-white p-4 lg:min-h-[calc(100vh-77px)] lg:border-b-0 lg:border-r lg:p-5">
-          <p className="mb-4 hidden px-3 text-[10px] font-bold uppercase tracking-[0.22em] text-slate-400 lg:block">
-            Recruitment workspace
+    <div className="min-w-0">
+      <header className="mb-7 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-teal-700">Mover onboarding</p>
+          <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">{titles[section] || "Workspace"}</h1>
+          <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-500">
+            {section === "messages" ? "Introduce your business to movers, with or without a customer lead. Prepare, preview and send each email here."
+              : section === "prospects" ? "One place for company details, contact history and the next onboarding step."
+              : section === "dashboard" ? "Your companies, priorities and recent activity in one place."
+              : "Keep your companies, conversations and next steps connected."}
           </p>
-          <nav
-            aria-label="Recruitment sections"
-            className="flex gap-1 overflow-x-auto lg:flex-col"
-          >
-            {nav.map((item) => (
-              <Link
-                key={item.id}
-                href={item.href}
-                aria-current={section === item.id ? "page" : undefined}
-                className={`flex shrink-0 items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold ${section === item.id ? "bg-teal-50 text-teal-800" : "text-slate-600 hover:bg-slate-50"}`}
-              >
-                <item.icon size={18} />
-                {item.title}
-              </Link>
-            ))}
-          </nav>
-          {actor.role === "OWNER" && (
-            <div className="mt-7 hidden border-t border-slate-100 pt-5 lg:block">
-              <p className="mb-3 px-3 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                Business administration
-              </p>
-              {[
-                ["/admin/trust", "Trust & customer support"],
-                ["/admin/quote-flow", "Registered movers & leads"],
-                ["/admin/verification", "Mover verification"],
-                ["/admin/cleaners", "Cleaners"],
-                ["/admin/leads", "Google Sheets"],
-              ].map(([href, title]) => (
-                <Link
-                  key={href}
-                  className="block rounded-xl px-3 py-2.5 text-sm text-slate-500 hover:bg-slate-50"
-                  href={href}
-                >
-                  {title}
-                </Link>
-              ))}
-            </div>
-          )}
-          <div className="mt-8 hidden rounded-xl bg-slate-50 p-4 text-xs leading-5 text-slate-500 lg:block">
-            Every invitation starts with a review. Your assigned companies, next
-            steps and results stay together.
-          </div>
-        </aside>
-        <div className="min-w-0 px-4 py-7 sm:px-8 lg:px-10">
-          <header className="mb-7">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-teal-700">
-              {actor.role === "OWNER"
-                ? "Business overview"
-                : "Your recruitment workspace"}
-            </p>
-            <h1 className="mt-2 text-3xl font-black tracking-[-0.04em] sm:text-4xl">
-              {section === "dashboard"
-                ? actor.role === "OWNER"
-                  ? "Recruitment at a glance"
-                  : `${actor.name.split(" ")[0]}'s dashboard`
-                : nav.find((item) => item.id === section)?.title}
-            </h1>
-            <p className="mt-3 text-sm leading-6 text-slate-500">
-              {section === "dashboard"
-                ? "Build relationships. Keep the next step clear. Measure the movers who join."
-                : "Your companies, conversations and next steps — connected in one place."}
-            </p>
-          </header>
-          {section === "dashboard" || section === "performance" ? (
-            <Dashboard actor={actor} performance={section === "performance"} />
-          ) : section === "prospects" ? (
-            <Prospects actor={actor} />
-          ) : section === "leads" ? (
-            <LeadOpportunities actor={actor} />
-          ) : section === "messages" ? (
-            <Messages actor={actor} />
-          ) : section === "tasks" ? (
-            <Tasks actor={actor} />
-          ) : section === "team" && actor.role === "OWNER" ? (
-            <Team actor={actor} />
-          ) : section === "settings" && actor.role === "OWNER" ? (
-            <OutreachSettings />
-          ) : (
-            <Empty
-              title="This section is unavailable"
-              detail="Choose an authorised section from the workspace navigation."
-            />
-          )}
         </div>
-      </div>
-    </main>
+        {section === "dashboard" && <Link href="/admin/recruitment/messages?compose=1" className={buttonClass}>Write an invitation<ArrowRight size={16} /></Link>}
+      </header>
+      {section === "dashboard" || section === "performance" ? (
+        <Dashboard actor={actor} performance={section === "performance"} />
+      ) : section === "prospects" ? <Prospects actor={actor} />
+        : section === "leads" ? <LeadOpportunities actor={actor} />
+        : section === "messages" ? <Messages actor={actor} />
+        : section === "tasks" ? <Tasks actor={actor} />
+        : section === "team" && actor.role === "OWNER" ? <Team actor={actor} />
+        : section === "settings" && actor.role === "OWNER" ? <OutreachSettings />
+        : <Empty title="This section is unavailable" detail="Choose an authorised section from the admin navigation." />}
+    </div>
   );
 }
 
@@ -828,7 +684,9 @@ function Prospects({ actor }: { actor: Actor }) {
   const [status, setStatus] = useState("");
   const [sort, setSort] = useState("recent");
   const [page, setPage] = useState(1);
-  const [creating, setCreating] = useState(false);
+  const [creating, setCreating] = useState(search.get("new") === "1");
+  const [discoveryDraft, setDiscoveryDraft] =
+    useState<DiscoveredProspectForm | null>(null);
   const { data, error, loading, load } = useData<{
     items: Prospect[];
     count: number;
@@ -885,27 +743,62 @@ function Prospects({ actor }: { actor: Actor }) {
           <option value="recent">Recently updated</option>
           <option value="name">Company A–Z</option>
         </select>
-        <button className={buttonClass} onClick={() => setCreating(!creating)}>
+        <button
+          className={buttonClass}
+          onClick={() => {
+            setDiscoveryDraft(null);
+            setCreating(!creating);
+          }}
+        >
           <Plus size={16} />
           Add company
         </button>
+        <MoverDiscovery
+          onChoose={(form) => {
+            setDiscoveryDraft(form);
+            setCreating(true);
+            window.requestAnimationFrame(() =>
+              document
+                .querySelector<HTMLInputElement>("#new-outreach-company input")
+                ?.focus(),
+            );
+          }}
+        />
       </div>
       {creating && (
-        <Panel title="New moving company">
-          <ProspectEditor
-            onSave={async (prospect) => {
-              const result = await mutate<Prospect>("save_prospect", {
-                prospect: {
-                  ...prospect,
-                  operatingRegion: prospect.operatingRegion || null,
-                },
-              });
-              setCreating(false);
-              await load();
-              router.push(`/admin/recruitment/prospects?id=${result.id}`);
-            }}
-          />
-        </Panel>
+        <div id="new-outreach-company">
+          <Panel
+            title={
+              discoveryDraft
+                ? "Review discovered moving company"
+                : "New moving company"
+            }
+          >
+            {discoveryDraft && (
+              <p className="mb-5 rounded-xl bg-teal-50 p-4 text-sm leading-6 text-teal-950">
+                Public business details have been copied below. Confirm the moving
+                services, email and coverage before saving. No contact
+                permission has been inferred.
+              </p>
+            )}
+            <ProspectEditor
+              key={discoveryDraft?.notes ?? "manual"}
+              initialValues={discoveryDraft ?? undefined}
+              onSave={async (prospect) => {
+                const result = await mutate<Prospect>("save_prospect", {
+                  prospect: {
+                    ...prospect,
+                    operatingRegion: prospect.operatingRegion || null,
+                  },
+                });
+                setCreating(false);
+                setDiscoveryDraft(null);
+                await load();
+                router.push(`/admin/recruitment/prospects?id=${result.id}`);
+              }}
+            />
+          </Panel>
+        </div>
       )}
       <State error={error} loading={loading} />
       {data && (
@@ -1011,9 +904,11 @@ function Prospects({ actor }: { actor: Actor }) {
 
 function ProspectEditor({
   prospect,
+  initialValues,
   onSave,
 }: {
   prospect?: Prospect;
+  initialValues?: Partial<ProspectForm>;
   onSave: (form: ProspectForm) => Promise<void>;
 }) {
   const [form, setForm] = useState<ProspectForm>(
@@ -1031,7 +926,7 @@ function ProspectEditor({
           notes: prospect.notes || "",
           duplicateReviewNote: prospect.duplicateReviewNote || "",
         }
-      : emptyProspect,
+      : { ...emptyProspect, ...initialValues },
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -1241,9 +1136,9 @@ function ProspectDetails({ actor, id }: { actor: Actor; id: string }) {
           <Panel
             title={prospect.companyName}
             action={
-              <button className={secondaryClass} onClick={() => setEdit(!edit)}>
+              <div className="flex flex-wrap gap-2"><Link className={buttonClass} href={`/admin/recruitment/messages?compose=1&company=${encodeURIComponent(prospect.id)}&q=${encodeURIComponent(prospect.email)}`}>Write email</Link><button className={secondaryClass} onClick={() => setEdit(!edit)}>
                 {edit ? "Close editor" : "Edit company"}
-              </button>
+              </button></div>
             }
           >
             <div className="flex flex-wrap items-center gap-3">
@@ -1645,11 +1540,29 @@ function Messages({ actor }: { actor: Actor }) {
   const search = useSearchParams();
   const id = search.get("id");
   const [page, setPage] = useState(1);
+  const [status, setStatus] = useState("");
+  const [kind, setKind] = useState("");
+  const station = useData<EmailStationData>(`view=email_station&message=${encodeURIComponent(id || "")}`);
   const { data, error, loading, load } = useData<Message[]>(
-    `view=messages&page=${page}${id ? `&id=${encodeURIComponent(id)}` : ""}`,
+    `view=messages&page=${page}${id ? `&id=${encodeURIComponent(id)}` : `${status ? `&status=${status}` : ""}${kind ? `&kind=${kind}` : ""}`}`,
   );
   return (
     <div className="space-y-5">
+      <State error={station.error} loading={station.loading} />
+      {!id && station.data && <>
+        <div className="grid gap-3 sm:grid-cols-3">
+          {([["DRAFT", "Saved drafts", station.data.drafts], ["SENT", "SMTP accepted", station.data.sent], ["NEEDS_REVIEW", "Needs review", station.data.needsReview]] as const).map(([value, title, count]) =>
+            <button key={value} onClick={() => { setStatus(value); setPage(1); }} className={`rounded-2xl border bg-white p-5 text-left transition hover:border-teal-500 ${status === value ? "border-teal-600 ring-1 ring-teal-600" : "border-slate-200"}`}><span className="text-xs font-semibold text-slate-500">{title}</span><span className="mt-2 block text-3xl font-black">{count}</span></button>)}
+        </div>
+        <GeneralEmailComposer key={`${search.get("company") || ""}:${search.get("compose") || ""}`} station={station.data} />
+        <div className="flex flex-wrap items-end justify-between gap-3 pt-3">
+          <div><h2 className="text-xl font-bold">Drafts & sending history</h2><p className="mt-1 text-xs text-slate-500">SMTP accepted means your mail server accepted the email; inbox delivery is not confirmed.</p></div>
+          <div className="flex flex-wrap gap-3">
+            <Field title="Status"><select className={inputClass} value={status} onChange={e => { setStatus(e.target.value); setPage(1); }}><option value="">All statuses</option><option value="DRAFT">Drafts</option><option value="SENT">SMTP accepted</option><option value="NEEDS_REVIEW">Needs review</option><option value="SENDING">Sending</option><option value="CANCELLED">Cancelled</option></select></Field>
+            {actor.canViewLeads && <Field title="Email type"><select className={inputClass} value={kind} onChange={e => { setKind(e.target.value); setPage(1); }}><option value="">All email types</option><option value="general">General introductions</option><option value="lead">Lead invitations</option></select></Field>}
+          </div>
+        </div>
+      </>}
       <State error={error} loading={loading} />
       {id && (
         <Link
@@ -1665,14 +1578,15 @@ function Messages({ actor }: { actor: Actor }) {
               key={`${message.id}:${message.updatedAt}`}
               actor={actor}
               message={message}
-              onSaved={load}
+              sendingReady={station.data?.sendingReady ?? false}
+              onSaved={async () => { await Promise.all([load(), station.load()]); }}
               expanded={Boolean(id) || data.length === 1}
             />
           ))
         : !loading && (
             <Empty
-              title="Your invitation history starts here"
-              detail="Open a recruitment opportunity, select relevant companies and prepare personalised drafts."
+              title="No emails in this view yet"
+              detail="Choose a company above and prepare your first introduction, or change the history filters. A customer lead is not required."
             />
           )}
       {!id && (
@@ -1691,16 +1605,76 @@ function Messages({ actor }: { actor: Actor }) {
     </div>
   );
 }
+type EmailStationData = {
+  template: string;
+  senderIdentity: string;
+  sendingReady: boolean;
+  drafts: number;
+  sent: number;
+  needsReview: number;
+};
+
+function GeneralEmailComposer({ station }: { station: EmailStationData }) {
+  const router = useRouter();
+  const search = useSearchParams();
+  const [companySearch, setCompanySearch] = useState(search.get("q") || "");
+  const [debouncedSearch, setDebouncedSearch] = useState(companySearch);
+  const [companyId, setCompanyId] = useState(search.get("company") || "");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(companySearch), 250);
+    return () => clearTimeout(timer);
+  }, [companySearch]);
+  const companies = useData<{ items: Prospect[]; count: number }>(`view=prospects&sort=name&q=${encodeURIComponent(debouncedSearch)}`);
+  const company = companies.data?.items.find(item => item.id === companyId);
+  async function prepare(event: FormEvent) {
+    event.preventDefault();
+    if (!companyId) return;
+    setBusy(true);
+    setError("");
+    try {
+      const message = await mutate<Message>("prepare_general", { prospectId: companyId });
+      router.push(`/admin/recruitment/messages?id=${message.id}`);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Could not prepare email.");
+    } finally { setBusy(false); }
+  }
+  return <Panel title="Write a company introduction" action={<span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-bold text-teal-800">No lead required</span>}>
+    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      <form onSubmit={prepare} className="space-y-4">
+        <p className="text-sm leading-6 text-slate-600">Invite a mover to join Match &apos;n Move at any time. Choose a company, then review and personalise the prefilled email before sending.</p>
+        <Field title="Find a company"><input className={inputClass} type="search" placeholder="Search company name or email" value={companySearch} onChange={e => { setCompanySearch(e.target.value); setCompanyId(""); }} /></Field>
+        <Field title="Choose recipient company"><select required className={inputClass} value={companyId} onChange={e => setCompanyId(e.target.value)}><option value="">Choose a company…</option>{companies.data?.items.map(item => <option key={item.id} value={item.id}>{item.companyName} · {item.email}</option>)}</select></Field>
+        <State error={companies.error} loading={companies.loading} />
+        {companies.data && companies.data.count > 50 && <p className="text-xs text-slate-500">Showing the first 50 matches. Search by name or email to find another company.</p>}
+        {company && <div className="rounded-xl bg-slate-50 p-3 text-sm"><p className="font-semibold">To: {company.email}</p><p className="mt-1 text-xs text-slate-500">{company.contactName || company.companyName}</p>{(company.consentBasis === "UNKNOWN" || !company.consentEvidence?.trim()) && <p className="mt-2 text-xs text-amber-800">Review this company&apos;s contact permission before preparing an invitation. <Link className="font-bold underline" href={`/admin/recruitment/prospects?id=${company.id}`}>Open company</Link></p>}</div>}
+        <State error={error} loading={false} />
+        <div className="flex flex-wrap items-center gap-3"><button className={buttonClass} disabled={busy || !companyId}>{busy ? "Preparing…" : "Prepare email preview"}<ArrowRight size={16} /></button><Link className={secondaryClass} href="/admin/recruitment/prospects?new=1"><Plus size={16} />Add company</Link></div>
+        {!station.sendingReady && <p className="rounded-xl bg-amber-50 p-3 text-xs leading-5 text-amber-900">You can prepare drafts. Sending becomes available once the owner enables outreach and verifies the sender in Email templates &amp; settings.</p>}
+      </form>
+      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-teal-700">Prefilled introduction template</p>
+        <h3 className="mt-3 font-bold">An invitation to join Match &apos;n Move</h3>
+        <p className="mt-4 text-sm leading-7 text-slate-600">Hi {company?.companyName || "[company name]"},</p>
+        <p className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-600">{station.template}</p>
+        <p className="mt-4 text-xs leading-6 text-slate-500">Your preview includes the company&apos;s registration link, sender details and unsubscribe option. Existing drafts reopen without creating duplicates.</p>
+      </div>
+    </div>
+  </Panel>;
+}
 function EmailReview({
   actor,
   message,
   onSaved,
   expanded,
+  sendingReady,
 }: {
   actor: Actor;
   message: Message;
   onSaved: () => Promise<void>;
   expanded: boolean;
+  sendingReady: boolean;
 }) {
   const [open, setOpen] = useState(expanded);
   const [intro, setIntro] = useState(message.introduction);
@@ -1762,6 +1736,7 @@ function EmailReview({
       <p className="mt-1 text-xs text-slate-500">
         To: {message.prospect?.email} · Sent: {date(message.sentAt)}
       </p>
+      <p className="mt-2 text-xs font-semibold text-teal-700">{message.quoteRequestId ? "Lead invitation" : "General introduction · no customer lead"}</p>
       {open && (
         <div className="mt-5 space-y-4">
           {message.status === "DRAFT" && (
@@ -1789,7 +1764,7 @@ function EmailReview({
                     await mutate("prepare_followup", { id: message.id });
                     await onSaved();
                     setNotice(
-                      "Follow-up draft prepared. Review it in Email invitations.",
+                      "Follow-up draft prepared. Review it in the Email station.",
                     );
                   } catch (error) {
                     setError((error as Error).message);
@@ -1813,7 +1788,7 @@ function EmailReview({
                 <button
                   className={buttonClass}
                   disabled={
-                    busy || !actor.canSend || intro !== message.introduction
+                    busy || !actor.canSend || !sendingReady || intro !== message.introduction
                   }
                   onClick={() => {
                     if (
@@ -1835,6 +1810,7 @@ function EmailReview({
               review drafts.
             </p>
           )}
+          {!sendingReady && message.status === "DRAFT" && <p className="rounded-xl bg-amber-50 p-3 text-xs leading-5 text-amber-900">Sending is not ready yet. The owner needs to verify the sender connection, add business contact details and enable outreach in {actor.role === "OWNER" ? <Link className="font-bold underline" href="/admin/recruitment/settings">Email templates &amp; settings</Link> : "Email templates & settings"}.</p>}
           {intro !== message.introduction && (
             <p className="text-xs text-amber-700">
               Save the draft to refresh its preview before sending.
@@ -2378,15 +2354,20 @@ type Config = {
   followUpDays: number;
   autoTasks: boolean;
   introduction: string;
+  generalIntroduction: string;
 };
 function OutreachSettings() {
   const { data, error, loading, load } = useData<{
     settings: Config;
     emailReady: boolean;
+    senderAddress: string;
   }>("view=settings");
   return (
     <>
       <State error={error} loading={loading} />
+      {data && (
+        <SenderVerification verified={data.emailReady} sender={data.senderAddress} onVerified={load} />
+      )}
       {data && (
         <SettingsForm
           key={JSON.stringify(data.settings)}
@@ -2400,6 +2381,20 @@ function OutreachSettings() {
       </div>
     </>
   );
+}
+function SenderVerification({ verified, sender, onVerified }: { verified: boolean; sender: string; onVerified: () => Promise<void> }) {
+  const [confirmed, setConfirmed] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState("");
+  const [error, setError] = useState("");
+  return <div className="mb-5"><Panel title="Sender connection">
+    <p className="text-sm text-slate-600">Sender: <strong>{sender || "Not configured"}</strong></p>
+    <p className="mt-2 text-sm leading-6 text-slate-500">{verified ? "Your email connection is verified. Enable sending below when you are ready." : "Confirm your sender, then check the email connection here. This check sends no email."}</p>
+    {!verified && <label className="mt-4 flex items-start gap-3 text-sm"><input type="checkbox" className="mt-1" checked={confirmed} onChange={e => setConfirmed(e.target.checked)} />I confirm this business email address is authorised to send our recruitment invitations.</label>}
+    <button className={`${secondaryClass} mt-4`} disabled={busy || !sender || (!verified && !confirmed)} onClick={async () => { setBusy(true); setError(""); try { const result = await mutate<{ message: string }>("verify_sender", { confirmed: true }); setNotice(result.message); await onVerified(); } catch (error) { setError((error as Error).message); } finally { setBusy(false); } }}>{busy ? "Checking…" : verified ? "Recheck connection" : "Verify sender connection"}</button>
+    <State error={error} loading={false} />{notice && <p role="status" className="mt-3 text-sm text-teal-700">{notice}</p>}
+    <p className="mt-3 text-xs leading-5 text-slate-500">The check verifies connection and authentication. It does not confirm recipient inbox delivery or domain authentication.</p>
+  </Panel></div>;
 }
 function SuppressionForm() {
   const [email, setEmail] = useState("");
@@ -2514,7 +2509,10 @@ function SettingsForm({
             placeholder="Match 'n Move · business contact details"
           />
         </Field>
-        <Field title="Approved default introduction">
+        <Field title="General introduction template (no lead required)">
+          <textarea className={inputClass} rows={6} minLength={20} maxLength={1500} required value={form.generalIntroduction} onChange={e => setForm({ ...form, generalIntroduction: e.target.value })} />
+        </Field>
+        <Field title="Lead invitation template">
           <textarea
             className={inputClass}
             rows={5}

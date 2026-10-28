@@ -197,18 +197,25 @@ export function escapeHtml(value: string) {
 }
 export const defaultIntroduction =
   "We would like to invite your company to join Match 'n Move, connecting New Zealand customers with moving companies. This moving request may suit your services.";
+export const defaultGeneralIntroduction =
+  "We would love to introduce your company to Match 'n Move, a New Zealand platform connecting people planning a move with moving companies. Joining is free: create your company profile, choose the areas you cover and review relevant quote requests as they become available. You choose which leads to open, with the price shown beforehand. If this sounds useful for your business, you can find out more and register below.";
 export function renderRecruitmentEmail(input: {
   companyName: string;
   introduction: string;
-  lead: SafeLead;
+  lead: SafeLead | null;
   registrationUrl: string;
   unsubscribeUrl: string;
   sender: string;
 }) {
-  const subject = `Join Match 'n Move: ${input.lead.origin} to ${input.lead.destination}`;
-  const details = `${input.lead.origin} to ${input.lead.destination}\nMoving date: ${input.lead.moveDate}${input.lead.dateFlexible ? " (flexible)" : ""}\nProperty: ${input.lead.property}; bedrooms: ${input.lead.bedrooms}`;
-  const disclaimer =
-    "This is an invitation to join Match 'n Move. Availability may change; this request is not reserved or guaranteed. Customer contact details are available only through authorised platform access.";
+  const subject = input.lead
+    ? `Join Match 'n Move: ${input.lead.origin} to ${input.lead.destination}`
+    : "An invitation to join Match 'n Move";
+  const details = input.lead
+    ? `${input.lead.origin} to ${input.lead.destination}\nMoving date: ${input.lead.moveDate}${input.lead.dateFlexible ? " (flexible)" : ""}\nProperty: ${input.lead.property}; bedrooms: ${input.lead.bedrooms}`
+    : "Free to join\nChoose your service areas\nReview lead pricing before opening customer details";
+  const disclaimer = input.lead
+    ? "This is an invitation to join Match 'n Move. Availability may change; this request is not reserved or guaranteed. Customer contact details are available only through authorised platform access."
+    : "This is a general invitation to join Match 'n Move, not an offer of a specific moving job. Enquiry volumes and bookings are not guaranteed.";
   const text = [
     `Hi ${input.companyName},`,
     input.introduction,

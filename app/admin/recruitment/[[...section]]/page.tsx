@@ -2,8 +2,14 @@ import { redirect, notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { isAdminUser, isAnyAdminUser } from "@/lib/admin-auth";
 import { RecruitmentWorkspace } from "@/components/recruitment-workspace";
+import { currentAdminSection } from "@/lib/admin-navigation";
 
 export const dynamic = "force-dynamic";
+export async function generateMetadata({ params }: { params: Promise<{ section?: string[] }> }) {
+  const section = (await params).section?.[0];
+  const page = currentAdminSection(`/admin/recruitment${section ? `/${section}` : ""}`, { role: "OWNER", canViewLeads: true });
+  return { title: page?.label || "Administration" };
+}
 export default async function RecruitmentPage({
   params,
 }: {
