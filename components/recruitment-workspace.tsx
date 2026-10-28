@@ -2494,7 +2494,7 @@ function SettingsForm({
         >
           {emailReady
             ? "SMTP outreach configuration is marked verified."
-            : "Sending is blocked until SMTP and the recruitment sender have been verified on the server."}
+            : "Verify the sender connection above before enabling sending."}
         </p>
         <Field title="Sender identification & contact details">
           <textarea
@@ -2559,7 +2559,7 @@ function SettingsForm({
         <label className="flex items-center gap-3 text-sm">
           <input
             type="checkbox"
-            disabled={!emailReady}
+            disabled={!emailReady && !form.sendingEnabled}
             checked={form.sendingEnabled}
             onChange={(e) =>
               setForm({ ...form, sendingEnabled: e.target.checked })
