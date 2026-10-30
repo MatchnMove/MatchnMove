@@ -11,7 +11,6 @@ import {
   defaultGeneralIntroduction,
   manualStatuses,
   normalizeCompany,
-  normalizeEmail,
   recruitmentLeadSelect,
   renderRecruitmentEmail,
   safeLeadSummary,
@@ -23,6 +22,7 @@ import {
 import { NZ_SERVICE_AREAS } from "@/lib/nz-regions";
 import { createHash } from "node:crypto";
 import { verifySmtpConnection } from "@/lib/email";
+import { contactFollowUp, prospectContactSchema, validBusinessEmail } from "@/lib/prospect-contacts";
 
 export class RecruitmentError extends Error {
   constructor(
@@ -182,9 +182,7 @@ export async function verifyRecruitmentSender(actor: RecruitmentActor) {
 const optionalText = z.string().trim().max(1000).nullable().optional();
 export const prospectSchema = z.object({
   companyName: z.string().trim().min(2).max(200),
-  email: z.string().trim().email().max(254).transform(normalizeEmail),
   contactName: z.string().trim().max(150).nullable().optional(),
-  phone: z.string().trim().max(50).nullable().optional(),
   website: z
     .union([
       z.literal(""),
@@ -207,7 +205,7 @@ export const prospectSchema = z.object({
   consentEvidence: optionalText,
   notes: z.string().trim().max(10000).nullable().optional(),
   duplicateReviewNote: optionalText,
-});
+}).and(prospectContactSchema);
 
 export async function prepareDraft(
   tx: Tx,
@@ -217,6 +215,7 @@ export async function prepareDraft(
   followUpToId?: string,
 ) {
   const prospect = await ownedProspect(tx, actor, prospectId);
+  if (!validBusinessEmail(prospect.email)) fail("Business email is missing. Complete manual contact follow-up before preparing an email.");
   const user = await checkActor(tx, actor);
   if (quoteRequestId && actor.role !== "OWNER" && !user.canViewRecruitmentLeads)
     fail("Lead summary access has not been authorised.", 403);
@@ -353,12 +352,22 @@ export async function saveProspect(
   id?: string,
   version?: number,
 ) {
-  const data = prospectSchema.parse(raw);
-  const normalizedName = normalizeCompany(data.companyName);
+  const parsed = prospectSchema.parse(raw);
   const prior = id ? await ownedProspect(tx, actor, id) : null;
+  const data = { ...parsed,
+    email: parsed.email === undefined ? prior?.email ?? null : parsed.email,
+    phone: parsed.phone === undefined ? prior?.phone ?? null : parsed.phone,
+    emailAvailability: parsed.emailAvailability ?? prior?.emailAvailability ?? null,
+    phoneAvailability: parsed.phoneAvailability ?? prior?.phoneAvailability ?? null,
+  };
+  if (!prior && !data.emailAvailability) fail("Select Business email availability before saving.");
+  if (!prior && !data.phoneAvailability) fail("Select Phone number availability before saving.");
+  // Revalidate after preserving a reviewed status on legacy/partial callers.
+  prospectContactSchema.parse(data);
+  const normalizedName = normalizeCompany(data.companyName);
   if (prior && prior.version !== version)
     fail("This company changed. Reload before saving.", 409);
-  if (prior && data.email !== prior.email && prior.status !== "NOT_CONTACTED")
+  if (prior?.email && data.email !== prior.email && prior.status !== "NOT_CONTACTED")
     fail(
       "After contact, record an email correction through an owner-reviewed new prospect.",
     );
@@ -375,14 +384,14 @@ export async function saveProspect(
     where: {
       id: { not: id || "" },
       OR: [
-        { email: data.email },
+        ...(data.email ? [{ email: data.email }] : []),
         { normalizedName },
         ...(data.website ? [{ website: data.website }] : []),
         ...(data.phone ? [{ phone: data.phone }] : []),
       ],
     },
   });
-  if (duplicate?.email === data.email)
+  if (data.email && duplicate?.email === data.email)
     fail(
       "This email already belongs to a prospect. Ask the owner to review its assignment.",
       409,
@@ -429,7 +438,49 @@ export async function saveProspect(
       prospectId: prospect.id,
       basis: data.consentBasis,
     });
+  if (prior && prior.email !== prospect.email) {
+    // A saved address never starts sending. Existing unsent previews require fresh review.
+    await tx.outreachMessage.updateMany({
+      where: { prospectId: prospect.id, status: { in: ["DRAFT", "QUEUED"] } },
+      data: { status: "CANCELLED" },
+    });
+  }
+  await syncContactFollowUp(tx, prospect, actor.id);
+  if (!prior || prior.emailAvailability !== prospect.emailAvailability || prior.phoneAvailability !== prospect.phoneAvailability) await activity(tx, prospect.id, actor.id, "contact_availability_reviewed", {
+    emailAvailability: prospect.emailAvailability,
+    phoneAvailability: prospect.phoneAvailability,
+  });
   return prospect;
+}
+
+export async function syncContactFollowUp(tx: Tx, prospect: {
+  id: string; companyName: string; email: string | null; phone: string | null;
+  emailAvailability: string | null; phoneAvailability: string | null;
+  assignedAdminId: string; status: string;
+}, actorId: string) {
+  const followUp = contactFollowUp(prospect);
+  const dedupeKey = `contact-info:${prospect.id}`;
+  if (!followUp.required) {
+    const result = await tx.recruitmentTask.updateMany({
+      where: { dedupeKey, completedAt: null, cancelledAt: null },
+      data: { completedAt: new Date() },
+    });
+    if (result.count) await activity(tx, prospect.id, actorId, "contact_followup_completed");
+  } else if (!stoppedStatuses.includes(prospect.status) && (
+    (followUp.missingEmail && prospect.emailAvailability === "NOT_PUBLIC") ||
+    (followUp.missingPhone && prospect.phoneAvailability === "NOT_PUBLIC")
+  )) {
+    const data = {
+      title: `Contact information follow-up: ${prospect.companyName}`,
+      description: followUp.description,
+      assignedAdminId: prospect.assignedAdminId,
+      completedAt: null, cancelledAt: null,
+    };
+    await tx.recruitmentTask.upsert({
+      where: { dedupeKey }, update: data,
+      create: { ...data, dedupeKey, prospectId: prospect.id, dueAt: new Date(), priority: "HIGH" },
+    });
+  }
 }
 
 export async function setProspectStatus(
@@ -443,6 +494,12 @@ export async function setProspectStatus(
   if (prospect.version !== version)
     fail("This record changed. Reload before updating.", 409);
   if (status === "DO_NOT_CONTACT") {
+    if (!prospect.email) {
+      await tx.moverProspect.update({ where: { id }, data: { status, nextFollowUpAt: null, version: { increment: 1 } } });
+      await cancelFollowUps(tx, id);
+      await activity(tx, id, actor.id, "contact_suppressed", { reason: "Admin recorded do not contact; no email recorded" });
+      return;
+    }
     await suppressContact(
       tx,
       prospect.email,

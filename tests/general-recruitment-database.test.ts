@@ -64,7 +64,7 @@ test("general company emails work without customer leads or lead permissions", {
   const ownerUser = await prisma.user.create({ data: { name: "Setup owner", email: `setup-${tag}@validation.invalid`, passwordHash: "unused-test-value", role: "ADMIN", adminRole: "OWNER" } });
   const owner = { ...actor, id: ownerUser.id, role: "OWNER" as const };
   const other = await prisma.user.create({ data: { name: "Other colleague", email: `other-${tag}@validation.invalid`, passwordHash: "unused-test-value", role: "ADMIN", adminRole: "RECRUITMENT_ADMIN" } });
-  const input = { companyName: `General Movers ${tag}`, email: `mover-${tag}@validation.invalid`, serviceAreas: ["Auckland"], consentBasis: "EXPRESS", consentEvidence: "Explicit local testing permission" };
+  const input = { companyName: `General Movers ${tag}`, email: `mover-${tag}@validation.invalid`, emailAvailability: "PUBLIC", phoneAvailability: "NOT_PUBLIC", serviceAreas: ["Auckland"], consentBasis: "EXPRESS", consentEvidence: "Explicit local testing permission" };
   await t.test("only an owner can verify the sender, without sending an email, and changed credentials require a new check", async () => {
     process.env.RECRUITMENT_EMAIL_VERIFIED = "false";
     assert.equal(await emailReady(), false);
@@ -117,7 +117,8 @@ test("general company emails work without customer leads or lead permissions", {
     assert.equal(accepted.length, 1);
   });
   await t.test("suppression blocks general outreach as well as lead invitations", async () => {
-    await locked(tx => suppressContact(tx, prospect.email, "Recipient request", "local-test"));
+    assert.ok(prospect.email);
+    await locked(tx => suppressContact(tx, prospect.email!, "Recipient request", "local-test"));
     await assert.rejects(locked(tx => prepareDraft(tx, actor, prospect.id)), /suppressed/);
   });
   await t.test("registration attribution also works for a general invitation", async () => {
@@ -126,6 +127,7 @@ test("general company emails work without customer leads or lead permissions", {
     await approveAndSend(actor, { id: invite.id, updatedAt: invite.updatedAt.toISOString(), confirmed: true });
     const token = invite.text.match(/attribution\?token=(\S+)/)?.[1];
     assert.ok(token);
+    assert.ok(second.email);
     const mover = await prisma.user.create({ data: { email: second.email, passwordHash: "unused-test-value", moverCompany: { create: { companyName: second.companyName, serviceAreas: ["Auckland"] } } }, include: { moverCompany: true } });
     await locked(tx => claimRegistrationAttribution(tx, token, mover.id, mover.email, mover.moverCompany!.id));
     assert.equal((await prisma.moverProspect.findUniqueOrThrow({ where: { id: second.id } })).status, "REGISTRATION_STARTED");

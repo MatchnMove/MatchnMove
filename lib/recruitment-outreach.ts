@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { validBusinessEmail } from "@/lib/prospect-contacts";
 import { sendViaSmtp } from "@/lib/email";
 import { canMoverAccessLeads } from "@/lib/mover-lead-access";
 import {
@@ -35,6 +36,7 @@ export async function editDraft(tx: Tx, actor: RecruitmentActor, raw: unknown) {
   });
   if (!message) fail("Draft not found.", 404);
   const prospect = await ownedProspect(tx, actor, message.prospectId);
+  if (!validBusinessEmail(prospect.email)) fail("Business email is missing. Complete manual contact follow-up before sending.");
   const user = await checkActor(tx, actor);
   if (message.quoteRequestId && actor.role !== "OWNER" && !user.canViewRecruitmentLeads)
     fail("Lead summary access has not been authorised.", 403);
@@ -114,6 +116,7 @@ async function verifySend(tx: Tx, actor: RecruitmentActor, messageId: string) {
       409,
     );
   const prospect = await ownedProspect(tx, actor, message.prospectId);
+  if (!validBusinessEmail(prospect.email)) fail("Business email is missing. Complete manual contact follow-up before sending.");
   const reason = contactBlockReason(
     prospect,
     Boolean(
@@ -130,7 +133,7 @@ async function verifySend(tx: Tx, actor: RecruitmentActor, messageId: string) {
     fail("Customer permission for this summary is no longer available.");
   if (message.attributionExpiresAt < new Date())
     fail("This draft has expired. Ask the owner to review.");
-  return { config, message, prospect };
+  return { config, message, prospect: { ...prospect, email: prospect.email } };
 }
 
 export async function approveAndSend(actor: RecruitmentActor, raw: unknown) {

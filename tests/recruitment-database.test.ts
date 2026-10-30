@@ -142,6 +142,8 @@ test(
     const prospectInput = {
       companyName: `Validation Movers ${tag}`,
       email: `mover-${tag}@validation.invalid`,
+      emailAvailability: "PUBLIC",
+      phoneAvailability: "NOT_PUBLIC",
       serviceAreas: ["Auckland", "Waikato"],
       serviceTypes: ["HOUSEHOLD"],
       longDistance: true,
@@ -151,6 +153,7 @@ test(
     const prospect = await locked((tx) =>
       saveProspect(tx, carli, prospectInput),
     );
+    assert.ok(prospect.email);
     await t.test(
       "assigned admins can edit their records; both directions of cross-admin access are denied",
       async () => {
@@ -489,7 +492,7 @@ test(
           },
         });
         await locked((tx) =>
-          suppressContact(tx, suppressed.email, "Recipient request", "test"),
+          suppressContact(tx, suppressed.email!, "Recipient request", "test"),
         );
         assert.ok(
           (
@@ -536,7 +539,7 @@ test(
         const user = await prisma.user.create({
           data: {
             name: "New mover",
-            email: prospect.email,
+            email: prospect.email!,
             passwordHash,
             moverCompany: {
               create: {
@@ -573,7 +576,7 @@ test(
             tx,
             token,
             user.id,
-            prospect.email,
+            prospect.email!,
             user.moverCompany!.id,
           ),
         );
@@ -596,7 +599,7 @@ test(
                 tx,
                 token,
                 user.id,
-                prospect.email,
+                prospect.email!,
                 user.moverCompany!.id,
               ),
             ),

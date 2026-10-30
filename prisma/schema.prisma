@@ -682,7 +682,9 @@ model MoverProspect {
   id                  String                @id @default(cuid())
   companyName         String
   normalizedName      String
-  email               String                @unique
+  email               String?               @unique
+  emailAvailability   String?
+  phoneAvailability   String?
   contactName         String?
   phone               String?
   website             String?

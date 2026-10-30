@@ -73,6 +73,8 @@ test(
           prospect: {
             companyName: `${name} ${tag}`,
             email: `${name}-${tag}@validation.invalid`,
+            emailAvailability: "PUBLIC",
+            phoneAvailability: "NOT_PUBLIC",
             serviceAreas: ["Auckland"],
             serviceTypes: ["HOUSEHOLD"],
             consentBasis: "EXPRESS",

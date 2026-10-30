@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { tokenHash } from "@/lib/recruitment-policy";
-import { locked, suppressContact } from "@/lib/recruitment";
+import { locked, suppressContact, cancelFollowUps, activity } from "@/lib/recruitment";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
@@ -26,13 +26,18 @@ export default async function UnsubscribePage({
         where: { unsubscribeHash: tokenHash(token) },
         include: { prospect: true },
       });
-      if (message)
+      if (message?.prospect.email)
         await suppressContact(
           tx,
           message.prospect.email,
           "Unsubscribed by recipient",
           "unsubscribe",
         );
+      else if (message) {
+        await tx.moverProspect.update({ where: { id: message.prospectId }, data: { status: "DO_NOT_CONTACT", nextFollowUpAt: null, version: { increment: 1 } } });
+        await cancelFollowUps(tx, message.prospectId);
+        await activity(tx, message.prospectId, null, "contact_suppressed", { source: "unsubscribe", reason: "No email currently recorded" });
+      }
     });
     const { redirect } = await import("next/navigation");
     redirect("/recruitment/unsubscribe?done=1");

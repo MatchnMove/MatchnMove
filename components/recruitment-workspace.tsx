@@ -16,6 +16,7 @@ import {
 } from "@/components/mover-discovery";
 import { recruitmentDateRange } from "@/lib/recruitment-dates";
 import { NZ_SERVICE_AREAS } from "@/lib/nz-regions";
+import { contactFollowUp, prospectContactSchema, validBusinessEmail } from "@/lib/prospect-contacts";
 // Runtime policy helpers contain node:crypto; keep this client module independent of server imports.
 const pipeline = [
   "NOT_CONTACTED",
@@ -64,7 +65,9 @@ type Activity = {
 type Prospect = {
   id: string;
   companyName: string;
-  email: string;
+  email: string | null;
+  emailAvailability: string | null;
+  phoneAvailability: string | null;
   contactName: string | null;
   phone: string | null;
   website: string | null;
@@ -101,7 +104,7 @@ type Message = {
   updatedAt: string;
   sentAt: string | null;
   lastError: string | null;
-  prospect?: { companyName: string; email: string };
+  prospect?: { companyName: string; email: string | null };
 };
 type Lead = {
   id: string;
@@ -175,6 +178,8 @@ const date = (value: string | null) =>
 const emptyProspect = {
   companyName: "",
   email: "",
+  emailAvailability: "",
+  phoneAvailability: "",
   contactName: "",
   phone: "",
   website: "",
@@ -683,6 +688,7 @@ function Prospects({ actor }: { actor: Actor }) {
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("");
   const [sort, setSort] = useState("recent");
+  const [contact, setContact] = useState(search.get("contact") || "");
   const [page, setPage] = useState(1);
   const [creating, setCreating] = useState(search.get("new") === "1");
   const [discoveryDraft, setDiscoveryDraft] =
@@ -696,6 +702,7 @@ function Prospects({ actor }: { actor: Actor }) {
       q,
       ...(status ? { status } : {}),
       sort,
+      ...(contact ? { contact } : {}),
       page: String(page),
     }).toString(),
   );
@@ -733,6 +740,13 @@ function Prospects({ actor }: { actor: Actor }) {
               {label(s)}
             </option>
           ))}
+        </select>
+        <select aria-label="Filter contact follow-up" className={`${inputClass} sm:w-64`} value={contact} onChange={e => { setContact(e.target.value); setPage(1); }}>
+          <option value="">All contact information</option>
+          <option value="followup">Contact follow-up required</option>
+          <option value="email">Missing business email</option>
+          <option value="phone">Missing phone number</option>
+          <option value="review">Availability not yet reviewed</option>
         </select>
         <select
           aria-label="Sort companies"
@@ -850,7 +864,8 @@ function Prospects({ actor }: { actor: Actor }) {
                         >
                           {p.companyName}
                         </Link>
-                        <p className="mt-1 text-xs text-slate-500">{p.email}</p>
+                        <p className="mt-1 text-xs text-slate-500">{p.email || "No business email recorded"}</p>
+                        <ContactInformationStatus prospect={p} compact />
                       </td>
                       <td className="px-3 py-4">
                         <Badge value={p.status} />
@@ -902,7 +917,7 @@ function Prospects({ actor }: { actor: Actor }) {
   );
 }
 
-function ProspectEditor({
+export function ProspectEditor({
   prospect,
   initialValues,
   onSave,
@@ -919,6 +934,9 @@ function ProspectEditor({
             Object.entries(prospect).filter(([key]) => key in emptyProspect),
           ),
           contactName: prospect.contactName || "",
+          email: prospect.email || "",
+          emailAvailability: prospect.emailAvailability || "",
+          phoneAvailability: prospect.phoneAvailability || "",
           phone: prospect.phone || "",
           website: prospect.website || "",
           operatingRegion: prospect.operatingRegion || "",
@@ -936,6 +954,15 @@ function ProspectEditor({
   ) => setForm((prior) => ({ ...prior, [key]: value }));
   async function submit(e: FormEvent) {
     e.preventDefault();
+    if (!prospect && (!form.emailAvailability || !form.phoneAvailability)) {
+      setError("Select an availability status for both Business email and Phone number before saving.");
+      return;
+    }
+    const contactCheck = prospectContactSchema.safeParse({ ...form,
+      emailAvailability: form.emailAvailability || null,
+      phoneAvailability: form.phoneAvailability || null,
+    });
+    if (!contactCheck.success) { setError(contactCheck.error.issues[0].message); return; }
     setBusy(true);
     setError("");
     try {
@@ -953,20 +980,30 @@ function ProspectEditor({
           ["companyName", "Company name", "text"],
           ["email", "Business email", "email"],
           ["contactName", "Contact person", "text"],
-          ["phone", "Phone", "tel"],
+          ["phone", "Phone number", "tel"],
           ["website", "Website", "url"],
         ].map(([key, title, type]) => (
-          <Field key={key} title={title}>
+          <div key={key}>
+          <Field title={title}>
             <input
+              name={key}
               className={inputClass}
               type={type}
-              required={["companyName", "email"].includes(key)}
+              required={key === "companyName" || (key === "email" && form.emailAvailability === "PUBLIC") || (key === "phone" && form.phoneAvailability === "PUBLIC")}
               value={String(form[key as keyof ProspectForm])}
               onChange={(e) =>
                 update(key as keyof ProspectForm, e.target.value)
               }
             />
           </Field>
+          {(key === "email" || key === "phone") && <fieldset className="mt-2 space-y-1.5">
+            <legend className="text-xs font-semibold text-slate-600">{title} availability{!prospect ? " (required)" : ""}</legend>
+            {[["PUBLIC", "Publicly Accessible"], ["NOT_PUBLIC", "Not Publicly Accessible"]].map(([value, text]) => <label key={value} className="flex items-center gap-2 text-xs text-slate-600">
+              <input type="radio" aria-required={!prospect} name={`${key}Availability`} value={value} checked={form[`${key}Availability`] === value} onChange={() => update(`${key}Availability`, value)} />{text}
+            </label>)}
+            {!form[`${key}Availability`] && prospect && <p className="text-xs text-slate-500">Not yet reviewed. Existing details are preserved; select after checking availability.</p>}
+          </fieldset>}
+          </div>
         ))}
         <Field title="Operating region">
           <select
@@ -1094,6 +1131,18 @@ function ProspectEditor({
   );
 }
 
+function ContactInformationStatus({ prospect, compact = false }: { prospect: Pick<Prospect, "email" | "phone" | "emailAvailability" | "phoneAvailability">; compact?: boolean }) {
+  const followUp = contactFollowUp(prospect);
+  const availabilityLabel = (value: string | null) => value === "PUBLIC" ? "Publicly Accessible" : value === "NOT_PUBLIC" ? "Not Publicly Accessible" : "Not yet reviewed";
+  return <div className={`${compact ? "mt-2 text-xs" : "mt-4 rounded-xl border p-4 text-sm"} ${followUp.required ? "border-amber-200 bg-amber-50 text-amber-950" : "border-slate-200 text-slate-600"}`}>
+    <p className="font-semibold">{followUp.required ? "Contact Information Incomplete — Follow-Up Required" : "Contact information recorded"}</p>
+    {followUp.required && <p className="mt-1 leading-5">{followUp.description}</p>}
+    {!compact && <p className="mt-2 text-xs">Email availability: {availabilityLabel(prospect.emailAvailability)} · Phone availability: {availabilityLabel(prospect.phoneAvailability)}</p>}
+    {followUp.reviewRequired && <p className="mt-1 text-xs">Availability not yet fully reviewed. Review the contact source when updating this company.</p>}
+    {!compact && <p className="mt-2 text-xs">Save the missing details in Edit company. Contact follow-up completes automatically when both valid details are recorded. Adding an email does not send a message or grant contact permission.</p>}
+  </div>;
+}
+
 function ProspectDetails({ actor, id }: { actor: Actor; id: string }) {
   const {
     data: prospect,
@@ -1136,7 +1185,7 @@ function ProspectDetails({ actor, id }: { actor: Actor; id: string }) {
           <Panel
             title={prospect.companyName}
             action={
-              <div className="flex flex-wrap gap-2"><Link className={buttonClass} href={`/admin/recruitment/messages?compose=1&company=${encodeURIComponent(prospect.id)}&q=${encodeURIComponent(prospect.email)}`}>Write email</Link><button className={secondaryClass} onClick={() => setEdit(!edit)}>
+              <div className="flex flex-wrap gap-2">{validBusinessEmail(prospect.email) ? <Link className={buttonClass} href={`/admin/recruitment/messages?compose=1&company=${encodeURIComponent(prospect.id)}&q=${encodeURIComponent(prospect.email)}`}>Write email</Link> : <span className="rounded-xl bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900">Email outreach blocked — address missing</span>}<button className={secondaryClass} onClick={() => setEdit(!edit)}>
                 {edit ? "Close editor" : "Edit company"}
               </button></div>
             }
@@ -1144,10 +1193,11 @@ function ProspectDetails({ actor, id }: { actor: Actor; id: string }) {
             <div className="flex flex-wrap items-center gap-3">
               <Badge value={prospect.status} />
               <span className="text-sm text-slate-500">
-                {prospect.email} ·{" "}
+                {prospect.email || "No business email recorded"} ·{" "}
                 {prospect.contactName || "Contact not recorded"}
               </span>
             </div>
+            <ContactInformationStatus prospect={prospect} />
             <div className="mt-5 grid gap-4 text-sm sm:grid-cols-3">
               <div>
                 <p className="text-xs text-slate-400">Coverage</p>
@@ -1490,6 +1540,7 @@ function LeadOpportunities({ actor }: { actor: Actor }) {
                       className="mt-1"
                       type="checkbox"
                       checked={selected.includes(p.id)}
+                      disabled={!validBusinessEmail(p.email)}
                       onChange={(e) =>
                         setSelected(
                           e.target.checked
@@ -1511,7 +1562,7 @@ function LeadOpportunities({ actor }: { actor: Actor }) {
                         {p.reasons.join(" · ")}
                       </p>
                       <p className="mt-2 text-xs text-slate-400">
-                        {p.email} · Contact permission: {label(p.consentBasis)}
+                        {p.email || "No email — manual contact follow-up required"} · Contact permission: {label(p.consentBasis)}
                       </p>
                     </div>
                   </label>
@@ -1630,7 +1681,7 @@ function GeneralEmailComposer({ station }: { station: EmailStationData }) {
   const company = companies.data?.items.find(item => item.id === companyId);
   async function prepare(event: FormEvent) {
     event.preventDefault();
-    if (!companyId) return;
+    if (!companyId || !validBusinessEmail(company?.email)) return;
     setBusy(true);
     setError("");
     try {
@@ -1645,12 +1696,13 @@ function GeneralEmailComposer({ station }: { station: EmailStationData }) {
       <form onSubmit={prepare} className="space-y-4">
         <p className="text-sm leading-6 text-slate-600">Invite a mover to join Match &apos;n Move at any time. Choose a company, then review and personalise the prefilled email before sending.</p>
         <Field title="Find a company"><input className={inputClass} type="search" placeholder="Search company name or email" value={companySearch} onChange={e => { setCompanySearch(e.target.value); setCompanyId(""); }} /></Field>
-        <Field title="Choose recipient company"><select required className={inputClass} value={companyId} onChange={e => setCompanyId(e.target.value)}><option value="">Choose a company…</option>{companies.data?.items.map(item => <option key={item.id} value={item.id}>{item.companyName} · {item.email}</option>)}</select></Field>
+        <Field title="Choose recipient company"><select required className={inputClass} value={companyId} onChange={e => setCompanyId(e.target.value)}><option value="">Choose a company…</option>{companies.data?.items.map(item => <option key={item.id} value={item.id} disabled={!validBusinessEmail(item.email)}>{item.companyName} · {item.email || "Missing email — follow-up required"}</option>)}</select></Field>
+        <Link className="inline-block text-sm font-semibold text-teal-700 underline" href="/admin/recruitment/prospects?contact=email">Missing-email follow-up list →</Link>
         <State error={companies.error} loading={companies.loading} />
         {companies.data && companies.data.count > 50 && <p className="text-xs text-slate-500">Showing the first 50 matches. Search by name or email to find another company.</p>}
         {company && <div className="rounded-xl bg-slate-50 p-3 text-sm"><p className="font-semibold">To: {company.email}</p><p className="mt-1 text-xs text-slate-500">{company.contactName || company.companyName}</p>{(company.consentBasis === "UNKNOWN" || !company.consentEvidence?.trim()) && <p className="mt-2 text-xs text-amber-800">Review this company&apos;s contact permission before preparing an invitation. <Link className="font-bold underline" href={`/admin/recruitment/prospects?id=${company.id}`}>Open company</Link></p>}</div>}
         <State error={error} loading={false} />
-        <div className="flex flex-wrap items-center gap-3"><button className={buttonClass} disabled={busy || !companyId}>{busy ? "Preparing…" : "Prepare email preview"}<ArrowRight size={16} /></button><Link className={secondaryClass} href="/admin/recruitment/prospects?new=1"><Plus size={16} />Add company</Link></div>
+        <div className="flex flex-wrap items-center gap-3"><button className={buttonClass} disabled={busy || !companyId || !validBusinessEmail(company?.email)}>{busy ? "Preparing…" : "Prepare email preview"}<ArrowRight size={16} /></button><Link className={secondaryClass} href="/admin/recruitment/prospects?new=1"><Plus size={16} />Add company</Link></div>
         {!station.sendingReady && <p className="rounded-xl bg-amber-50 p-3 text-xs leading-5 text-amber-900">You can prepare drafts. Sending becomes available once the owner enables outreach and verifies the sender in Email templates &amp; settings.</p>}
       </form>
       <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">

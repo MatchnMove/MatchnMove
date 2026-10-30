@@ -48,6 +48,7 @@ import {
 import { rateLimit } from "@/lib/rate-limit";
 import { isRecruitmentMutationRequest } from "@/lib/recruitment-request";
 import { sendPasswordResetEmail } from "@/lib/mover-auth";
+import { contactFollowUp } from "@/lib/prospect-contacts";
 
 export const dynamic = "force-dynamic";
 const headers = { "Cache-Control": "private, no-store" };
@@ -162,8 +163,16 @@ export async function GET(req: NextRequest) {
       };
     } else if (view === "prospects") {
       const status = query.get("status");
+      const contactFilter = query.get("contact");
+      const missingEmail = { OR: [{ email: null }, { email: "" }] };
+      const missingPhone = { OR: [{ phone: null }, { phone: "" }] };
       const filter: Prisma.MoverProspectWhereInput = {
         ...scope,
+        AND: contactFilter === "followup" ? [{ OR: [missingEmail, missingPhone] }]
+          : contactFilter === "email" ? [missingEmail]
+          : contactFilter === "phone" ? [missingPhone]
+          : contactFilter === "review" ? [{ OR: [{ emailAvailability: null }, { phoneAvailability: null }] }]
+          : [],
         ...(q
           ? {
               OR: [
@@ -280,7 +289,7 @@ export async function GET(req: NextRequest) {
       const suppressions = new Set(
         (
           await prisma.contactSuppression.findMany({
-            where: { email: { in: prospects.map((p) => p.email) } },
+            where: { email: { in: prospects.flatMap((p) => p.email ? [p.email] : []) } },
             select: { email: true },
           })
         ).map((s) => s.email),
@@ -288,7 +297,7 @@ export async function GET(req: NextRequest) {
       data = {
         lead,
         items: prospects
-          .filter((p) => !suppressions.has(p.email))
+          .filter((p) => !p.email || !suppressions.has(p.email))
           .map((p) => ({ ...p, ...matchProspect(p, lead) }))
           .sort((a, b) => b.score - a.score),
         truncated: prospects.length === 500,
@@ -653,6 +662,11 @@ export async function POST(req: NextRequest) {
         });
         if (!task) fail("Task not found.", 404);
         if (task.completedAt) return { ok: true };
+        if (task.dedupeKey?.startsWith("contact-info:") && task.prospectId) {
+          const prospect = await ownedProspect(tx, actor, task.prospectId);
+          if (contactFollowUp(prospect).required)
+            fail("Record a valid business email and phone number before completing contact follow-up.");
+        }
         await tx.recruitmentTask.update({
           where: { id: task.id },
           data: { completedAt: task.completedAt || new Date() },
@@ -661,7 +675,7 @@ export async function POST(req: NextRequest) {
           await activity(tx, task.prospectId, actor.id, "task_completed", {
             taskId: task.id,
           });
-          await tx.moverProspect.update({
+          if (!task.dedupeKey?.startsWith("contact-info:")) await tx.moverProspect.update({
             where: { id: task.prospectId },
             data: { nextFollowUpAt: null },
           });

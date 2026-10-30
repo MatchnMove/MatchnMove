@@ -397,7 +397,8 @@ export function MoverDiscovery({
           )}
           <p className="mt-5 border-t border-slate-200 pt-4 text-xs leading-6 text-slate-600">
             Review &amp; add opens the existing company form. Confirm the
-            business email and service coverage before saving. New prospects
+            available contact details and service coverage, and mark missing
+            contact details for follow-up before saving. New prospects
             belong to the administrator who saves them. Contact permission
             remains Unknown until separately reviewed; discovery creates no
             accounts and sends no emails. Business emails must be confirmed
