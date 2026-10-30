@@ -153,12 +153,12 @@ const navGroups = [
         copy: "Information for moving companies.",
       },
       {
-        href: "/mover/login?mode=signup",
+        href: "/signup",
         label: "Partner signup",
         copy: "Moving and cleaning companies choose their account type here.",
       },
       {
-        href: "/mover/login?mode=login",
+        href: "/login",
         label: "Partner login",
         copy: "Access your mover or cleaner dashboard.",
       },
@@ -211,8 +211,8 @@ const footerGroups = [
   {
     title: "Moving Companies",
     links: [
-      { href: "/mover/login?mode=signup", label: "Join as a Mover" },
-      { href: "/mover/login?mode=login", label: "Mover Login" },
+      { href: "/signup", label: "Join as a Mover" },
+      { href: "/login", label: "Company Login" },
       { href: "/mover/pricing", label: "Mover Pricing" },
     ],
   },
@@ -294,7 +294,7 @@ export function Nav() {
       : moverSession.accountType === "cleaner"
         ? "/cleaner/dashboard"
         : "/mover/dashboard"
-    : "/mover/login";
+    : "/login";
   const moverAccountLabel =
     moverSession?.authenticated && moverSession.accountName
       ? moverSession.accountType === "admin"

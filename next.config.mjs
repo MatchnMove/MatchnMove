@@ -15,6 +15,8 @@ const nextConfig = {
     ];
 
     return [
+      { source: "/partner-sw.js", headers: [{ key: "Content-Type", value: "application/javascript; charset=utf-8" }, { key: "Cache-Control", value: "no-store" }, { key: "Service-Worker-Allowed", value: "/" }] },
+      ...["/app", "/login", "/signup", "/install"].map(source => ({ source, headers: [...noIndexHeaders, { key: "Cache-Control", value: "private, no-store" }] })),
       {
         source: "/mover-sw.js",
         headers: [

@@ -12,8 +12,8 @@ test("both install manifests launch the mover experience and preserve the existi
   const dedicatedManifest = await moverManifest().json();
   assert.deepEqual(dedicatedManifest, publicManifest);
   assert.equal(publicManifest.id, "/mover/dashboard");
-  assert.equal(publicManifest.start_url, "/mover/app");
-  assert.equal(publicManifest.scope, "/mover/");
+  assert.equal(publicManifest.start_url, "/app");
+  assert.equal(publicManifest.scope, "/");
   assert.equal(publicManifest.display, "standalone");
   for (const icon of publicManifest.icons || []) {
     const png = readFileSync(`public${icon.src}`);
@@ -56,7 +56,7 @@ test("a failed worker installation rejects with an actionable error", async () =
   } finally { if (original) Object.defineProperty(globalThis, "navigator", original); else Reflect.deleteProperty(globalThis, "navigator"); }
 });
 
-test("the worker caches only the generic offline shell and never writes authenticated pages or API data", async () => {
+for (const script of ["mover-sw.js", "partner-sw.js"]) test(`${script} caches only static help and never private pages or API data`, async () => {
   const handlers: Record<string, (event: unknown) => void> = {};
   const cacheWrites: string[][] = [];
   let failNetwork = false;
@@ -67,7 +67,7 @@ test("the worker caches only the generic offline shell and never writes authenti
     caches: { open: async () => ({ addAll: async (urls: string[]) => { cacheWrites.push(urls); } }), match: async () => offline },
     self: { location: { origin: "https://www.matchnmove.co.nz" }, skipWaiting() {}, addEventListener: (name: string, handler: (event: unknown) => void) => { handlers[name] = handler; } },
   };
-  vm.runInNewContext(readFileSync("public/mover-sw.js", "utf8"), context);
+  vm.runInNewContext(readFileSync(`public/${script}`, "utf8"), context);
   let pending: Promise<unknown> | undefined;
   handlers.install({ waitUntil: (promise: Promise<unknown>) => { pending = promise; } });
   await pending;
@@ -82,4 +82,12 @@ test("the worker caches only the generic offline shell and never writes authenti
   let intercepted = false;
   handlers.fetch({ request: { mode: "cors", url: "https://www.matchnmove.co.nz/api/mover/leads" }, respondWith: () => { intercepted = true; } });
   assert.equal(intercepted, false);
+  if (script === "partner-sw.js") {
+    failNetwork = false;
+    handlers.fetch({ request: { mode: "navigate", url: "https://www.matchnmove.co.nz/cleaner/dashboard" }, respondWith: (promise: Promise<Response>) => { response = promise; } });
+    assert.equal(await (await response!).text(), "private dashboard");
+    handlers.fetch({ request: { mode: "cors", url: "https://www.matchnmove.co.nz/api/cleaner/leads" }, respondWith: () => { intercepted = true; } });
+    assert.equal(intercepted, false);
+    assert.equal(cacheWrites.length, 1);
+  }
 });

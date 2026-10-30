@@ -1,7 +1,8 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import { getInstallPlatform, registerMoverAppWorker, type InstallPlatform } from "@/lib/mover-app-client";
+import { getInstallPlatform, registerPartnerAppWorker, type InstallPlatform } from "@/lib/mover-app-client";
 
 type InstallPrompt = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: "accepted" | "dismissed" }> };
 type AppContext = {
@@ -11,6 +12,7 @@ type AppContext = {
 const Context = createContext<AppContext | null>(null);
 
 export function MoverAppProvider({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
   const [installed, setInstalled] = useState(false);
   const [platform, setPlatform] = useState<InstallPlatform>("desktop");
   const [prompt, setPrompt] = useState<InstallPrompt | null>(null);
@@ -27,11 +29,12 @@ export function MoverAppProvider({ children }: { children: ReactNode }) {
       if (!active) return;
       setPlatform(getInstallPlatform(navigator.userAgent, navigator.maxTouchPoints));
       read();
+      if (!["/app", "/login", "/signup", "/install"].includes(pathname) && !pathname.startsWith("/mover/") && !pathname.startsWith("/cleaner/") && !media.matches && !(navigator as Navigator & { standalone?: boolean }).standalone) return;
       if (!window.isSecureContext || !("serviceWorker" in navigator)) {
         setWorkerError("Use an up-to-date Safari, Chrome or Edge browser over a secure connection.");
         return;
       }
-      try { await registerMoverAppWorker(); if (active) setWorkerError(""); }
+      try { await registerPartnerAppWorker(); if (active) setWorkerError(""); }
       catch { if (active) setWorkerError("App setup could not finish. Check your internet connection, then try again."); }
     };
     window.addEventListener("beforeinstallprompt", before);
@@ -39,7 +42,7 @@ export function MoverAppProvider({ children }: { children: ReactNode }) {
     media.addEventListener("change", read);
     void begin();
     return () => { active = false; window.removeEventListener("beforeinstallprompt", before); window.removeEventListener("appinstalled", after); media.removeEventListener("change", read); };
-  }, [attempt]);
+  }, [attempt, pathname]);
   const install = useCallback(async () => {
     if (!prompt) return "unavailable" as const;
     try { await prompt.prompt(); return (await prompt.userChoice).outcome; }

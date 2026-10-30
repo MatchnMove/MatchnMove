@@ -3,9 +3,9 @@
 import Link from "next/link";
 import Script from "next/script";
 import { useEffect, useEffectEvent, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { ArrowLeft, ArrowRight, Building2, ChevronDown, Eye, EyeOff, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, Building2, Eye, EyeOff, Sparkles } from "lucide-react";
 import { PartnerAuthShell, partnerButtonClass, partnerInputClass, partnerLinkClass } from "@/components/partner-auth-shell";
-import { partnerAuthHref, partnerAuthReturnPath, type PartnerBusiness, type PartnerAuthMode } from "@/lib/partner-auth-navigation";
+import { partnerAuthReturnPath, type PartnerBusiness, type PartnerAuthMode } from "@/lib/partner-auth-navigation";
 import { cleanerRegisterSchema, moverRegisterSchema } from "@/lib/validators";
 import { formatCleaningLeadPrice } from "@/lib/cleaner-lead-pricing";
 import { trackAnalyticsEvent } from "@/lib/analytics";
@@ -18,10 +18,11 @@ type AuthResponse = { error?: string; email?: string; emailCodeRequired?: boolea
 type SignupForm = { name: string; companyName: string; phone: string; password: string; confirmPassword: string; acceptedTerms: boolean };
 const emptySignup: SignupForm = { name: "", companyName: "", phone: "", password: "", confirmPassword: "", acceptedTerms: false };
 
-export function PartnerAuth({ business, initialMode = "login", appMode = false }: { business: PartnerBusiness; initialMode?: PartnerAuthMode; appMode?: boolean }) {
+export function PartnerAuth({ business: initialBusiness = "mover", initialMode = "login", appMode = false }: { business?: PartnerBusiness; initialMode?: PartnerAuthMode; appMode?: boolean }) {
   const { locale, t } = useLanguage();
   const [mode, setMode] = useState(initialMode);
-  const [step, setStep] = useState<Step>("email");
+  const [business, setBusiness] = useState<PartnerBusiness>(initialBusiness);
+  const [step, setStep] = useState<Step>("business");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
@@ -39,13 +40,13 @@ export function PartnerAuth({ business, initialMode = "login", appMode = false }
   const busyRef = useRef(false);
   const isCleaner = business === "cleaner";
   const copy = (key: string, fallback: string) => isCleaner ? t(`cleanerAuth.${key}`) : fallback;
-  const number = step === "email" || step === "business" ? 1 : step === "password" || step === "details" ? 2 : 3;
-  const title = step === "business" ? "Choose your business"
+  const number = step === "business" ? 1 : step === "email" ? 2 : step === "password" || step === "details" ? 3 : 4;
+  const title = step === "business" ? "Choose your company type"
     : step === "email" ? mode === "login" ? "Welcome back" : "Create your account"
     : step === "password" ? "Enter your password"
     : step === "code" ? copy("login.checkEmailTitle", "Check your email")
     : step === "details" ? "About your business" : "Secure your account";
-  const description = step === "business" ? "Which account would you like to use?"
+  const description = step === "business" ? `Select your company to ${mode === "login" ? "sign in" : "create an account"} and access your own leads.`
     : step === "email" ? `Use your ${isCleaner ? "cleaning" : "moving"} company email to ${mode === "login" ? "sign in" : "get started"}.`
     : step === "password" ? "Enter the password for your account."
     : step === "code" ? `Enter the six-digit code sent to ${codeEmail}.`
@@ -62,18 +63,24 @@ export function PartnerAuth({ business, initialMode = "login", appMode = false }
   }, [step, mode]);
 
   function go(next: Step) { setError(""); setNotice(""); setShowPassword(false); setStep(next); }
+  function chooseBusiness(selected: PartnerBusiness) {
+    setBusiness(selected);
+    setEmail(""); setPassword(""); setCode(""); setCodeEmail(""); setSignup(emptySignup);
+    setNextPath(partnerAuthReturnPath(selected, new URLSearchParams(window.location.search).get("next"), appMode));
+    go("email");
+  }
   function switchMode() {
     const nextMode = mode === "login" ? "signup" : "login";
     setMode(nextMode); setPassword(""); setCode(""); setCodeEmail("");
     setSignup(current => ({ ...current, password: "", confirmPassword: "", acceptedTerms: false }));
-    go("email");
+    go("business");
     const url = new URL(window.location.href);
-    if (business === "mover") url.searchParams.set("mode", nextMode);
-    else url.pathname = partnerAuthHref(business, nextMode);
+    url.pathname = appMode ? "/app" : nextMode === "signup" ? "/signup" : "/login";
+    if (appMode) url.searchParams.set("mode", nextMode); else url.searchParams.delete("mode");
     if (nextMode === "signup") { url.searchParams.delete("next"); setNextPath(`/${business}/dashboard`); }
     window.history.replaceState(null, "", url);
   }
-  function back() { go(step === "details" || step === "password" || step === "business" ? "email" : step === "security" ? "details" : "password"); }
+  function back() { go(step === "email" ? "business" : step === "details" || step === "password" ? "email" : step === "security" ? "details" : "password"); }
   function destination(admin = false) { return admin ? `/admin/mfa?next=${encodeURIComponent(nextPath.startsWith("/admin/") ? nextPath : "/admin/recruitment")}` : nextPath; }
   function finish(admin = false) { setNotice("Signed in. Opening your dashboard…"); window.location.replace(destination(admin)); }
   async function request(path: string, body: unknown) {
@@ -140,19 +147,16 @@ export function PartnerAuth({ business, initialMode = "login", appMode = false }
   }
   return <PartnerAuthShell appMode={appMode}>
     {GOOGLE_CLIENT_ID && !isCleaner && <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" onReady={() => setGoogleReady(true)} />}
-    {step !== "business" && <div className="mb-6">
+    <div className="mb-6">
       <div className="mb-3 flex min-h-8 items-center justify-between gap-3 text-xs text-slate-500">
-        {step !== "email" ? <button type="button" disabled={busy} onClick={back} className={`${partnerLinkClass} inline-flex min-h-8 items-center gap-1.5`}><ArrowLeft size={14} />Back</button>
-          : appMode ? <span>Mover app</span>
-          : <button type="button" aria-label="Change business type" disabled={busy} onClick={() => go("business")} className={`${partnerLinkClass} inline-flex min-h-8 items-center gap-1`}>{isCleaner ? "Cleaning company" : "Moving company"}<ChevronDown size={13} /></button>}
-        <span>Step {number} of 3</span>
+        {step !== "business" ? <button type="button" disabled={busy} onClick={back} className={`${partnerLinkClass} inline-flex min-h-8 items-center gap-1.5`}><ArrowLeft size={14} />Back</button> : <span>{mode === "login" ? "Company login" : "Company sign-up"}</span>}
+        <span>Step {number} of 4</span>
       </div>
-      <div role="progressbar" aria-label={mode === "login" ? "Login progress" : "Sign-up progress"} aria-valuemin={1} aria-valuemax={3} aria-valuenow={number} className="flex gap-1.5">{[1, 2, 3].map(item => <span key={item} className={`h-1 flex-1 rounded-full ${item <= number ? "bg-sky-700" : "bg-slate-100"}`} />)}</div>
-    </div>}
-    {step === "business" && <button type="button" onClick={back} className={`${partnerLinkClass} mb-5 inline-flex min-h-8 items-center gap-1.5 text-xs`}><ArrowLeft size={14} />Back</button>}
+      <div role="progressbar" aria-label={mode === "login" ? "Login progress" : "Sign-up progress"} aria-valuemin={1} aria-valuemax={4} aria-valuenow={number} className="flex gap-1.5">{[1, 2, 3, 4].map(item => <span key={item} className={`h-1 flex-1 rounded-full ${item <= number ? "bg-sky-700" : "bg-slate-100"}`} />)}</div>
+    </div>
     <h1 ref={heading} tabIndex={-1} className="text-2xl font-semibold tracking-tight text-slate-900 outline-none">{title}</h1>
     <p className="mt-2 break-words text-sm leading-6 text-slate-500">{description}</p>
-    {step === "business" ? <div className="mt-7 space-y-3">{([['mover', Building2, 'Moving company'], ['cleaner', Sparkles, 'Cleaning company']] as const).map(([id, Icon, label]) => <Link key={id} href={partnerAuthHref(id, mode)} onClick={event => { if (id === business) { event.preventDefault(); go("email"); } }} className="flex min-h-16 items-center gap-3 rounded-lg border border-slate-200 px-4 py-4 text-sm font-medium hover:border-sky-600 hover:bg-sky-50"><Icon size={20} className="text-sky-700" />{label}<ArrowRight size={16} className="ml-auto text-slate-400" /></Link>)}</div> : <>
+    {step === "business" ? <div className="mt-7 space-y-3">{([['mover', Building2, 'Moving company', 'Moving leads and your mover dashboard'], ['cleaner', Sparkles, 'Cleaning company', 'Cleaning leads and your cleaner dashboard']] as const).map(([id, Icon, label, detail]) => <button type="button" key={id} aria-label={label} onClick={() => chooseBusiness(id)} className="flex min-h-20 w-full items-center gap-3 rounded-lg border border-slate-200 px-4 py-4 text-left text-sm font-medium hover:border-sky-600 hover:bg-sky-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-700"><Icon size={20} className="shrink-0 text-sky-700" /><span><span className="block">{label}</span><span className="mt-1 block text-xs font-normal leading-5 text-slate-500">{detail}</span></span><ArrowRight size={16} className="ml-auto shrink-0 text-slate-400" /></button>)}</div> : <>
       {(step === "password" || step === "security") && <div className="mt-5 flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2 text-sm"><span className="min-w-0 truncate" title={email}>{email}</span><button disabled={busy} type="button" onClick={() => go("email")} className={`${partnerLinkClass} min-h-8 shrink-0 text-xs`}>Change</button></div>}
       <form onSubmit={submit} className="mt-6" aria-busy={busy}>
         <fieldset disabled={busy} className="min-w-0 space-y-5">
@@ -184,8 +188,8 @@ export function PartnerAuth({ business, initialMode = "login", appMode = false }
       </form>
       {step === "code" && <button type="button" disabled={busy} onClick={() => void sendCode()} className={`${partnerLinkClass} mt-5 min-h-10 w-full text-center text-sm`}>Send a new code</button>}
       {step === "email" && GOOGLE_CLIENT_ID && !isCleaner && <div className="mt-6"><div className="mb-5 flex items-center gap-3 text-xs text-slate-400"><span className="h-px flex-1 bg-slate-200" />or<span className="h-px flex-1 bg-slate-200" /></div><div ref={googleButton} className={`min-h-11 w-full ${busy ? "pointer-events-none opacity-60" : ""}`} /></div>}
-      {step === "email" && <p className="mt-7 border-t border-slate-100 pt-6 text-center text-sm text-slate-500">{mode === "login" ? "New to Match ’n Move?" : "Already have an account?"} <button type="button" disabled={busy} onClick={switchMode} className={`${partnerLinkClass} inline-flex min-h-8 items-center`}>{mode === "login" ? "Create account" : "Sign in"}</button></p>}
     </>}
+    {(step === "email" || step === "business") && <p className="mt-7 border-t border-slate-100 pt-6 text-center text-sm text-slate-500">{mode === "login" ? "New to Match ’n Move?" : "Already have an account?"} <button type="button" disabled={busy} onClick={switchMode} className={`${partnerLinkClass} inline-flex min-h-8 items-center`}>{mode === "login" ? "Create account" : "Sign in"}</button></p>}
   </PartnerAuthShell>;
 }
 

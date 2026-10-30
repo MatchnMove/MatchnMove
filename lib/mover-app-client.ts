@@ -12,8 +12,10 @@ export function applicationServerKey(value: string): ArrayBuffer {
   return bytes.buffer;
 }
 
-export async function registerMoverAppWorker() {
-  const registration = await navigator.serviceWorker.register("/mover-sw.js", { scope: "/mover/", updateViaCache: "none" });
+export function registerMoverAppWorker() { return registerAppWorker("/mover-sw.js", "/mover/"); }
+export function registerPartnerAppWorker() { return registerAppWorker("/partner-sw.js", "/"); }
+async function registerAppWorker(script: string, scope: string) {
+  const registration = await navigator.serviceWorker.register(script, { scope, updateViaCache: "none" });
   if (registration.active?.state === "activated") return registration;
   const worker = registration.installing || registration.waiting || registration.active;
   if (!worker) throw new Error("Mover app setup did not start. Refresh the page and try again.");

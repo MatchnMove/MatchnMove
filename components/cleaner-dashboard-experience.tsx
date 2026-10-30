@@ -555,7 +555,7 @@ export function CleanerDashboardExperience({
     await fetch("/api/cleaner/logout", { method: "POST" }).catch(
       () => undefined,
     );
-    window.location.replace("/cleaner/login");
+    window.location.replace("/app");
   }
 
   const statusMessage =

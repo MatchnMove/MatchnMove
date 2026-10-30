@@ -8,11 +8,13 @@ import { SITE_DESCRIPTION, SITE_NAME, SITE_PHONE, SITE_URL, absoluteUrl } from "
 import { SITE_EMAILS } from "@/lib/site-emails";
 import { PrivateAnalyticsBoundary } from "@/components/private-analytics-boundary";
 
+import { MoverAppProvider } from "@/components/mover-app-provider";
 import { LegacyMoverAppRedirect } from "@/components/legacy-mover-app-redirect";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   applicationName: SITE_NAME,
+  appleWebApp: { capable: true, title: "Match n Move", statusBarStyle: "default" },
   title: {
     default: `Free Moving Quotes NZ | ${SITE_NAME}`,
     template: `%s | ${SITE_NAME}`
@@ -29,7 +31,7 @@ export const metadata: Metadata = {
   icons: {
     icon: [{ url: "/logo-mark.png", type: "image/png" }],
     shortcut: [{ url: "/logo-mark.png", type: "image/png" }],
-    apple: [{ url: "/logo-mark.png", type: "image/png" }],
+    apple: [{ url: "/mover-app/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
   openGraph: {
     title: `Free Moving Quotes NZ | ${SITE_NAME}`,
@@ -152,7 +154,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             type="application/ld+json"
             dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
           />
-          <PrivateAnalyticsBoundary measurementId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID}>{children}</PrivateAnalyticsBoundary>
+          <MoverAppProvider><PrivateAnalyticsBoundary measurementId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID}>{children}</PrivateAnalyticsBoundary></MoverAppProvider>
         </LanguageProvider>
       </body>
     </html>

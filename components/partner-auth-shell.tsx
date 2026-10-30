@@ -11,7 +11,7 @@ export function PartnerAuthShell({ children, appMode = false }: { children: Reac
   return <div className="relative isolate flex min-h-svh flex-col overflow-x-clip bg-[#f7f9fc] text-slate-900">
     <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-72 bg-[radial-gradient(ellipse_at_top_right,rgba(186,230,253,0.45),transparent_65%)]" />
     <header className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4 px-6 pb-4 pt-7 sm:px-8 sm:pt-10" style={{ paddingTop: "max(1.75rem, env(safe-area-inset-top))" }}>
-      <Link href={appMode ? "/mover/app" : "/"} aria-label={appMode ? "Match 'n Move mover app" : "Match 'n Move home"} className="text-xl font-extrabold tracking-tight text-slate-950">match<span className="text-sky-700">&apos;n</span>move<span className="text-orange-500">.</span></Link>
+      <Link href={appMode ? "/app" : "/"} aria-label={appMode ? "Match 'n Move business app" : "Match 'n Move home"} className="text-xl font-extrabold tracking-tight text-slate-950">match<span className="text-sky-700">&apos;n</span>move<span className="text-orange-500">.</span></Link>
       <LanguageSelector compact />
     </header>
     <main className="mx-auto flex w-full max-w-[460px] flex-1 flex-col px-4 pb-8 pt-6 sm:px-5 sm:pt-10">
@@ -19,7 +19,7 @@ export function PartnerAuthShell({ children, appMode = false }: { children: Reac
       <footer className="flex flex-wrap justify-center gap-x-5 gap-y-3 px-2 pb-2 pt-7 text-xs text-slate-500" style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}>
         <Link href="/privacy" className="hover:text-slate-900 hover:underline">Privacy</Link>
         <Link href="/terms" className="hover:text-slate-900 hover:underline">Terms</Link>
-        <Link href={appMode ? "/mover/install" : "/contact"} className="hover:text-slate-900 hover:underline">{appMode ? "Install & help" : "Help"}</Link>
+        <Link href="/install" className="hover:text-slate-900 hover:underline">Install & help</Link>
       </footer>
     </main>
   </div>;

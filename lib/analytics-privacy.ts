@@ -2,6 +2,7 @@ export function isPrivateWorkspacePath(pathname: string | null) {
   return Boolean(
     pathname &&
       [
+        "/app", "/login", "/signup", "/install",
         "/admin",
         "/recruitment",
         "/mover",

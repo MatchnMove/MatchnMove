@@ -48,11 +48,11 @@ test("mover app public installation, existing-account login, email code and logo
   const get = (path: string, cookie?: string) => fetch(base + path, { redirect: "manual", headers: cookie ? { Cookie: cookie } : {} });
   const post = (path: string, body: unknown, cookie?: string) => fetch(base + path, { method: "POST", headers: { "Content-Type": "application/json", Origin: base!, ...(cookie ? { Cookie: cookie } : {}) }, body: JSON.stringify(body) });
   await t.test("installation and dedicated login are available before authentication", async () => {
-    const response = await get("/mover/app");
+    const response = await get("/app");
     assert.equal(response.status, 200);
     const html = await response.text();
-    assert.ok(html.includes("Welcome back"));
-    assert.ok(html.includes("Mover app"));
+    assert.ok(html.includes("Choose your company type"));
+    assert.ok(html.includes("Moving company") && html.includes("Cleaning company"));
     assert.equal(html.includes("Build your"), false);
     assert.equal(html.includes("Partner account type"), false);
     assert.equal(html.includes("Create your mover account"), false);
@@ -60,30 +60,32 @@ test("mover app public installation, existing-account login, email code and logo
     const linkedManifest = html.match(/<link[^>]*rel="manifest"[^>]*href="([^"]+)"/)?.[1];
     assert.ok(linkedManifest);
     const installedManifest = await (await get(linkedManifest)).json();
-    assert.equal(installedManifest.start_url, "/mover/app");
+    assert.equal(installedManifest.start_url, "/app");
     assert.match(response.headers.get("cache-control") || "", /no-store/);
-    const guide = await get("/mover/install");
+    const guide = await get("/install");
     assert.equal(guide.status, 200);
     assert.ok((await guide.text()).includes("iPhone / iPad"));
     const manifest = await (await get("/mover/manifest.webmanifest")).json();
-    assert.equal(manifest.start_url, "/mover/app");
+    assert.equal(manifest.start_url, "/app");
     assert.equal((await get("/mover-sw.js")).status, 200);
   });
   await t.test("a protected dashboard returns to the mover login and preserves a lead deep link", async () => {
     const response = await get("/mover/dashboard?tab=leads&lead=fixture");
     assert.equal(response.status, 307);
     const location = new URL(response.headers.get("location")!, base);
-    assert.equal(location.pathname, "/mover/app");
+    assert.equal(location.pathname, "/app");
     assert.equal(location.searchParams.get("next"), "/mover/dashboard?tab=leads&lead=fixture");
     assert.equal((await get("/api/mover/leads")).status, 401);
   });
-  await t.test("website, cleaner and app entry points render only the email step with the correct mode", async () => {
-    for (const [path, title] of [["/mover/login", "Welcome back"], ["/mover/login?mode=signup", "Create your account"], ["/cleaner/login", "Welcome back"], ["/cleaner/register", "Create your account"], ["/mover/app?mode=signup", "Create your account"]]) {
+  await t.test("website, cleaner and app entry points show both company choices before credentials", async () => {
+    for (const [path, title] of [["/login", "Company login"], ["/signup", "Company sign-up"], ["/mover/login", "Company login"], ["/mover/login?mode=signup", "Company sign-up"], ["/cleaner/login", "Company login"], ["/cleaner/register", "Company sign-up"], ["/app?mode=signup", "Company sign-up"]]) {
       const response = await get(path);
       assert.equal(response.status, 200);
       const html = await response.text();
       assert.ok(html.includes(title), `${path} must use its requested mode on first render`);
-      assert.match(html, /<input[^>]*name="email"/);
+      assert.ok(html.includes("Moving company") && html.includes("Cleaning company"));
+      assert.ok(html.includes("Choose your company type"));
+      assert.doesNotMatch(html, /<input[^>]*name="email"/);
       assert.doesNotMatch(html, /<input[^>]*name="(?:password|companyName)"/);
       assert.equal(html.includes("Main navigation"), false);
     }
@@ -102,7 +104,7 @@ test("mover app public installation, existing-account login, email code and logo
     assert.ok(header);
     assert.match(header, /HttpOnly/i);
     cookie = header.split(";")[0];
-    const app = await get("/mover/app?next=%2Fmover%2Fdashboard%3Ftab%3Dleads", cookie);
+    const app = await get("/app?next=%2Fmover%2Fdashboard%3Ftab%3Dleads", cookie);
     if (app.status === 307) assert.equal(new URL(app.headers.get("location")!, base).pathname, "/mover/dashboard");
     else {
       assert.equal(app.status, 200);
@@ -116,14 +118,42 @@ test("mover app public installation, existing-account login, email code and logo
     const push = await get("/api/mover/push", cookie);
     assert.equal(push.status, 200);
     assert.ok(Array.isArray((await push.json()).subscriptions));
+    assert.equal((await get("/api/mover/leads", cookie)).status, 200);
+    assert.equal((await get("/api/cleaner/leads", cookie)).status, 401);
+  });
+  await t.test("cleaners use their own login, dashboard and lead API through the same installed app entry", async () => {
+    const cleanerEmail = `cleaner-app-${randomUUID()}@validation.invalid`;
+    await prisma.user.create({ data: { email: cleanerEmail, name: "Cleaner fixture", role: "CLEANER", emailVerifiedAt: new Date(), passwordHash: await hashPassword(password), cleanerCompany: { create: { companyName: "Local cleaning fixture", contactPerson: "Cleaner fixture", phone: "0210000000", status: "ACTIVE", serviceAreas: ["Manawatu-Whanganui"] } } } });
+    const login = await post("/api/cleaner/login", { email: cleanerEmail, password });
+    assert.equal(login.status, 200);
+    assert.equal((await login.json()).emailCodeRequired, true);
+    const code = mail.at(-1)!.replace(/=\r?\n/g, "").match(/\r?\n(\d{6})\r?\n/)?.[1];
+    assert.ok(code);
+    const verified = await post("/api/cleaner/login/verify-code", { email: cleanerEmail, code });
+    assert.equal(verified.status, 200);
+    const cleanerCookie = verified.headers.getSetCookie().find(value => value.startsWith("mm_session="))!.split(";")[0];
+    const app = await get("/app?next=%2Fmover%2Fdashboard", cleanerCookie);
+    if (app.status === 307) assert.equal(new URL(app.headers.get("location")!, base).pathname, "/cleaner/dashboard");
+    else assert.ok((await app.text()).includes("url=/cleaner/dashboard") || app.headers.get("location")?.includes("/cleaner/dashboard"));
+    const dashboard = await get("/cleaner/dashboard", cleanerCookie);
+    assert.equal(dashboard.status, 200);
+    assert.ok((await dashboard.text()).includes("Local cleaning fixture"));
+    assert.equal((await get("/api/cleaner/leads", cleanerCookie)).status, 200);
+    assert.equal((await get("/api/mover/leads", cleanerCookie)).status, 404);
+    const legacy = await get("/mover/app");
+    assert.equal(legacy.status, 200);
+    assert.ok((await legacy.text()).includes("Choose your company type"));
+    const worker = await get("/partner-sw.js");
+    assert.equal(worker.status, 200);
+    assert.equal(worker.headers.get("service-worker-allowed"), "/");
   });
   await t.test("logout clears the mover session and app launch returns to mover login", async () => {
     const logout = await post("/api/mover/logout", {}, cookie);
     assert.equal(logout.status, 200);
     assert.ok(logout.headers.getSetCookie().some(value => value.startsWith("mm_session=;")));
-    const app = await get("/mover/app");
+    const app = await get("/app");
     assert.equal(app.status, 200);
-    assert.ok((await app.text()).includes("Welcome back"));
-    assert.equal(mail.length, 1);
+    assert.ok((await app.text()).includes("Choose your company type"));
+    assert.equal(mail.length, 2);
   });
 });

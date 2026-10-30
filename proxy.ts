@@ -37,7 +37,7 @@ export function proxy(req: NextRequest) {
     if (pathname.startsWith("/api/")) {
       return privateNoStore(NextResponse.json({ error: "Unauthorized" }, { status: 401 }));
     }
-    const loginUrl = new URL(pathname.startsWith("/cleaner/") ? "/cleaner/login" : "/mover/app", req.url);
+    const loginUrl = new URL("/app", req.url);
     loginUrl.searchParams.set("next", `${pathname}${req.nextUrl.search}`);
     return privateNoStore(NextResponse.redirect(loginUrl));
   }

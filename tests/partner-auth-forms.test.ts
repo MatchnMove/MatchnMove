@@ -33,10 +33,13 @@ test("real partner forms reveal one step, retain drafts and use the existing sec
     dom.window.close();
   });
   let renderId = 0;
-  async function mount(business: "mover" | "cleaner", initialMode: "login" | "signup" = "login", appMode = false) {
+  async function mount(business: "mover" | "cleaner", initialMode: "login" | "signup" = "login", appMode = false, selectCompany = true) {
     dom.window.history.replaceState(null, "", `/${business}/${appMode ? "app" : "login"}`);
     calls.length = 0;
     await React.act(async () => root.render(React.createElement(LanguageProvider, null, React.createElement(PartnerAuth, { key: ++renderId, business, initialMode, appMode }))));
+    assert.equal(title(), "Choose your company type");
+    assert.ok(button("Moving company")); assert.ok(button("Cleaning company"));
+    if (selectCompany) await click(business === "mover" ? "Moving company" : "Cleaning company");
   }
   function input(name: string) { const element = dom.window.document.querySelector<HTMLInputElement>(`input[name="${name}"]:not([hidden])`); assert.ok(element, `${name} must be on this step`); return element; }
   function button(text: string) { const element = [...dom.window.document.querySelectorAll("button")].find(item => item.textContent?.trim() === text || item.getAttribute("aria-label") === text); assert.ok(element, `${text} button must exist`); return element; }
@@ -49,9 +52,9 @@ test("real partner forms reveal one step, retain drafts and use the existing sec
   async function click(text: string) { await React.act(async () => button(text).click()); }
   const title = () => dom.window.document.querySelector("h1")?.textContent;
 
-  for (const business of ["mover", "cleaner"] as const) {
-    await t.test(`${business} login validates email, handles credential errors, then verifies a code`, async () => {
-      await mount(business);
+  for (const [business, appMode] of [["mover", false], ["cleaner", false], ["mover", true], ["cleaner", true]] as const) {
+    await t.test(`${appMode ? "app" : "web"} ${business} login validates email, handles credential errors, then verifies a code`, async () => {
+      await mount(business, "login", appMode);
       assert.equal(title(), "Welcome back");
       assert.equal(dom.window.document.querySelector("input[name=password]"), null);
       await fill("email", "invalid"); await click("Continue");
@@ -79,8 +82,8 @@ test("real partner forms reveal one step, retain drafts and use the existing sec
       await click("Back"); assert.equal(input("password").value, "CorrectPassword!1");
       await click("Back"); assert.equal(input("email").value, "mover@validation.invalid");
     });
-    await t.test(`${business} signup preserves details, checks passwords and requires final consent`, async () => {
-      await mount(business, "signup");
+    await t.test(`${appMode ? "app" : "web"} ${business} signup preserves details, checks passwords and requires final consent`, async () => {
+      await mount(business, "signup", appMode);
       assert.equal(title(), "Create your account");
       assert.equal(dom.window.document.querySelector("input[name=companyName]"), null);
       await fill("email", "new@validation.invalid"); await click("Continue");
@@ -104,18 +107,19 @@ test("real partner forms reveal one step, retain drafts and use the existing sec
       assert.equal(input("password").value, "StrongPassword!1");
     });
   }
-  await t.test("app login has a quiet install link and company selection is a separate website step", async () => {
-    await mount("mover", "login", true);
-    assert.equal(dom.window.document.querySelector('a[href="/mover/install"]')?.textContent, "Install & help");
-    assert.equal(dom.window.document.querySelector('input[name="password"]'), null);
-    assert.equal([...dom.window.document.querySelectorAll("button")].some(item => item.textContent === "Change business type"), false);
-    await click("Create account"); assert.equal(title(), "Create your account");
-    await mount("mover"); await click("Change business type");
-    assert.equal(title(), "Choose your business");
-    assert.equal(dom.window.document.querySelector('a[href="/cleaner/login"]')?.textContent, "Cleaning company");
-    assert.equal(dom.window.document.querySelector("form"), null);
-  });
-  await t.test("a pending request disables the form and cannot send duplicate sign-in emails", async () => {
+  await t.test("both company types are the first step on web and app and switching clears credentials", async () => {
+    for (const appMode of [false, true]) {
+      await mount("mover", "login", appMode, false);
+      assert.equal(dom.window.document.querySelector("form"), null);
+      assert.equal(dom.window.document.body.textContent?.includes("Mover app"), false);
+      if (appMode) assert.equal(dom.window.document.querySelector('a[href="/install"]')?.textContent, "Install & help");
+      await click("Create account"); assert.equal(title(), "Choose your company type");
+      await click("Cleaning company"); assert.equal(title(), "Create your account");
+      await fill("email", "draft@validation.invalid"); await click("Continue");
+      await click("Back"); await click("Back");
+      await click("Moving company"); assert.equal(input("email").value, "");
+    }
+  });  await t.test("a pending request disables the form and cannot send duplicate sign-in emails", async () => {
     await mount("mover"); await fill("email", "test@validation.invalid"); await click("Continue"); await fill("password", "StrongPassword!1");
     let resolve!: (response: Response) => void;
     handler = () => new Promise<Response>(done => { resolve = done; });
