@@ -1403,7 +1403,7 @@ export function MoverProfileSettings({
                 Verification readiness
               </p>
               <h2 className="mt-1 text-xl font-black tracking-[-0.05em] text-slate-950 sm:text-2xl">
-                {profile.readiness.missingCount} to go live
+                {profile.readiness.missingCount} profile checks remaining
               </h2>
             </div>
             <div className="rounded-2xl bg-white p-3 text-emerald-700 shadow-sm">

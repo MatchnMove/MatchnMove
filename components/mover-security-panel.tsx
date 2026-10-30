@@ -348,16 +348,18 @@ export function MoverSecurityPanel({ mover, onOpenDestination }: Props) {
   return (
     <div className="space-y-4">
       {!mover.readiness.isLive ? (
-        <section className="rounded-[24px] border border-amber-200 bg-[linear-gradient(135deg,#fff8e8,#fffef8)] p-4 shadow-sm sm:rounded-[30px] sm:p-5">
+        <section className={cx("rounded-[24px] border p-4 shadow-sm sm:rounded-[30px] sm:p-5", mover.canAccessLeads ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50")}>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="max-w-3xl">
-              <div className="inline-flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-amber-800">
-                <AlertTriangle className="h-4 w-4" />
-                Verification required
+              <div className={cx("inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em]", mover.canAccessLeads ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800")}>
+                {mover.canAccessLeads ? <Check className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+                {mover.canAccessLeads ? "Lead access active" : "Lead setup required"}
               </div>
-              <h2 className="mt-3 text-xl font-black tracking-[-0.05em] text-slate-950 sm:text-2xl">Complete verification before your mover profile goes live</h2>
+              <h2 className="mt-3 text-xl font-black tracking-[-0.05em] text-slate-950 sm:text-2xl">Complete your public verified profile</h2>
               <p className="mt-2 text-sm leading-6 text-slate-700">
-                Security is required here. Finish every item in this checklist before the public profile and new lead access are enabled.
+                {mover.canAccessLeads
+                  ? "Your account can receive and open matching leads now. The remaining profile and document checks are for your public verified profile; they do not block your lead access."
+                  : "Lead access requires an active mover account, a verified email and valid service regions. Review your account setup or contact support. The checklist below is for your public verified profile."}
               </p>
             </div>
 
@@ -384,9 +386,9 @@ export function MoverSecurityPanel({ mover, onOpenDestination }: Props) {
           </div>
 
           <div className="mt-4 grid gap-2 sm:grid-cols-3">
-            <StatusSummary label="Verification" value={`${mover.readiness.missingCount} missing`} good={false} />
+            <StatusSummary label="Verified profile" value={`${mover.readiness.missingCount} checks remaining`} good={false} />
             <StatusSummary label="Email" value={mover.emailVerified ? "Verified" : "Pending"} good={mover.emailVerified} />
-            <StatusSummary label="Documents" value={documentsReady ? "Approved" : "Required"} good={documentsReady} />
+            <StatusSummary label="Profile documents" value={documentsReady ? "Approved" : "Checks remaining"} good={documentsReady} />
           </div>
 
           <StatusMessage state={verifyState} className="mt-4" />
@@ -663,12 +665,12 @@ export function MoverSecurityPanel({ mover, onOpenDestination }: Props) {
 
         {!mover.readiness.isLive ? (
         <aside className="order-1 rounded-[24px] border border-slate-200 bg-[linear-gradient(180deg,#f8fbff,#ffffff)] p-4 shadow-sm sm:rounded-[30px] sm:p-5 2xl:order-2">
-          <p className="text-sm font-semibold uppercase tracking-[0.16em] text-sky-700">Verification to go live</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.16em] text-sky-700">Verified profile checklist</p>
           <h2 className="mt-1 text-xl font-black tracking-[-0.05em] text-slate-950 sm:text-2xl">
-            {mover.readiness.isLive ? "All checks complete" : `${mover.readiness.missingCount} required check${mover.readiness.missingCount === 1 ? "" : "s"} left`}
+            {mover.readiness.isLive ? "All checks complete" : `${mover.readiness.missingCount} profile check${mover.readiness.missingCount === 1 ? "" : "s"} left`}
           </h2>
           <p className="mt-2 text-sm leading-6 text-slate-600">
-            Complete these required checks before the profile is public and new lead access is enabled.
+            Complete these checks to earn your public verified profile. Lead eligibility is checked separately using your account status, verified email and service regions.
           </p>
 
           <div className="mt-4 h-3 rounded-full bg-slate-200">

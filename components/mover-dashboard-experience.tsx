@@ -962,10 +962,10 @@ function MobileHeader({
               <h1 className="text-lg font-black tracking-[-0.04em] text-white">
                 {t(dashboardTabKeys[activeTab.id])}
               </h1>
-              <span className="rounded-full bg-emerald-400/15 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-200">
-                {mover.readiness.isLive
-                  ? t("moverDashboard.profileLive")
-                  : t("moverDashboard.verifyProfile")}
+              <span className={cx("rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]", mover.canAccessLeads ? "bg-emerald-400/15 text-emerald-200" : "bg-amber-400/15 text-amber-200")}>
+                {mover.canAccessLeads
+                  ? t("moverDashboard.leadAccessActive")
+                  : t("moverDashboard.leadSetupRequired")}
               </span>
             </div>
           </div>
@@ -1175,10 +1175,10 @@ function DesktopSidebar({
             <Sparkles className="h-3.5 w-3.5" />
             {t("moverDashboard.moverHub")}
           </span>
-          <span className="rounded-full bg-emerald-400/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-200">
-            {mover.readiness.isLive
-              ? t("moverDashboard.profileLive")
-              : t("moverDashboard.verifyProfile")}
+          <span className={cx("rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]", mover.canAccessLeads ? "bg-emerald-400/15 text-emerald-200" : "bg-amber-400/15 text-amber-200")}>
+            {mover.canAccessLeads
+              ? t("moverDashboard.leadAccessActive")
+              : t("moverDashboard.leadSetupRequired")}
           </span>
         </div>
         <p className="mt-4 text-2xl font-black tracking-[-0.05em] text-white">
@@ -1366,8 +1366,8 @@ function VerificationBanner({
   const { t } = useLanguage();
   const nextStep = mover.readiness.nextStep;
   const primaryDestination = nextStep?.destination ?? "security";
-  const primaryLabel = mover.readiness.isLive
-    ? t("moverDashboard.reviewSecurity")
+  const primaryLabel = mover.canAccessLeads
+    ? t("moverDashboard.reviewProfileChecks")
     : primaryDestination === "security"
       ? t("moverDashboard.verifyEmail")
       : primaryDestination === "documents"
@@ -1378,7 +1378,7 @@ function VerificationBanner({
     <section
       className={cx(
         "rounded-[24px] border p-4 shadow-sm sm:rounded-[30px] sm:p-5",
-        mover.readiness.isLive
+        mover.canAccessLeads
           ? "border-emerald-200 bg-[linear-gradient(135deg,#ecfdf5,#ffffff)]"
           : "border-amber-200 bg-[linear-gradient(135deg,#fff8e8,#ffffff)]",
       )}
@@ -1388,29 +1388,29 @@ function VerificationBanner({
           <div
             className={cx(
               "inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] sm:text-xs",
-              mover.readiness.isLive
+              mover.canAccessLeads
                 ? "bg-emerald-100 text-emerald-800"
                 : "bg-amber-100 text-amber-800",
             )}
           >
-            {mover.readiness.isLive ? (
+            {mover.canAccessLeads ? (
               <CheckCircle2 className="h-4 w-4" />
             ) : (
               <AlertTriangle className="h-4 w-4" />
             )}
-            {mover.readiness.isLive
-              ? t("moverDashboard.profileLive")
-              : t("moverDashboard.verificationRequired")}
+            {mover.canAccessLeads
+              ? t("moverDashboard.leadAccessActive")
+              : t("moverDashboard.leadSetupRequired")}
           </div>
           <h2 className="mt-3 text-xl font-black tracking-[-0.05em] text-slate-950 sm:text-2xl">
-            {mover.readiness.isLive
-              ? t("moverDashboard.yourProfileLive")
-              : t("moverDashboard.getVerified")}
+            {mover.canAccessLeads
+              ? t("moverDashboard.readyForLeads")
+              : t("moverDashboard.leadSetupRequired")}
           </h2>
           <p className="mt-2 text-sm leading-6 text-slate-700">
-            {mover.readiness.isLive
-              ? t("moverDashboard.liveChecksComplete")
-              : t("moverDashboard.verificationCopy")}
+            {mover.canAccessLeads
+              ? t("moverDashboard.activeLeadAccessCopy")
+              : t("moverDashboard.blockedLeadAccessCopy")}
           </p>
         </div>
 
@@ -1418,13 +1418,11 @@ function VerificationBanner({
           <button
             type="button"
             onClick={() =>
-              onOpenDestination(
-                mover.readiness.isLive ? "security" : primaryDestination,
-              )
+              onOpenDestination(mover.canAccessLeads ? "security" : primaryDestination)
             }
             className={cx(
               "inline-flex min-h-[48px] items-center justify-center gap-2 rounded-2xl px-4 py-2 text-sm font-semibold text-white transition hover:translate-y-[-1px]",
-              mover.readiness.isLive
+              mover.canAccessLeads
                 ? "bg-emerald-700 hover:bg-emerald-800"
                 : "bg-slate-900 hover:bg-slate-800",
             )}
@@ -1432,7 +1430,7 @@ function VerificationBanner({
             {primaryLabel}
             <ArrowRight className="h-4 w-4" />
           </button>
-          {!mover.readiness.isLive ? (
+          {!mover.canAccessLeads ? (
             <button
               type="button"
               onClick={() => onOpenDestination("security")}
@@ -1444,7 +1442,10 @@ function VerificationBanner({
         </div>
       </div>
 
-      <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-7">
+      <p className="mt-4 text-xs font-semibold uppercase tracking-[0.12em] text-slate-600">
+        {t("moverDashboard.verifiedProfileChecklist")}
+      </p>
+      <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-7">
         {mover.readiness.checks.map((check) => (
           <div
             key={check.key}
