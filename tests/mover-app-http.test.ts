@@ -77,6 +77,17 @@ test("mover app public installation, existing-account login, email code and logo
     assert.equal(location.searchParams.get("next"), "/mover/dashboard?tab=leads&lead=fixture");
     assert.equal((await get("/api/mover/leads")).status, 401);
   });
+  await t.test("website, cleaner and app entry points render only the email step with the correct mode", async () => {
+    for (const [path, title] of [["/mover/login", "Welcome back"], ["/mover/login?mode=signup", "Create your account"], ["/cleaner/login", "Welcome back"], ["/cleaner/register", "Create your account"], ["/mover/app?mode=signup", "Create your account"]]) {
+      const response = await get(path);
+      assert.equal(response.status, 200);
+      const html = await response.text();
+      assert.ok(html.includes(title), `${path} must use its requested mode on first render`);
+      assert.match(html, /<input[^>]*name="email"/);
+      assert.doesNotMatch(html, /<input[^>]*name="(?:password|companyName)"/);
+      assert.equal(html.includes("Main navigation"), false);
+    }
+  });
   let cookie = "";
   await t.test("existing credentials send a code only to the local mail catcher and verification establishes the session", async () => {
     const login = await post("/api/mover/login", { email, password });
