@@ -1294,7 +1294,7 @@ function ProspectDetails({ actor, id }: { actor: Actor; id: string }) {
                 </>
               )}
             </div>
-            {actor.canViewLeads && (
+            {actor.canViewLeads && validBusinessEmail(prospect.email) && (
               <Link
                 className={`${buttonClass} mt-5`}
                 href={`/admin/recruitment/leads?prospectId=${id}`}
