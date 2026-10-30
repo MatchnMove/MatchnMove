@@ -65,7 +65,7 @@ export default async function MoverDashboardPage({
   const session = await auth();
   if (!session?.user?.id) {
     const returnPath = getDashboardReturnPath(resolvedSearchParams);
-    redirect(`/mover/login?mode=login&next=${encodeURIComponent(returnPath)}`);
+    redirect(`/mover/app?next=${encodeURIComponent(returnPath)}`);
   }
   if (isAnyAdminUser(session.user)) {
     redirect(

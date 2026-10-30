@@ -1,6 +1,6 @@
 "use client";
 
-import { Nav } from "@/components/site-shell";
+import { MoverAppHeader } from "@/components/mover-app-header";
 import Link from "next/link";
 import { FormEvent, useState } from "react";
 
@@ -35,7 +35,7 @@ export default function ForgotPasswordPage() {
 
   return (
     <>
-      <Nav />
+      <MoverAppHeader dedicated />
       <section className="min-h-screen bg-[linear-gradient(180deg,#edf4fb_0%,#f8fbff_100%)] py-12">
         <div className="container-shell max-w-2xl">
           <div className="rounded-[32px] border border-white/80 bg-white/85 p-8 shadow-[0_30px_70px_-38px_rgba(15,23,42,0.35)] backdrop-blur">
@@ -71,7 +71,7 @@ export default function ForgotPasswordPage() {
 
             <p className="mt-5 text-sm text-slate-500">
               Remembered it?{" "}
-              <Link href="/mover/login" className="font-semibold text-brandBlue hover:text-indigo-700">
+              <Link href="/mover/app" className="font-semibold text-brandBlue hover:text-indigo-700">
                 Back to login
               </Link>
             </p>

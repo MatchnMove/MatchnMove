@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { Nav } from "@/components/site-shell";
+import { MoverAppHeader } from "@/components/mover-app-header";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
@@ -57,7 +57,7 @@ function VerifyEmailContent() {
       </p>
 
       <div className="mt-6 flex flex-wrap gap-3">
-        <Link href="/mover/login" className="rounded-2xl bg-brandBlue px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-600">
+        <Link href="/mover/app" className="rounded-2xl bg-brandBlue px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-600">
           Go to mover login
         </Link>
         <Link href="/mover/dashboard" className="rounded-2xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
@@ -71,7 +71,7 @@ function VerifyEmailContent() {
 export default function VerifyEmailPage() {
   return (
     <>
-      <Nav />
+      <MoverAppHeader dedicated />
       <section className="min-h-screen bg-[linear-gradient(180deg,#edf4fb_0%,#f8fbff_100%)] py-12">
         <div className="container-shell max-w-2xl">
           <Suspense

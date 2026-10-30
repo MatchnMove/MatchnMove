@@ -13,8 +13,25 @@ export function applicationServerKey(value: string): ArrayBuffer {
 }
 
 export async function registerMoverAppWorker() {
-  await navigator.serviceWorker.register("/mover-sw.js", { scope: "/mover/", updateViaCache: "none" });
-  return navigator.serviceWorker.ready;
+  const registration = await navigator.serviceWorker.register("/mover-sw.js", { scope: "/mover/", updateViaCache: "none" });
+  if (registration.active?.state === "activated") return registration;
+  const worker = registration.installing || registration.waiting || registration.active;
+  if (!worker) throw new Error("Mover app setup did not start. Refresh the page and try again.");
+  await new Promise<void>((resolve, reject) => {
+    const finish = (error?: Error) => {
+      clearTimeout(timer);
+      worker.removeEventListener("statechange", changed);
+      if (error) reject(error); else resolve();
+    };
+    const changed = () => {
+      if (worker.state === "activated") finish();
+      else if (worker.state === "redundant") finish(new Error("Mover app setup failed. Check your connection and try again."));
+    };
+    const timer = setTimeout(() => finish(new Error("Mover app setup timed out. Refresh the page and try again.")), 15000);
+    worker.addEventListener("statechange", changed);
+    changed();
+  });
+  return registration;
 }
 
 export async function disconnectMoverPushDevice() {

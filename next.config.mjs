@@ -47,6 +47,8 @@ const nextConfig = {
       { source: "/mover/reviews", headers: noIndexHeaders },
       { source: "/mover/dashboard/:path*", headers: noIndexHeaders },
       { source: "/mover/login", headers: noIndexHeaders },
+      { source: "/mover/app", headers: [...noIndexHeaders, { key: "Cache-Control", value: "private, no-store" }] },
+      { source: "/mover/install", headers: noIndexHeaders },
       { source: "/mover/forgot-password", headers: noIndexHeaders },
       { source: "/mover/reset-password", headers: noIndexHeaders },
       { source: "/mover/verify-email", headers: noIndexHeaders },

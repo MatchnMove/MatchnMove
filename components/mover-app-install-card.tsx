@@ -2,36 +2,16 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ArrowDownToLine, ArrowRight, Bell, BellRing, Check, CheckCircle2, ChevronRight, LoaderCircle, Monitor, MoreHorizontal, Share, ShieldCheck, Smartphone, X } from "lucide-react";
-import { applicationServerKey, disconnectMoverPushDevice, getInstallPlatform, registerMoverAppWorker, type InstallPlatform } from "@/lib/mover-app-client";
+import { applicationServerKey, disconnectMoverPushDevice, registerMoverAppWorker, type InstallPlatform } from "@/lib/mover-app-client";
 
-type InstallPrompt = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: "accepted" | "dismissed" }> };
+import { useMoverApp } from "@/components/mover-app-provider";
+import { moverInstallGuides as guides } from "@/lib/mover-install-guide";
+
 type PushSettings = { ready: boolean; publicKey: string | null; subscriptions: Array<{ id: string; endpoint: string }> };
 
-const guides: Record<InstallPlatform, Array<{ title: string; text: string }>> = {
-  ios: [
-    { title: "Open this dashboard in Safari", text: "If you're inside an email or social app, open this page in Safari first." },
-    { title: "Tap Share, then Add to Home Screen", text: "Share is the square with an upward arrow. If it's hidden, tap More (•••) first. Scroll through the actions to find Add to Home Screen." },
-    { title: "Keep Open as Web App on, then tap Add", text: "If your iPhone shows that option, leave it switched on. The Match 'n Move icon will appear on your Home Screen." },
-    { title: "Open the app and enable notifications", text: "Launch it from the new icon, sign in if asked, then tap Enable notifications and Allow. Requires iOS or iPadOS 16.4 or later." },
-  ],
-  android: [
-    { title: "Open the dashboard in Chrome", text: "Use your phone's browser rather than the browser inside an email or social app." },
-    { title: "Tap Install the mover app", text: "Confirm Install when your phone asks. You can also open Chrome's ⋮ menu and choose Add to Home screen or Install app." },
-    { title: "Open your new app", text: "Find Match 'n Move on your Home Screen or in your apps. Sign in with your existing mover account." },
-    { title: "Turn on phone alerts", text: "Tap Enable notifications, choose Allow, then send yourself a test notification." },
-  ],
-  desktop: [
-    { title: "Install from your browser", text: "In Chrome or Edge, use Install the mover app or the install icon in the address bar. On a Mac with Safari, choose File → Add to Dock." },
-    { title: "Keep your dashboard close", text: "Open Match 'n Move from your apps, Dock or taskbar. It opens directly to your mover dashboard." },
-    { title: "Enable alerts on this device", text: "Choose Enable notifications, then Allow. To get alerts on your phone too, open this dashboard on your phone and repeat the setup there." },
-  ],
-};
-
 export function MoverAppInstallCard({ accountId, isTestAccount }: { accountId: string; isTestAccount: boolean }) {
-  const [platform, setPlatform] = useState<InstallPlatform>("desktop");
+  const { installed, platform, canPrompt, install: promptInstall } = useMoverApp();
   const [guide, setGuide] = useState<InstallPlatform>("desktop");
-  const [installed, setInstalled] = useState(false);
-  const [installPrompt, setInstallPrompt] = useState<InstallPrompt | null>(null);
   const [pushState, setPushState] = useState<"loading" | "off" | "on" | "unsupported" | "blocked">("loading");
   const [settings, setSettings] = useState<PushSettings | null>(null);
   const [busy, setBusy] = useState<"install" | "enable" | "disable" | "test" | null>(null);
@@ -43,18 +23,9 @@ export function MoverAppInstallCard({ accountId, isTestAccount }: { accountId: s
 
   useEffect(() => {
     let cancelled = false;
-    const media = window.matchMedia("(display-mode: standalone)");
-    const readInstalled = () => setInstalled(media.matches || Boolean((navigator as Navigator & { standalone?: boolean }).standalone));
-    const beforeInstall = (event: Event) => { event.preventDefault(); setInstallPrompt(event as InstallPrompt); };
-    const afterInstall = () => { setInstalled(true); setInstallPrompt(null); setNotice("App installed. Enable notifications to get alerts on this device."); };
-    window.addEventListener("beforeinstallprompt", beforeInstall);
-    window.addEventListener("appinstalled", afterInstall);
-    media.addEventListener("change", readInstalled);
     async function initialise() {
       await Promise.resolve();
       if (cancelled) return;
-      const detected = getInstallPlatform(navigator.userAgent, navigator.maxTouchPoints);
-      setPlatform(detected); setGuide(detected); readInstalled();
       if (!("serviceWorker" in navigator) || !window.isSecureContext) { setPushState("unsupported"); return; }
       try {
         const [registration, response] = await Promise.all([registerMoverAppWorker(), fetch("/api/mover/push", { cache: "no-store" })]);
@@ -75,19 +46,19 @@ export function MoverAppInstallCard({ accountId, isTestAccount }: { accountId: s
       }
     }
     void initialise();
-    return () => { cancelled = true; window.removeEventListener("beforeinstallprompt", beforeInstall); window.removeEventListener("appinstalled", afterInstall); media.removeEventListener("change", readInstalled); };
+    return () => { cancelled = true; };
   }, [accountId]);
 
   function showGuide() { setGuide(platform); dialogRef.current?.showModal(); }
 
   async function install() {
-    if (!installPrompt) { showGuide(); return; }
+    if (!canPrompt) { showGuide(); return; }
     setBusy("install"); setError(""); setNotice("");
     try {
-      await installPrompt.prompt();
-      const choice = await installPrompt.userChoice;
-      if (choice.outcome === "dismissed") setNotice("No problem. You can install the app here whenever you're ready.");
-      setInstallPrompt(null);
+      const outcome = await promptInstall();
+      if (outcome === "dismissed") setNotice("You can install the app here whenever you're ready.");
+      else if (outcome === "unavailable") showGuide();
+      else setNotice("App added. Open it from your new Home Screen icon, then enable notifications.");
     } catch { showGuide(); }
     finally { setBusy(null); }
   }

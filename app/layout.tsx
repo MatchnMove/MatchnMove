@@ -8,6 +8,8 @@ import { SITE_DESCRIPTION, SITE_NAME, SITE_PHONE, SITE_URL, absoluteUrl } from "
 import { SITE_EMAILS } from "@/lib/site-emails";
 import { PrivateAnalyticsBoundary } from "@/components/private-analytics-boundary";
 
+import { LegacyMoverAppRedirect } from "@/components/legacy-mover-app-redirect";
+
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   applicationName: SITE_NAME,
@@ -144,6 +146,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   return (
     <html lang={initialLocale} suppressHydrationWarning>
       <body>
+        <LegacyMoverAppRedirect />
         <LanguageProvider initialLocale={initialLocale} localeWasExplicit={Boolean(localeCookie)}>
           <script
             type="application/ld+json"

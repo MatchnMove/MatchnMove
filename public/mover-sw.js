@@ -1,5 +1,5 @@
 /* global self, caches */
-const CACHE = "matchnmove-mover-shell-v1";
+const CACHE = "matchnmove-mover-shell-v2";
 const OFFLINE = "/mover-offline.html";
 
 self.addEventListener("install", (event) => {

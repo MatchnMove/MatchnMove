@@ -492,7 +492,7 @@ export function MoverDashboardExperience({
           const next = encodeURIComponent(
             window.location.pathname + window.location.search,
           );
-          window.location.replace(`/mover/login?mode=login&next=${next}`);
+          window.location.replace(`/mover/app?next=${next}`);
           return;
         }
 
@@ -609,7 +609,7 @@ export function MoverDashboardExperience({
     try {
       await disconnectMoverPushDevice().catch(() => undefined);
       await fetch("/api/mover/logout", { method: "POST" });
-      window.location.replace("/mover/login");
+      window.location.replace("/mover/app");
     } catch {
       setLogoutLoading(false);
     }

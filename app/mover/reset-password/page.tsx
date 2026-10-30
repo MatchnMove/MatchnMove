@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, FormEvent, useState } from "react";
-import { Nav } from "@/components/site-shell";
+import { MoverAppHeader } from "@/components/mover-app-header";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
@@ -102,7 +102,7 @@ function ResetPasswordContent() {
 export default function ResetPasswordPage() {
   return (
     <>
-      <Nav />
+      <MoverAppHeader dedicated />
       <section className="min-h-screen bg-[linear-gradient(180deg,#edf4fb_0%,#f8fbff_100%)] py-12">
         <div className="container-shell max-w-2xl">
           <Suspense
