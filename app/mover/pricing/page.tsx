@@ -240,7 +240,7 @@ export default function MoverPricingPage() {
 
                 <div className="mt-7 flex flex-col gap-3 sm:flex-row">
                   <Link
-                    href="/mover/login"
+                    href="/mover/login?mode=signup"
                     className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-2xl bg-accentOrange px-6 py-3 text-sm font-semibold text-white transition hover:translate-y-[-1px] hover:bg-orange-500"
                   >
                     Join as a mover
