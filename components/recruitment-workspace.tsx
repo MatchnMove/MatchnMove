@@ -999,7 +999,7 @@ export function ProspectEditor({
           {(key === "email" || key === "phone") && <fieldset className="mt-2 space-y-1.5">
             <legend className="text-xs font-semibold text-slate-600">{title} availability{!prospect ? " (required)" : ""}</legend>
             {[["PUBLIC", "Publicly Accessible"], ["NOT_PUBLIC", "Not Publicly Accessible"]].map(([value, text]) => <label key={value} className="flex items-center gap-2 text-xs text-slate-600">
-              <input type="radio" aria-required={!prospect} name={`${key}Availability`} value={value} checked={form[`${key}Availability`] === value} onChange={() => update(`${key}Availability`, value)} />{text}
+              <input type="radio" required={!prospect} name={`${key}Availability`} value={value} checked={form[`${key}Availability`] === value} onChange={() => update(`${key}Availability`, value)} />{text}
             </label>)}
             {!form[`${key}Availability`] && prospect && <p className="text-xs text-slate-500">Not yet reviewed. Existing details are preserved; select after checking availability.</p>}
           </fieldset>}
