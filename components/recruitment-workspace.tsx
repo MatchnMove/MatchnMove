@@ -17,26 +17,8 @@ import {
 import { recruitmentDateRange } from "@/lib/recruitment-dates";
 import { NZ_SERVICE_AREAS } from "@/lib/nz-regions";
 import { contactFollowUp, prospectContactSchema, validBusinessEmail } from "@/lib/prospect-contacts";
-// Runtime policy helpers contain node:crypto; keep this client module independent of server imports.
-const pipeline = [
-  "NOT_CONTACTED",
-  "CONTACTED",
-  "FOLLOW_UP_REQUIRED",
-  "INTERESTED",
-  "REGISTRATION_STARTED",
-  "REGISTERED",
-  "ACTIVE_MOVER",
-  "NOT_INTERESTED",
-  "DO_NOT_CONTACT",
-];
-const manual = [
-  "NOT_CONTACTED",
-  "CONTACTED",
-  "FOLLOW_UP_REQUIRED",
-  "INTERESTED",
-  "NOT_INTERESTED",
-  "DO_NOT_CONTACT",
-];
+import { statuses as pipeline, manualStatuses as manual } from "@/lib/recruitment-stages";
+import { CompanyStageSelect } from "@/components/company-stage-select";
 type Actor = {
   id: string;
   role: "OWNER" | "RECRUITMENT_ADMIN";
@@ -868,7 +850,7 @@ function Prospects({ actor }: { actor: Actor }) {
                         <ContactInformationStatus prospect={p} compact />
                       </td>
                       <td className="px-3 py-4">
-                        <Badge value={p.status} />
+                        <CompanyStageSelect id={p.id} companyName={p.companyName} status={p.status} version={p.version} onSaved={load} />
                       </td>
                       <td className="px-3 py-4 text-slate-500">
                         {p.serviceAreas.join(", ") ||

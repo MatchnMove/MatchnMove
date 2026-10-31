@@ -1,4 +1,6 @@
 import { createHash, randomBytes } from "crypto";
+import { stoppedStatuses } from "@/lib/recruitment-stages";
+export { statuses, manualStatuses, stoppedStatuses } from "@/lib/recruitment-stages";
 
 export type RecruitmentActor = {
   id: string;
@@ -6,31 +8,6 @@ export type RecruitmentActor = {
   canSend: boolean;
   canViewLeads: boolean;
 };
-export const statuses = [
-  "NOT_CONTACTED",
-  "CONTACTED",
-  "FOLLOW_UP_REQUIRED",
-  "INTERESTED",
-  "REGISTRATION_STARTED",
-  "REGISTERED",
-  "ACTIVE_MOVER",
-  "NOT_INTERESTED",
-  "DO_NOT_CONTACT",
-] as const;
-export const manualStatuses = [
-  "NOT_CONTACTED",
-  "CONTACTED",
-  "FOLLOW_UP_REQUIRED",
-  "INTERESTED",
-  "NOT_INTERESTED",
-  "DO_NOT_CONTACT",
-] as const;
-export const stoppedStatuses = [
-  "REGISTERED",
-  "ACTIVE_MOVER",
-  "NOT_INTERESTED",
-  "DO_NOT_CONTACT",
-];
 export const consentBases = [
   "UNKNOWN",
   "EXPRESS",
