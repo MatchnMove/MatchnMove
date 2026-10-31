@@ -1,6 +1,6 @@
-/* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
-import { Building2, MapPin } from "lucide-react";
+import { MapPin } from "lucide-react";
+import { CompanyLogo } from "@/components/company-logo";
 import { ReviewStars } from "@/components/review-stars";
 import { formatServiceAreaLabel } from "@/lib/nz-regions";
 export type PublicMoverCardData = {
@@ -23,16 +23,7 @@ export function PublicMoverCard({ mover }: { mover: PublicMoverCardData }) {
     <article className="self-start rounded-2xl border border-white/15 bg-white/5 p-5 text-white">
       <div className="flex items-start gap-4">
         <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-white p-2">
-          {mover.logoUrl ? (
-            <img
-              loading="lazy"
-              src={mover.logoUrl}
-              alt={mover.companyName + " logo"}
-              className="max-h-full max-w-full object-contain"
-            />
-          ) : (
-            <Building2 className="text-slate-500" />
-          )}
+          <CompanyLogo src={mover.logoUrl} companyName={mover.companyName} />
         </div>
         <div>
           <h2 className="text-xl font-bold">{mover.companyName}</h2>

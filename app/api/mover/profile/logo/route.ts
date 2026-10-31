@@ -3,7 +3,7 @@ import { randomUUID } from "crypto";
 import { prisma } from "@/lib/db";
 import { detectDocumentMimeType, getDocumentSha256 } from "@/lib/document-security";
 import { calculateMoverProfileReadiness, requireAuthenticatedMover } from "@/lib/mover-profile";
-import { getStoredMoverLogoKey, toStoredMoverLogoUrl } from "@/lib/mover-logo";
+import { getMoverLogoUrl, getStoredMoverLogoKey, toStoredMoverLogoUrl } from "@/lib/mover-logo";
 import { deletePrivateDocument, isPrivateStorageConfigured, putPrivateDocument } from "@/lib/private-storage";
 import { revalidateAboutPage, revalidatePublicMovers } from "@/lib/public-cache";
 import { moverLogoSchema, parseDataUrl } from "@/lib/validators";
@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({
     ok: true,
-    logoUrl: `/api/public-movers/${updatedMover.id}/logo`,
+    logoUrl: getMoverLogoUrl(updatedMover.id, updatedMover.logoUrl),
     readiness: calculateMoverProfileReadiness(updatedMover),
   });
 }

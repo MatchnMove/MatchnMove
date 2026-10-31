@@ -1,7 +1,6 @@
-/* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Building2 } from "lucide-react";
+import { CompanyLogo } from "@/components/company-logo";
 import { ReviewStars } from "@/components/review-stars";
 import { SiteShell } from "@/components/site-shell";
 import { ReviewActions } from "@/components/review-actions";
@@ -42,15 +41,7 @@ export default async function Profile({
         <header className="mt-7 rounded-3xl bg-slate-950 p-6 text-white sm:p-10">
           <div className="flex items-start gap-5">
             <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-white p-3">
-              {mover.logoUrl ? (
-                <img
-                  src={mover.logoUrl}
-                  alt={mover.companyName + " logo"}
-                  className="max-h-full max-w-full object-contain"
-                />
-              ) : (
-                <Building2 className="text-slate-500" />
-              )}
+              <CompanyLogo src={mover.logoUrl} companyName={mover.companyName} loading="eager" />
             </div>
             <div>
               <h1 className="text-3xl font-bold sm:text-4xl">

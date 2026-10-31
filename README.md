@@ -111,6 +111,15 @@ See [Production operations](docs/PRODUCTION_OPERATIONS.md) for the launch-scale 
 - `STORAGE_ENDPOINT`
   Required for private verification-document storage. Leave the endpoint blank only when using AWS S3.
 
+For the Railway `mover-verification` bucket, use reference variables rather than
+pasted credentials: `STORAGE_ACCESS_KEY=${{mover-verification.ACCESS_KEY_ID}}`,
+`STORAGE_SECRET_KEY=${{mover-verification.SECRET_ACCESS_KEY}}`,
+`STORAGE_BUCKET=${{mover-verification.BUCKET}}`,
+`STORAGE_REGION=${{mover-verification.REGION}}` and
+`STORAGE_ENDPOINT=${{mover-verification.ENDPOINT}}`. Redeploy after credential
+changes. Logos use versioned application URLs; their redirects to signed storage
+URLs must not be cached because those signatures expire.
+
 ## Notes
 - No watermark references are included in the UI.
 - The legacy mover unlock endpoint keeps its existing no-Stripe development behaviour; cleaner unlocks always create a real internal monthly ledger charge.
