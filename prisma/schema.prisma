@@ -844,6 +844,7 @@ model PartnerMailbox {
 }
 
 model PartnerConversation {
+  onboardingTracked      Boolean                     @default(false)
   pendingProviderChanges Json?
   providerChangeError    String?
   providerChangeNextAt   DateTime?
@@ -883,6 +884,7 @@ model PartnerConversation {
   @@index([assignedAdminId, archived, lastMessageAt])
   @@index([unread, lastMessageAt])
   @@index([prospectId, lastMessageAt])
+  @@index([onboardingTracked, lastMessageAt])
 }
 
 model PartnerMessage {

@@ -85,6 +85,7 @@ test(
     );
     const conversation = await prisma.partnerConversation.create({
       data: {
+        onboardingTracked: true,
         subject: `HTTP thread ${tag}`,
         participants: [prospect.email!],
         prospectId: prospect.id,
@@ -107,6 +108,107 @@ test(
         rfcMessageId: `<http-${tag}@validation.invalid>`,
       },
     });
+    await t.test(
+      "unrelated imported mail is excluded from every view and direct action, including for owners",
+      async () => {
+        const unrelated = await prisma.partnerConversation.create({
+          data: {
+            subject: `Vendor ${tag}`,
+            participants: ["notifications@vendor.invalid"],
+            labels: [],
+            assignedAdminId: colleague.id,
+            unread: true,
+          },
+        });
+        const personal = await prisma.partnerMessage.create({
+          data: {
+            conversationId: unrelated.id,
+            direction: "INBOUND",
+            from: "notifications@vendor.invalid",
+            to: ["support@matchnmove.co.nz"],
+            cc: [],
+            bcc: [],
+            references: [],
+            providerLabels: ["INBOX", "UNREAD"],
+            subject: unrelated.subject,
+            text: "Unrelated billing notification",
+          },
+        });
+        const file = await prisma.partnerAttachment.create({
+          data: {
+            messageId: personal.id,
+            fileName: "billing.pdf",
+            mimeType: "application/pdf",
+            size: 100,
+          },
+        });
+        for (const folder of [
+          "inbox",
+          "all",
+          "unread",
+          "assigned",
+          "sent",
+          "drafts",
+          "archived",
+          "spam",
+        ]) {
+          const rows = await (
+            await get(`/api/admin/inbox?folder=${folder}&q=${tag}`, owner)
+          ).json();
+          assert.ok(
+            !rows.items.some(
+              (item: { id: string }) => item.id === unrelated.id,
+            ),
+          );
+        }
+        assert.equal(
+          (
+            await get(
+              `/api/admin/inbox?view=conversation&id=${unrelated.id}`,
+              owner,
+            )
+          ).status,
+          404,
+        );
+        assert.equal(
+          (await get(`/api/admin/inbox/attachments/${file.id}`, owner)).status,
+          403,
+        );
+        assert.equal(
+          (
+            await post(
+              "note",
+              { id: unrelated.id, text: "Do not change unrelated mail" },
+              owner,
+            )
+          ).status,
+          404,
+        );
+        assert.equal(
+          (
+            await post(
+              "draft",
+              {
+                mode: "new",
+                purpose: "SERVICE",
+                to: ["vendor@vendor.invalid"],
+                subject: "General mail",
+                text: "General email",
+                serviceReason:
+                  "An unrelated operational message outside onboarding",
+              },
+              owner,
+            )
+          ).status,
+          400,
+        );
+        assert.equal(
+          await prisma.partnerMessage.count({ where: { id: personal.id } }),
+          1,
+          "Unrelated mail is retained rather than deleted",
+        );
+      },
+    );
     await t.test(
       "anonymous, non-admin, incomplete MFA and non-enabled colleagues cannot read inbox data",
       async () => {

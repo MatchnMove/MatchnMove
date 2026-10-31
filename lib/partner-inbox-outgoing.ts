@@ -28,7 +28,10 @@ import {
   InboxProviderError,
 } from "@/lib/partner-inbox-google";
 import { inboxAttachmentBytes } from "@/lib/partner-inbox-attachments";
-import { persistGmailMessage } from "@/lib/partner-inbox-sync";
+import {
+  onboardingConversation,
+  persistGmailMessage,
+} from "@/lib/partner-inbox-sync";
 
 export async function saveInboxDraft(actor: InboxActor, raw: unknown) {
   const input = draftSchema.parse(raw);
@@ -37,6 +40,10 @@ export async function saveInboxDraft(actor: InboxActor, raw: unknown) {
     const original = input.conversationId
       ? await inboxConversation(tx, actor, input.conversationId)
       : null;
+    if (!original && input.purpose !== "OUTREACH")
+      fail(
+        "Start an onboarding invitation for a company, or reply inside an existing onboarding conversation.",
+      );
     const existing = input.id
       ? await tx.partnerMessage.findFirst({
           where: { id: input.id, conversationId: original?.id || "" },
@@ -155,13 +162,15 @@ export async function saveInboxDraft(actor: InboxActor, raw: unknown) {
     if (!conversation || (input.mode === "forward" && !existing))
       conversation = await tx.partnerConversation.create({
         data: {
+          onboardingTracked: true,
           subject: input.subject,
           participants: [
             ...new Set([SUPPORT_MAILBOX, ...input.to, ...input.cc]),
           ],
           labels: [],
-          prospectId: prospect?.id || null,
-          moverCompanyId: prospect?.moverCompanyId || null,
+          prospectId: prospect?.id || original?.prospectId || null,
+          moverCompanyId:
+            prospect?.moverCompanyId || original?.moverCompanyId || null,
           assignedAdminId: actor.id,
           waitingFor: "PARTNER",
           unread: false,
@@ -676,7 +685,11 @@ export async function reviewInboxSend(
     fail("Owner review and a recorded check of Gmail Sent are required.", 403);
   const row = await locked(async (tx) => {
     await checkInboxActor(tx, actor, true);
-    return tx.partnerMessage.findUniqueOrThrow({ where: { id } });
+    const message = await tx.partnerMessage.findUniqueOrThrow({
+      where: { id },
+    });
+    await inboxConversation(tx, actor, message.conversationId);
+    return message;
   });
   if (row.status !== "NEEDS_REVIEW" || !row.rfcMessageId)
     fail(
@@ -741,6 +754,15 @@ export async function syncInboxDrafts(
   );
   for (const draft of providerDrafts.drafts || []) {
     await renew();
+    const metadata = await gmail.request<GmailMessage>(
+      `/messages/${encodeURIComponent(draft.message.id)}?format=metadata&metadataHeaders=From&metadataHeaders=Message-ID&metadataHeaders=In-Reply-To&metadataHeaders=References`,
+    );
+    if (
+      !(await prisma.$transaction((tx) =>
+        onboardingConversation(tx, metadata, draft.id),
+      ))
+    )
+      continue;
     const existing = await prisma.partnerMessage.findUnique({
       where: { gmailDraftId: draft.id },
     });
@@ -762,7 +784,11 @@ export async function syncInboxDrafts(
     data: { draftPageToken: providerDrafts.nextPageToken || null },
   });
   const drafts = await prisma.partnerMessage.findMany({
-    where: { status: "DRAFT", draftDirty: true },
+    where: {
+      status: "DRAFT",
+      draftDirty: true,
+      conversation: { onboardingTracked: true },
+    },
     orderBy: { updatedAt: "asc" },
     take: 5,
   });
@@ -881,6 +907,10 @@ export async function bridgeRecruitmentMessages() {
         where: { outreachMessageId: item.id },
       });
       if (paired) {
+        await tx.partnerConversation.update({
+          where: { id: paired.conversationId },
+          data: { onboardingTracked: true },
+        });
         if (paired.status === "SENT") return;
         await tx.partnerMessage.update({
           where: { id: paired.id },
@@ -934,6 +964,7 @@ export async function bridgeRecruitmentMessages() {
         await tx.partnerConversation.update({
           where: { id: matched.conversationId },
           data: {
+            onboardingTracked: true,
             prospectId: item.prospectId,
             moverCompanyId: item.prospect.moverCompanyId,
             assignedAdminId: item.prospect.assignedAdminId,
@@ -943,6 +974,7 @@ export async function bridgeRecruitmentMessages() {
       }
       const conversation = await tx.partnerConversation.create({
         data: {
+          onboardingTracked: true,
           subject: item.subject,
           preview: item.text.slice(0, 250),
           participants: [

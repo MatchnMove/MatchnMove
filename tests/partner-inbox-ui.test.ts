@@ -7,6 +7,10 @@ test("inbox UI previews the final email, requires explicit send and keeps failed
     url: "https://www.matchnmove.co.nz/admin/inbox",
   });
   const previous = new Map<string, PropertyDescriptor | undefined>();
+  const scrolled: Element[] = [];
+  dom.window.HTMLElement.prototype.scrollIntoView = function () {
+    scrolled.push(this);
+  };
   for (const [key, value] of Object.entries({
     window: dom.window,
     self: dom.window,
@@ -94,6 +98,22 @@ test("inbox UI previews the final email, requires explicit send and keeps failed
     resolved: 0,
     recent: [conversation],
   };
+  const secondConversation = {
+    ...conversation,
+    id: "thread-2",
+    subject: "Second onboarding thread",
+    preview: "A different onboarding reply",
+    messages: [
+      {
+        ...inbound,
+        id: "received-2",
+        conversationId: "thread-2",
+        text: "Second company response",
+      },
+    ],
+  };
+  let deferFirst = false;
+  let finishFirst: (() => void) | undefined;
   globalThis.fetch = (async (input, init) => {
     if (init?.method === "POST") {
       const body = JSON.parse(String(init.body));
@@ -126,14 +146,20 @@ test("inbox UI previews the final email, requires explicit send and keeps failed
     const query = new URL(String(input), dom.window.location.origin)
       .searchParams;
     const view = query.get("view");
+    if (view === "conversation" && query.get("id") === "thread" && deferFirst)
+      await new Promise<void>((resolve) => {
+        finishFirst = resolve;
+      });
     return Response.json(
       view === "summary"
         ? summary
         : view === "team"
           ? []
           : view === "conversation"
-            ? conversation
-            : { items: [conversation], count: 1 },
+            ? query.get("id") === "thread-2"
+              ? secondConversation
+              : conversation
+            : { items: [conversation, secondConversation], count: 2 },
     );
   }) as typeof fetch;
   dom.window.confirm = () => true;
@@ -213,5 +239,51 @@ test("inbox UI previews the final email, requires explicit send and keeps failed
   assert.equal(
     calls.find((item) => item.action === "send")!.data.confirmed,
     true,
+  );
+  const reader = dom.window.document.querySelector(
+    '[aria-label="Conversation details"]',
+  ) as HTMLElement;
+  const list = dom.window.document.querySelector(
+    '[data-testid="inbox-list-viewport"]',
+  ) as HTMLElement;
+  reader.scrollTop = 1800;
+  list.scrollTop = 900;
+  await React.act(async () => {
+    buttons()
+      .find((item) => item.textContent?.includes("Second onboarding thread"))!
+      .click();
+  });
+  assert.equal(
+    reader.scrollTop,
+    0,
+    "Choosing another email resets the reading pane",
+  );
+  assert.equal(list.scrollTop, 900, "The email list retains its own position");
+  assert.ok(
+    scrolled.includes(reader),
+    "Mobile selection brings the reading pane into view",
+  );
+  assert.match(reader.textContent!, /Second company response/);
+  deferFirst = true;
+  await React.act(async () => {
+    buttons()
+      .find((item) =>
+        item.textContent?.includes("Please help with onboarding."),
+      )!
+      .click();
+  });
+  assert.ok(finishFirst);
+  await React.act(async () => {
+    buttons()
+      .find((item) => item.textContent?.includes("Second onboarding thread"))!
+      .click();
+  });
+  await React.act(async () => {
+    finishFirst!();
+  });
+  assert.match(
+    reader.textContent!,
+    /Second company response/,
+    "A slower earlier request cannot replace the selected email",
   );
 });

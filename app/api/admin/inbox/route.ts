@@ -145,6 +145,7 @@ export async function GET(req: NextRequest) {
           where: {
             ...scope,
             waitingFor: "TEAM",
+            messages: { some: { status: { in: ["SENT", "SYNCED"] } } },
             status: { not: "RESOLVED" },
             spam: false,
           },
@@ -153,6 +154,7 @@ export async function GET(req: NextRequest) {
           where: {
             ...scope,
             waitingFor: "PARTNER",
+            messages: { some: { status: { in: ["SENT", "SYNCED"] } } },
             status: { not: "RESOLVED" },
             spam: false,
           },

@@ -26,7 +26,10 @@ export async function checkInboxActor(
   };
 }
 export function inboxScope(actor: RecruitmentActor) {
-  return actor.role === "OWNER" ? {} : { assignedAdminId: actor.id };
+  return {
+    onboardingTracked: true,
+    ...(actor.role === "OWNER" ? {} : { assignedAdminId: actor.id }),
+  };
 }
 export async function inboxConversation(
   tx: Tx,

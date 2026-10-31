@@ -99,10 +99,51 @@ test(
       }),
     );
     const partner = prospect.email!;
+    const seededConversation = await prisma.partnerConversation.create({
+      data: {
+        onboardingTracked: true,
+        gmailThreadId: `thread-${tag}`,
+        prospectId: prospect.id,
+        assignedAdminId: colleague.id,
+        subject: "Previous admin onboarding invitation",
+        participants: [SUPPORT_MAILBOX, partner],
+        labels: [],
+        unread: false,
+      },
+    });
+    await prisma.partnerMessage.create({
+      data: {
+        conversationId: seededConversation.id,
+        authorId: colleague.id,
+        purpose: "OUTREACH",
+        direction: "OUTBOUND",
+        status: "SENT",
+        from: SUPPORT_MAILBOX,
+        to: [partner],
+        cc: [],
+        bcc: [],
+        references: [],
+        providerLabels: ["SENT"],
+        subject: seededConversation.subject,
+        text: "Previous admin onboarding invitation",
+        rfcMessageId: `<admin-invitation-${tag}@validation.invalid>`,
+        sentAt: new Date(),
+      },
+    });
+    const serviceContext = await prisma.partnerConversation.create({
+      data: {
+        onboardingTracked: true,
+        assignedAdminId: owner.id,
+        subject: "Existing onboarding service context",
+        participants: [SUPPORT_MAILBOX, partner],
+        labels: [],
+      },
+    });
     const messages = new Map<string, GmailMessage>();
     const providerDrafts = new Map<string, string>();
     const sentRaw: string[] = [],
       modified: unknown[] = [];
+    const fullMessageReads: string[] = [];
     let failHistory = false,
       expiredHistory = false,
       failSend = 0,
@@ -229,7 +270,14 @@ test(
             }
           }
         } else if (path.startsWith("/messages/")) {
-          result = messages.get(decodeURIComponent(path.split("/")[2]));
+          const id = decodeURIComponent(path.split("/")[2]);
+          const found = messages.get(id);
+          if (requestUrl.searchParams.get("format") === "metadata" && found)
+            result = { ...found, payload: { headers: found.payload?.headers } };
+          else {
+            result = found;
+            fullMessageReads.push(id);
+          }
           if (!result) res.statusCode = 404;
         } else if (path.includes("/threads/") && path.endsWith("/modify"))
           modified.push(body);
@@ -370,6 +418,27 @@ test(
       where: { gmailMessageId: initial.id },
     });
     const conversationId = original.conversationId;
+    await t.test(
+      "a reply referencing an admin invitation is retained even when Gmail uses another thread",
+      async () => {
+        const reply = incoming(
+          `reference-reply-${tag}`,
+          `new-thread-${tag}`,
+          partner,
+          `<reference-${tag}@validation.invalid>`,
+          "Please help with onboarding",
+          [
+            {
+              name: "In-Reply-To",
+              value: `<admin-invitation-${tag}@validation.invalid>`,
+            },
+          ],
+        );
+        const saved = await persistGmailMessage(reply);
+        assert.ok(saved);
+        assert.equal(saved.conversationId, conversationId);
+      },
+    );
     const reply = () =>
       saveInboxDraft(colleague, {
         mode: "replyAll",
@@ -381,7 +450,7 @@ test(
         purpose: "REPLY",
       });
     await t.test(
-      "unknown senders remain unlinked; untrusted Message-ID cannot overwrite another message",
+      "unrelated mail is rejected even from a known company or with a copied Message-ID",
       async () => {
         const unknown = incoming(
           `unknown-${tag}`,
@@ -390,14 +459,42 @@ test(
           original.rfcMessageId!,
         );
         const row = await persistGmailMessage(unknown);
-        assert.notEqual(row.id, original.id);
+        assert.equal(row, null);
+        const unrelated = incoming(
+          `newsletter-${tag}`,
+          `unrelated-thread-${tag}`,
+          partner,
+        );
+        messages.set(unrelated.id, unrelated);
+        await syncPartnerInbox(true, connect);
         assert.equal(
-          (
-            await prisma.partnerConversation.findUniqueOrThrow({
-              where: { id: row.conversationId },
-            })
-          ).prospectId,
-          null,
+          await prisma.partnerMessage.count({
+            where: { gmailMessageId: unrelated.id },
+          }),
+          0,
+        );
+        assert.ok(
+          !fullMessageReads.includes(unrelated.id),
+          "Unrelated message bodies must not be fetched",
+        );
+        const personalDraft = incoming(
+          `personal-draft-${tag}`,
+          `personal-draft-thread-${tag}`,
+          SUPPORT_MAILBOX,
+        );
+        personalDraft.labelIds = ["DRAFT"];
+        messages.set(personalDraft.id, personalDraft);
+        providerDrafts.set(`personal-draft-id-${tag}`, personalDraft.id);
+        await syncInboxDrafts(await connect());
+        assert.equal(
+          await prisma.partnerMessage.count({
+            where: { gmailMessageId: personalDraft.id },
+          }),
+          0,
+        );
+        assert.ok(
+          !fullMessageReads.includes(personalDraft.id),
+          "Personal Gmail drafts must not be fetched in full",
         );
       },
     );
@@ -450,6 +547,7 @@ test(
         assert.doesNotMatch(raw, /STRICTLY_PRIVATE_INTERNAL_NOTE/);
         const service = await saveInboxDraft(owner, {
           mode: "new",
+          conversationId: serviceContext.id,
           to: [partner],
           bcc: ["audit@validation.invalid"],
           subject: "Requested service assistance",
@@ -956,6 +1054,7 @@ test(
         );
         const service = await saveInboxDraft(owner, {
           mode: "new",
+          conversationId: serviceContext.id,
           to: [partner],
           subject: "Operational support",
           text: "Requested assistance",

@@ -80,6 +80,7 @@ type Task = {
   conversation?: { id: string; subject: string };
 };
 type Conversation = {
+  page?: number;
   companyHistory?: Array<{
     id: string;
     subject: string;
@@ -270,6 +271,38 @@ export function PartnerInbox({
   const [taskView, setTaskView] = useState("outstanding");
   const [notice, setNotice] = useState("");
   const latest = useRef<string | null>(null);
+  const workspaceRef = useRef<HTMLDivElement>(null);
+  const readingPaneRef = useRef<HTMLElement>(null);
+  const listViewportRef = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLFormElement>(null);
+  const listPosition = useRef(0);
+  const selectedId = useRef(initialId);
+  const conversationRequest = useRef(0);
+  const composing = Boolean(composer);
+  useEffect(() => {
+    if (!id) {
+      if (listViewportRef.current)
+        listViewportRef.current.scrollTop = listPosition.current;
+      return;
+    }
+    if (composing || conversation?.id !== id || (conversation.page !== undefined && conversation.page !== messagePage)) return;
+    if (readingPaneRef.current) readingPaneRef.current.scrollTop = 0;
+    readingPaneRef.current?.focus({ preventScroll: true });
+    const target =
+      window.innerWidth >= 1280 ? workspaceRef.current : readingPaneRef.current;
+    target?.scrollIntoView?.({ block: "start", behavior: "auto" });
+  }, [id, messagePage, conversation?.id, conversation?.page, composing]);
+  useEffect(() => {
+    if (listViewportRef.current) listViewportRef.current.scrollTop = 0;
+    listPosition.current = 0;
+  }, [page, folder, search, stage, assignee, taskView]);
+  useEffect(() => {
+    if (composing)
+      composerRef.current?.scrollIntoView?.({
+        block: "start",
+        behavior: "auto",
+      });
+  }, [composing, composer?.id, preview]);
   const reloadSummary = useCallback(async () => {
     const data = await api<Summary>("view=summary");
     setSummary(data);
@@ -302,10 +335,12 @@ export function PartnerInbox({
   }, [folder, search, page, stage, assignee, taskView]);
   const reloadConversation = useCallback(async () => {
     if (!id) return null;
+    const request = ++conversationRequest.current;
     const data = await api<Conversation>(
       `view=conversation&id=${encodeURIComponent(id)}&page=${messagePage}`,
     );
-    setConversation(data);
+    if (selectedId.current === id && request === conversationRequest.current)
+      setConversation(data);
     return data;
   }, [id, messagePage]);
   useEffect(() => {
@@ -395,6 +430,9 @@ export function PartnerInbox({
       return;
     setComposer(null);
     setPreview(false);
+    listPosition.current = listViewportRef.current?.scrollTop || 0;
+    selectedId.current = value;
+    setConversation(null);
     setId(value);
     setMessagePage(1);
   }
@@ -476,7 +514,9 @@ export function PartnerInbox({
     setConversation(
       await api<Conversation>(`view=conversation&id=${draft.conversationId}`),
     );
+    selectedId.current = draft.conversationId;
     setId(draft.conversationId);
+    setMessagePage(1);
     setNotice("Draft saved. Nothing has been sent.");
     await Promise.all([reloadList(), reloadSummary()]);
     return draft;
@@ -489,6 +529,10 @@ export function PartnerInbox({
             Partner communications
           </p>
           <h1 className="mt-2 text-3xl font-black">Inbox</h1>
+          <p className="mt-2 text-sm text-slate-500">
+            Onboarding invitations sent through this admin panel and their
+            replies.
+          </p>
           <p className="mt-2 text-sm text-slate-500">
             {summary?.mailbox.address || "support@matchnmove.co.nz"} ·{" "}
             {summary?.mailbox.connected
@@ -526,6 +570,7 @@ export function PartnerInbox({
                 !composer ||
                 window.confirm("Leave this composer? Save your draft first.")
               ) {
+                selectedId.current = null;
                 setId(null);
                 setConversation(null);
                 compose();
@@ -597,10 +642,14 @@ export function PartnerInbox({
           </p>
         </details>
       )}
-      <div className="grid min-h-[600px] gap-4 xl:grid-cols-[160px_330px_minmax(0,1fr)]">
+      <div
+        ref={workspaceRef}
+        data-testid="inbox-workspace"
+        className="grid min-h-0 scroll-mt-24 gap-4 xl:sticky xl:top-24 xl:h-[calc(100dvh-7rem)] xl:min-h-[24rem] xl:grid-cols-[160px_330px_minmax(0,1fr)]"
+      >
         <nav
           aria-label="Inbox folders"
-          className="flex gap-1 overflow-x-auto rounded-2xl border bg-white p-2 xl:block xl:space-y-1 xl:self-start"
+          className="flex gap-1 overflow-x-auto rounded-2xl border bg-white p-2 xl:block xl:min-h-0 xl:space-y-1 xl:overflow-y-auto"
         >
           {folders.map(([value, title]) => (
             <button
@@ -617,10 +666,10 @@ export function PartnerInbox({
           ))}
         </nav>
         <section
-          className={`${id || composer ? "hidden xl:block" : ""} overflow-hidden rounded-2xl border bg-white xl:min-h-[650px]`}
+          className={`${id || composer ? "hidden xl:flex" : "flex"} max-h-[70dvh] min-h-0 flex-col overflow-hidden rounded-2xl border bg-white xl:h-full xl:max-h-none`}
           aria-label="Conversations"
         >
-          <div className="space-y-2 border-b p-3">
+          <div className="shrink-0 space-y-2 border-b p-3">
             <label className="flex items-center gap-2">
               <Search size={16} />
               <input
@@ -666,87 +715,93 @@ export function PartnerInbox({
               </select>
             )}
           </div>
-          {loading && (
-            <p role="status" className="p-5 text-sm text-slate-500">
-              Loading inbox…
-            </p>
-          )}
-          {folder === "followups" ? (
-            <div className="p-3">
-              <select
-                aria-label="Filter follow-up status"
-                className={input}
-                value={taskView}
-                onChange={(event) => {
-                  setTaskView(event.target.value);
-                  setPage(1);
-                }}
-              >
-                <option value="outstanding">Outstanding</option>
-                <option value="overdue">Overdue</option>
-                <option value="completed">Completed</option>
-              </select>
-              {tasks.map((task) => (
-                <button
-                  key={task.id}
-                  className="mt-3 block w-full rounded-xl border p-3 text-left text-sm"
-                  onClick={() =>
-                    task.conversation && open(task.conversation.id)
-                  }
+          <div
+            ref={listViewportRef}
+            data-testid="inbox-list-viewport"
+            className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
+          >
+            {loading && (
+              <p role="status" className="p-5 text-sm text-slate-500">
+                Loading inbox…
+              </p>
+            )}
+            {folder === "followups" ? (
+              <div className="p-3">
+                <select
+                  aria-label="Filter follow-up status"
+                  className={input}
+                  value={taskView}
+                  onChange={(event) => {
+                    setTaskView(event.target.value);
+                    setPage(1);
+                  }}
                 >
-                  <strong>{task.title}</strong>
-                  <p className="mt-1 text-xs text-slate-500">
-                    {date(task.dueAt)} · {task.priority}
-                  </p>
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div>
-              {items.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => open(item.id)}
-                  className={`block w-full border-b p-4 text-left ${item.id === id ? "bg-teal-50" : "hover:bg-slate-50"}`}
-                >
-                  <div className="flex justify-between gap-2">
-                    <span
-                      className={`truncate text-sm ${item.unread ? "font-bold" : "font-medium"}`}
-                    >
-                      {item.prospect?.companyName ||
-                        item.participants.find(
-                          (email) => email !== summary?.mailbox.address,
-                        ) ||
-                        "Unlinked conversation"}
-                    </span>
-                    {item.unread && (
+                  <option value="outstanding">Outstanding</option>
+                  <option value="overdue">Overdue</option>
+                  <option value="completed">Completed</option>
+                </select>
+                {tasks.map((task) => (
+                  <button
+                    key={task.id}
+                    className="mt-3 block w-full rounded-xl border p-3 text-left text-sm"
+                    onClick={() =>
+                      task.conversation && open(task.conversation.id)
+                    }
+                  >
+                    <strong>{task.title}</strong>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {date(task.dueAt)} · {task.priority}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div>
+                {items.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => open(item.id)}
+                    className={`block w-full border-b p-4 text-left ${item.id === id ? "bg-teal-50" : "hover:bg-slate-50"}`}
+                  >
+                    <div className="flex justify-between gap-2">
                       <span
-                        className="mt-1 h-2 w-2 shrink-0 rounded-full bg-teal-600"
-                        aria-label="Unread"
-                      />
-                    )}
-                  </div>
-                  <p className="mt-1 truncate text-sm">{item.subject}</p>
-                  <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">
-                    {item.preview}
+                        className={`truncate text-sm ${item.unread ? "font-bold" : "font-medium"}`}
+                      >
+                        {item.prospect?.companyName ||
+                          item.participants.find(
+                            (email) => email !== summary?.mailbox.address,
+                          ) ||
+                          "Unlinked conversation"}
+                      </span>
+                      {item.unread && (
+                        <span
+                          className="mt-1 h-2 w-2 shrink-0 rounded-full bg-teal-600"
+                          aria-label="Unread"
+                        />
+                      )}
+                    </div>
+                    <p className="mt-1 truncate text-sm">{item.subject}</p>
+                    <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">
+                      {item.preview}
+                    </p>
+                    <p className="mt-2 text-[11px] text-slate-400">
+                      {date(item.lastMessageAt)} ·{" "}
+                      {item.assignedAdmin?.name || "Unassigned"} ·{" "}
+                      {label(item.status)}
+                    </p>
+                  </button>
+                ))}
+                {!loading && !items.length && (
+                  <p className="p-6 text-sm leading-6 text-slate-500">
+                    {summary?.mailbox.connected
+                    ? "No onboarding conversations match this view. Invitations sent through this admin panel and their replies will appear here."
+                      : "Connect the support mailbox to receive replies to admin-panel onboarding invitations."}
                   </p>
-                  <p className="mt-2 text-[11px] text-slate-400">
-                    {date(item.lastMessageAt)} ·{" "}
-                    {item.assignedAdmin?.name || "Unassigned"} ·{" "}
-                    {label(item.status)}
-                  </p>
-                </button>
-              ))}
-              {!loading && !items.length && (
-                <p className="p-6 text-sm leading-6 text-slate-500">
-                  {summary?.mailbox.connected
-                    ? "No conversations match this view."
-                    : "Connect the real support mailbox to import conversations. No sample emails are shown."}
-                </p>
-              )}
-            </div>
-          )}
-          <div className="flex justify-between p-3 text-xs">
+                )}
+              </div>
+            )}
+          </div>
+          <div className="flex shrink-0 justify-between border-t p-3 text-xs">
             <button disabled={page === 1} onClick={() => setPage(page - 1)}>
               Previous
             </button>
@@ -765,7 +820,9 @@ export function PartnerInbox({
           </div>
         </section>
         <section
-          className="min-w-0 space-y-4"
+          ref={readingPaneRef}
+          tabIndex={-1}
+          className="min-w-0 scroll-mt-36 space-y-4 [overflow-anchor:none] focus:outline-none xl:h-full xl:min-h-0 xl:scroll-mt-24 xl:overflow-y-auto xl:overscroll-contain xl:pr-1"
           aria-label="Conversation details"
         >
           {(id || composer) && (
@@ -779,6 +836,7 @@ export function PartnerInbox({
                   )
                 )
                   return;
+                selectedId.current = null;
                 setId(null);
                 setComposer(null);
                 setConversation(null);
@@ -1131,7 +1189,8 @@ export function PartnerInbox({
           )}
           {composer && (
             <form
-              className="rounded-2xl border-2 border-teal-600 bg-white p-4"
+              ref={composerRef}
+              className="scroll-mt-36 rounded-2xl border-2 border-teal-600 bg-white p-4"
               onSubmit={(event) => {
                 event.preventDefault();
                 void run(async () => {
@@ -1207,7 +1266,11 @@ export function PartnerInbox({
                     <option value="OUTREACH">
                       Promotional / partnership outreach
                     </option>
-                    <option value="SERVICE">Operational service message</option>
+                    {composer.conversationId && (
+                      <option value="SERVICE">
+                        Onboarding service message
+                      </option>
+                    )}
                   </select>
                 </label>
                 {composer.purpose === "OUTREACH" && (
@@ -1674,8 +1737,9 @@ function InboxOwnerSetup({
           </p>
         )}
         <p className="text-xs text-slate-500">
-          Initial import covers the latest 30 days. Inbox and Sent synchronise
-          in the background; internal notes never leave this app.
+            Only onboarding invitations started in this admin panel and replies
+            to those conversations are synchronised. Other Gmail conversations
+            stay outside this inbox. Internal notes remain private.
         </p>
         <div className="border-t pt-3">
           <h3 className="font-bold">Explicit team access</h3>

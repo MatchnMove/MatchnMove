@@ -17,31 +17,63 @@ import {
 import { locked, type Tx } from "@/lib/recruitment";
 import { Prisma } from "@prisma/client";
 
-async function matchCompany(tx: Tx, email: string) {
-  const verified = await tx.partnerContactAssociation.findUnique({
-    where: { email },
-    include: { prospect: true },
+// A company address alone never qualifies a thread. Only app-created onboarding
+// anchors, their Gmail thread IDs, or replies referencing an app-authored anchor qualify.
+export async function onboardingConversation(
+  tx: Tx,
+  message: GmailMessage,
+  gmailDraftId?: string,
+) {
+  const rfc = messageIds(header(message.payload, "message-id"))[0];
+  const ownOutbound =
+    message.labelIds?.some((label) => ["SENT", "DRAFT"].includes(label)) &&
+    addresses(header(message.payload, "from"))[0] === SUPPORT_MAILBOX;
+  const anchor = await tx.partnerMessage.findFirst({
+    where: {
+      conversation: { onboardingTracked: true },
+      OR: [
+        { gmailMessageId: message.id },
+        ...(gmailDraftId ? [{ gmailDraftId }] : []),
+        ...(ownOutbound && rfc
+          ? [
+              {
+                rfcMessageId: rfc,
+                direction: "OUTBOUND",
+                authorId: { not: null },
+              },
+            ]
+          : []),
+      ],
+    },
+    select: { conversationId: true },
   });
-  if (verified)
-    return {
-      prospectId: verified.prospectId,
-      moverCompanyId:
-        verified.moverCompanyId || verified.prospect?.moverCompanyId || null,
-      assignedAdminId: verified.prospect?.assignedAdminId || null,
-    };
-  const prospect = await tx.moverProspect.findFirst({
-    where: { email: { equals: email, mode: "insensitive" } },
+  if (anchor)
+    return tx.partnerConversation.findUnique({
+      where: { id: anchor.conversationId },
+    });
+  const thread = await tx.partnerConversation.findFirst({
+    where: { gmailThreadId: message.threadId, onboardingTracked: true },
   });
-  const mover = await tx.moverCompany.findFirst({
-    where: { user: { email: { equals: email, mode: "insensitive" } } },
-    select: { id: true, companyName: true },
+  if (thread) return thread;
+  const references = messageIds(
+    header(message.payload, "in-reply-to") +
+      " " +
+      header(message.payload, "references"),
+  );
+  if (!references.length) return null;
+  const candidates = await tx.partnerMessage.findMany({
+    where: {
+      conversation: { onboardingTracked: true },
+      direction: "OUTBOUND",
+      authorId: { not: null },
+      rfcMessageId: { in: references },
+    },
+    select: { conversationId: true },
   });
-  if (prospect && mover && prospect.moverCompanyId !== mover.id) return {};
-  return {
-    prospectId: prospect?.id || null,
-    moverCompanyId: mover?.id || prospect?.moverCompanyId || null,
-    assignedAdminId: prospect?.assignedAdminId || null,
-  };
+  const ids = [...new Set(candidates.map((item) => item.conversationId))];
+  return ids.length === 1
+    ? tx.partnerConversation.findUnique({ where: { id: ids[0] } })
+    : null;
 }
 
 export async function persistGmailMessage(
@@ -67,8 +99,11 @@ export async function persistGmailMessage(
     Number.isFinite(stamp) && stamp > 0 ? new Date(stamp) : new Date();
   const rfc = messageIds(header(message.payload, "message-id"))[0] || null;
   return locked(async (tx) => {
+    let conversation = await onboardingConversation(tx, message, gmailDraftId);
+    if (!conversation) return null;
     const linked = await tx.partnerMessage.findFirst({
       where: {
+        conversationId: conversation.id,
         OR: [
           { gmailMessageId: message.id },
           ...(gmailDraftId ? [{ gmailDraftId }] : []),
@@ -105,53 +140,6 @@ export async function persistGmailMessage(
           },
         });
       return linked;
-    }
-    let conversation = linked
-      ? await tx.partnerConversation.findUniqueOrThrow({
-          where: { id: linked.conversationId },
-        })
-      : await tx.partnerConversation.findUnique({
-          where: { gmailThreadId: message.threadId },
-        });
-    if (!conversation && direction === "INBOUND") {
-      const references = messageIds(
-        `${header(message.payload, "in-reply-to")} ${header(message.payload, "references")}`,
-      );
-      const candidates = references.length
-        ? await tx.partnerMessage.findMany({
-            where: {
-              direction: "OUTBOUND",
-              from: SUPPORT_MAILBOX,
-              rfcMessageId: { in: references },
-              to: { has: from },
-              conversation: { gmailThreadId: null },
-            },
-            select: { conversationId: true },
-          })
-        : [];
-      const ids = [...new Set(candidates.map((item) => item.conversationId))];
-      if (ids.length === 1)
-        conversation = await tx.partnerConversation.findUniqueOrThrow({
-          where: { id: ids[0] },
-        });
-    }
-    if (!conversation) {
-      const match = await matchCompany(
-        tx,
-        direction === "INBOUND"
-          ? from
-          : to.find((value) => value !== SUPPORT_MAILBOX) || "",
-      );
-      conversation = await tx.partnerConversation.create({
-        data: {
-          gmailThreadId: message.threadId,
-          subject,
-          participants: [...new Set([from, ...to, ...cc])],
-          labels: [],
-          ...match,
-          ...(match.assignedAdminId ? { assignedAt: new Date() } : {}),
-        },
-      });
     }
     if (!conversation.gmailThreadId) {
       conversation = await tx.partnerConversation.update({
@@ -321,6 +309,7 @@ export async function syncPartnerInbox(
     await bridgeRecruitmentMessages();
     const pending = await prisma.partnerConversation.findMany({
       where: {
+        onboardingTracked: true,
         pendingProviderChanges: { not: Prisma.DbNull },
         gmailThreadId: { not: null },
         OR: [
@@ -416,11 +405,19 @@ export async function syncPartnerInbox(
       });
       if (!lease.count) throw new Error("Mailbox sync lease changed.");
       try {
+        const metadata = await connection.request<GmailMessage>(
+          `/messages/${encodeURIComponent(id)}?format=metadata&metadataHeaders=From&metadataHeaders=Message-ID&metadataHeaders=In-Reply-To&metadataHeaders=References`,
+        );
+        const eligible = await prisma.$transaction((tx) =>
+          onboardingConversation(tx, metadata),
+        );
+        visited.add(id);
+        if (!eligible) continue; // Never fetch/store unrelated message bodies or attachments.
         const message = await connection.request<GmailMessage>(
           `/messages/${encodeURIComponent(id)}?format=full`,
         );
         const known = await prisma.partnerConversation.findUnique({
-          where: { gmailThreadId: message.threadId },
+          where: { gmailThreadId: message.threadId, onboardingTracked: true },
           select: { id: true },
         });
         // A recent message can belong to an older thread. Import the entire thread once.
@@ -508,6 +505,7 @@ export async function syncPartnerInbox(
     });
     await prisma.partnerMessage.updateMany({
       where: {
+        conversation: { onboardingTracked: true },
         status: "SENDING",
         updatedAt: { lt: new Date(Date.now() - 600000) },
       },
