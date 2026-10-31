@@ -5,6 +5,7 @@ import { processLeadSpreadsheetQueue } from "@/lib/lead-spreadsheet";
 import { processCleanerBillingJobs } from "@/lib/cleaner-billing-jobs";
 import { processMoverPushQueue } from "@/lib/mover-push";
 import { syncRecruitmentOutcomes } from "@/lib/recruitment-outreach";
+import { startPartnerInboxWorker } from "@/lib/partner-inbox-worker";
 
 type BackgroundJobState = {
   started: boolean;
@@ -34,10 +35,9 @@ function getNumberEnv(name: string, fallback: number, minimum: number) {
 }
 
 function shouldRunBackgroundJobs() {
+  if (process.env.NEXT_PHASE === "phase-production-build" || process.env.NODE_ENV === "test") return false;
   const explicit = getBooleanEnv("BACKGROUND_JOBS_ENABLED");
   if (explicit !== null) return explicit;
-  if (process.env.NEXT_PHASE === "phase-production-build") return false;
-  if (process.env.NODE_ENV === "test") return false;
   return process.env.NODE_ENV === "production";
 }
 
@@ -108,6 +108,7 @@ async function runBackgroundJobTick(state: BackgroundJobState) {
 
 export function startBackgroundJobs() {
   if (!shouldRunBackgroundJobs()) return;
+  startPartnerInboxWorker();
 
   const state = globalForBackgroundJobs.matchnMoveBackgroundJobs ?? {
     started: false,

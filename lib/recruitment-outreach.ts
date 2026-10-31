@@ -83,7 +83,7 @@ export async function editDraft(tx: Tx, actor: RecruitmentActor, raw: unknown) {
   return result;
 }
 
-async function verifySend(tx: Tx, actor: RecruitmentActor, messageId: string) {
+export async function verifySend(tx: Tx, actor: RecruitmentActor, messageId: string) {
   const user = await checkActor(tx, actor);
   if (
     actor.role !== "OWNER" &&

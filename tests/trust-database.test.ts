@@ -63,6 +63,7 @@ test(
         { tags: [], expirationsByCacheKind: new Map() },
         undefined,
         undefined,
+        undefined,
       );
       const work = {
         route: req.nextUrl.pathname,

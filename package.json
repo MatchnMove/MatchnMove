@@ -37,12 +37,13 @@
     "framer-motion": "^12.38.0",
     "google-auth-library": "^10.6.2",
     "lucide-react": "^0.468.0",
-    "next": "16.2.7",
-    "nodemailer": "8.0.5",
+    "next": "16.4.3",
+    "nodemailer": "10.3.1",
     "otplib": "^13.4.1",
     "qrcode": "^1.5.4",
     "react": "19.2.0",
     "react-dom": "19.2.0",
+    "sanitize-html": "^2.18.1",
     "stripe": "^17.5.0",
     "web-push": "^3.6.7",
     "zod": "^3.24.1"
@@ -55,19 +56,21 @@
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@types/sanitize-html": "^2.16.2",
     "@types/web-push": "^3.6.4",
     "autoprefixer": "^10.4.20",
     "eslint": "^9.0.0",
     "eslint-config-next": "16.2.4",
     "jsdom": "^26.1.0",
-    "postcss": "8.5.15",
+    "postcss": "8.5.32",
     "prisma": "^5.22.0",
     "tailwindcss": "^3.4.17",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
   },
   "overrides": {
-    "postcss": "8.5.15"
+    "eslint-plugin-react-hooks": "7.0.1",
+    "postcss": "8.5.32"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

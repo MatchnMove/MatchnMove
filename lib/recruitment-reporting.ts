@@ -72,6 +72,7 @@ export async function recruitmentMetrics(
     }),
     prisma.recruitmentTask.count({
       where: {
+        conversationId: null,
         ...(actor.role === "OWNER" ? {} : { assignedAdminId: actor.id }),
         completedAt: null,
         cancelledAt: null,
@@ -80,6 +81,7 @@ export async function recruitmentMetrics(
     }),
     prisma.recruitmentTask.count({
       where: {
+        conversationId: null,
         ...(actor.role === "OWNER" ? {} : { assignedAdminId: actor.id }),
         completedAt: { not: null, ...range },
         cancelledAt: null,

@@ -99,6 +99,7 @@ export async function GET(req: NextRequest) {
         recruitmentMetrics(actor, range),
         prisma.recruitmentTask.findMany({
           where: {
+            conversationId: null,
             ...(actor.role === "OWNER" ? {} : { assignedAdminId: actor.id }),
             completedAt: null,
             cancelledAt: null,
@@ -232,7 +233,7 @@ export async function GET(req: NextRequest) {
             orderBy: { createdAt: "desc" },
             take: 100,
           },
-          tasks: { orderBy: { dueAt: "asc" }, take: 100 },
+          tasks: { where: { conversationId: null }, orderBy: { dueAt: "asc" }, take: 100 },
         },
       });
       if (!prospect) fail("Company not found.", 404);
@@ -333,6 +334,7 @@ export async function GET(req: NextRequest) {
     } else if (view === "tasks") {
       data = await prisma.recruitmentTask.findMany({
         where: {
+          conversationId: null,
           ...(actor.role === "OWNER" ? {} : { assignedAdminId: actor.id }),
           cancelledAt: null,
         },
@@ -485,7 +487,7 @@ export async function POST(req: NextRequest) {
           data: { assignedAdminId: admin.id, version: { increment: 1 } },
         });
         await tx.recruitmentTask.updateMany({
-          where: { prospectId: input.id, completedAt: null, cancelledAt: null },
+          where: { prospectId: input.id, conversationId: null, completedAt: null, cancelledAt: null },
           data: { assignedAdminId: admin.id },
         });
         await activity(tx, input.id, actor.id, "prospect_reassigned", {
@@ -655,6 +657,7 @@ export async function POST(req: NextRequest) {
         const input = z.object({ id: z.string() }).parse(body.data);
         const task = await tx.recruitmentTask.findFirst({
           where: {
+            conversationId: null,
             id: input.id,
             ...(actor.role === "OWNER" ? {} : { assignedAdminId: actor.id }),
             cancelledAt: null,

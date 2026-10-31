@@ -1,4 +1,5 @@
 "use client";
+import { PartnerInboxSummary } from "@/components/partner-inbox-summary";
 
 import { FormEvent, ReactNode, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
@@ -372,6 +373,7 @@ function Dashboard({
   ];
   return (
     <div className="space-y-6">
+      {!performance && <PartnerInboxSummary />}
       <div className="flex flex-wrap items-end gap-3">
         <Field title="Reporting period">
           <select

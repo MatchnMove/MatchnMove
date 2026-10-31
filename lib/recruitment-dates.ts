@@ -44,6 +44,12 @@ function addDays(day: string, days: number) {
   instant.setUTCDate(instant.getUTCDate() + days);
   return instant.toISOString().slice(0, 10);
 }
+export function aucklandWeekStart(now = new Date()) {
+  const p = aucklandParts(now);
+  const day = `${p.year}-${String(p.month).padStart(2, "0")}-${String(p.day).padStart(2, "0")}`;
+  const weekday = new Date(`${day}T00:00:00Z`).getUTCDay();
+  return aucklandMidnight(addDays(day, -((weekday + 6) % 7)));
+}
 export function recruitmentDateRange(
   period: string,
   from = "",

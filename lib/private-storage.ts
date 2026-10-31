@@ -120,3 +120,17 @@ export async function getPrivateDocumentUrl(key: string, fileName: string) {
     { expiresIn },
   );
 }
+
+export async function readPrivateDocument(key: string, maxBytes: number) {
+  const { bucket, client } = getStorageClient();
+  const result = await client.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
+  if (!result.Body || (result.ContentLength || 0) > maxBytes) throw new Error("File exceeds the permitted size.");
+  const chunks: Buffer[] = [];
+  let size = 0;
+  for await (const chunk of result.Body as AsyncIterable<Uint8Array>) {
+    const bytes = Buffer.from(chunk); size += bytes.length;
+    if (size > maxBytes) throw new Error("File exceeds the permitted size.");
+    chunks.push(bytes);
+  }
+  return Buffer.concat(chunks);
+}

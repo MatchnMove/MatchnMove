@@ -232,3 +232,11 @@ Authorization: Bearer $EMAIL_QUEUE_SECRET
 New quote requests can be appended automatically to a company-owned Google Sheet for the communications team. The integration uses a dedicated service account, a durable Postgres retry queue, idempotent Quote IDs, raw-value formula protection, and named Workspace sharing.
 
 Production setup and security operations are documented in [`docs/LEAD_GOOGLE_SHEETS_SETUP.md`](docs/LEAD_GOOGLE_SHEETS_SETUP.md). After configuring Railway and sharing the Sheet with the service account, an MFA-verified admin completes setup at `/admin/leads`.
+
+## Shared partner inbox
+
+`/admin/inbox` connects the actual Google Workspace support mailbox through Gmail OAuth, with shared conversations, replies, drafts, attachments, assignments, private notes, company history and follow-up tasks. Existing SMTP notifications and outreach safeguards remain in force. Owners explicitly grant colleagues read/send access; colleagues see assigned conversations only.
+
+Follow [`docs/PARTNER_INBOX_SETUP.md`](docs/PARTNER_INBOX_SETUP.md) to create the Google OAuth client, store its credentials securely, connect **support@matchnmove.co.nz**, configure the dedicated `PARTNER_INBOX_ENCRYPTION_KEY`, and perform the final live round-trip acceptance test. The app never automatically sends an invitation when a mailbox or company address is added.
+
+Inbox tests run with `npm test` (policy/UI) and opt-in `INBOX_TEST_DATABASE_URL` / `INBOX_TEST_BASE_URL` for database/provider and authenticated HTTP integration tests. Integration suites enforce a loopback database ending in `_test`; do not point them at production.

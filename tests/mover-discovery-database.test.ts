@@ -173,6 +173,7 @@ test(
         { tags: [], expirationsByCacheKind: new Map() },
         undefined,
         undefined,
+        undefined,
       );
       const work = {
         route: req.nextUrl.pathname,
@@ -315,7 +316,7 @@ test(
             save,
             {
               action: "save_prospect",
-              data: { prospect: { ...data.prefill, operatingRegion: null } },
+              data: { prospect: { ...data.prefill, emailAvailability: "PUBLIC", phoneAvailability: data.prefill.phone ? "PUBLIC" : "NOT_PUBLIC", operatingRegion: null } },
             },
             token(b),
           );
@@ -338,7 +339,7 @@ test(
             save,
             {
               action: "save_prospect",
-              data: { prospect: { ...data.prefill, operatingRegion: null } },
+              data: { prospect: { ...data.prefill, emailAvailability: "PUBLIC", phoneAvailability: data.prefill.phone ? "PUBLIC" : "NOT_PUBLIC", operatingRegion: null } },
             },
             token(a),
           );
@@ -423,6 +424,8 @@ test(
                 prospect: {
                   ...data.prefill,
                   email: "web-" + tag + "@validation.invalid",
+                  emailAvailability: "PUBLIC",
+                  phoneAvailability: data.prefill.phone ? "PUBLIC" : "NOT_PUBLIC",
                   operatingRegion: null,
                 },
               },

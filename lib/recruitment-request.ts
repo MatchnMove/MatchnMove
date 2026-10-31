@@ -3,7 +3,7 @@ import { isSameOriginPushRequest } from "@/lib/mover-push-policy";
 export function isRecruitmentMutationRequest(request: {
   headers: Headers;
   nextUrl: { protocol: string };
-}) {
+}, maxBytes = 64000) {
   const host =
     request.headers.get("x-forwarded-host") || request.headers.get("host");
   const protocol =
@@ -14,6 +14,6 @@ export function isRecruitmentMutationRequest(request: {
     Boolean(
       request.headers.get("content-type")?.includes("application/json"),
     ) &&
-    Number(request.headers.get("content-length") || 0) <= 64000
+    Number(request.headers.get("content-length") || 0) <= maxBytes
   );
 }

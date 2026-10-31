@@ -109,6 +109,11 @@ model User {
   lastSignInAt            DateTime?
   canSendRecruitment      Boolean                 @default(false)
   canViewRecruitmentLeads Boolean                 @default(false)
+  canAccessPartnerInbox   Boolean                 @default(false)
+  canSendPartnerInbox     Boolean                 @default(false)
+  inboxConversations      PartnerConversation[]
+  inboxMessages           PartnerMessage[]
+  inboxNotes              PartnerInboxNote[]
   assignedProspects       MoverProspect[]
   recruitmentTasks        RecruitmentTask[]
   outreachMessages        OutreachMessage[]
@@ -142,51 +147,53 @@ model CleanerCompany {
 }
 
 model MoverCompany {
-  id                           String                  @id @default(cuid())
-  userId                       String                  @unique
-  stripeCustomerId             String?                 @unique
+  inboxConversations           PartnerConversation[]
+  inboxContacts                PartnerContactAssociation[]
+  id                           String                      @id @default(cuid())
+  userId                       String                      @unique
+  stripeCustomerId             String?                     @unique
   companyName                  String
   businessDescription          String?
   nzbn                         String?
-  nzbnVerificationStatus       String                  @default("UNVERIFIED")
+  nzbnVerificationStatus       String                      @default("UNVERIFIED")
   nzbnVerifiedAt               DateTime?
   nzbnRegisteredName           String?
   nzbnEntityStatus             String?
   nzbnVerificationSource       String?
-  nzbnVerificationError        String?                 @db.Text
+  nzbnVerificationError        String?                     @db.Text
   operatingRegion              String?
-  movingServices               String[]                @default([])
+  movingServices               String[]                    @default([])
   yearsOperatingVerifiedAt     DateTime?
-  legacyPublicProfile          Boolean                 @default(false)
+  legacyPublicProfile          Boolean                     @default(false)
   profileReviewedAt            DateTime?
   yearsOperating               Int?
   logoUrl                      String?
   serviceAreas                 String[]
-  status                       String                  @default("ACTIVE")
+  status                       String                      @default("ACTIVE")
   contactPerson                String?
   phone                        String?
   phoneVerifiedAt              DateTime?
   authorizedRepresentativeName String?
   authorizedRepresentativeRole String?
   authorityDeclaredAt          DateTime?
-  baseLeadPrice                Int                     @default(2000)
-  averageRating                Float                   @default(0)
-  totalReviewCount             Int                     @default(0)
-  fiveStarCount                Int                     @default(0)
-  fourStarCount                Int                     @default(0)
-  threeStarCount               Int                     @default(0)
-  twoStarCount                 Int                     @default(0)
-  oneStarCount                 Int                     @default(0)
-  communicationAverage         Float                   @default(0)
-  punctualityAverage           Float                   @default(0)
-  careOfBelongingsAverage      Float                   @default(0)
-  professionalismAverage       Float                   @default(0)
-  valueForMoneyAverage         Float                   @default(0)
-  recommendationRate           Float                   @default(0)
-  leaderboardEligible          Boolean                 @default(false)
-  createdAt                    DateTime                @default(now())
-  updatedAt                    DateTime                @updatedAt
-  user                         User                    @relation(fields: [userId], references: [id])
+  baseLeadPrice                Int                         @default(2000)
+  averageRating                Float                       @default(0)
+  totalReviewCount             Int                         @default(0)
+  fiveStarCount                Int                         @default(0)
+  fourStarCount                Int                         @default(0)
+  threeStarCount               Int                         @default(0)
+  twoStarCount                 Int                         @default(0)
+  oneStarCount                 Int                         @default(0)
+  communicationAverage         Float                       @default(0)
+  punctualityAverage           Float                       @default(0)
+  careOfBelongingsAverage      Float                       @default(0)
+  professionalismAverage       Float                       @default(0)
+  valueForMoneyAverage         Float                       @default(0)
+  recommendationRate           Float                       @default(0)
+  leaderboardEligible          Boolean                     @default(false)
+  createdAt                    DateTime                    @default(now())
+  updatedAt                    DateTime                    @updatedAt
+  user                         User                        @relation(fields: [userId], references: [id])
   documents                    MoverDocument[]
   leads                        Lead[]
   reviews                      Review[]
@@ -679,10 +686,10 @@ model AdminInvitation {
 }
 
 model MoverProspect {
-  id                  String                @id @default(cuid())
+  id                  String                      @id @default(cuid())
   companyName         String
   normalizedName      String
-  email               String?               @unique
+  email               String?                     @unique
   emailAvailability   String?
   phoneAvailability   String?
   contactName         String?
@@ -691,16 +698,16 @@ model MoverProspect {
   operatingRegion     String?
   serviceAreas        String[]
   serviceTypes        String[]
-  longDistance        Boolean               @default(false)
+  longDistance        Boolean                     @default(false)
   assignedAdminId     String
-  assignedAdmin       User                  @relation(fields: [assignedAdminId], references: [id], onDelete: Restrict)
-  status              RecruitmentStatus     @default(NOT_CONTACTED)
-  consentBasis        String                @default("UNKNOWN")
-  consentEvidence     String?               @db.Text
+  assignedAdmin       User                        @relation(fields: [assignedAdminId], references: [id], onDelete: Restrict)
+  status              RecruitmentStatus           @default(NOT_CONTACTED)
+  consentBasis        String                      @default("UNKNOWN")
+  consentEvidence     String?                     @db.Text
   consentRecordedAt   DateTime?
   consentRecordedBy   String?
-  notes               String?               @db.Text
-  version             Int                   @default(0)
+  notes               String?                     @db.Text
+  version             Int                         @default(0)
   lastContactedAt     DateTime?
   nextFollowUpAt      DateTime?
   respondedAt         DateTime?
@@ -709,15 +716,17 @@ model MoverProspect {
   activatedAt         DateTime?
   firstPaidLeadAt     DateTime?
   recruitedById       String?
-  moverCompanyId      String?               @unique
-  moverCompany        MoverCompany?         @relation(fields: [moverCompanyId], references: [id], onDelete: Restrict)
+  moverCompanyId      String?                     @unique
+  moverCompany        MoverCompany?               @relation(fields: [moverCompanyId], references: [id], onDelete: Restrict)
   duplicateOfId       String?
   duplicateReviewNote String?
-  createdAt           DateTime              @default(now())
-  updatedAt           DateTime              @updatedAt
+  createdAt           DateTime                    @default(now())
+  updatedAt           DateTime                    @updatedAt
   messages            OutreachMessage[]
   tasks               RecruitmentTask[]
   activities          RecruitmentActivity[]
+  inboxConversations  PartnerConversation[]
+  inboxContacts       PartnerContactAssociation[]
 
   @@index([assignedAdminId, status, nextFollowUpAt])
   @@index([normalizedName])
@@ -725,31 +734,32 @@ model MoverProspect {
 }
 
 model OutreachMessage {
-  id                    String        @id @default(cuid())
+  inboxMessage          PartnerMessage?
+  id                    String          @id @default(cuid())
   prospectId            String
-  prospect              MoverProspect @relation(fields: [prospectId], references: [id], onDelete: Restrict)
+  prospect              MoverProspect   @relation(fields: [prospectId], references: [id], onDelete: Restrict)
   quoteRequestId        String?
-  quoteRequest          QuoteRequest? @relation(fields: [quoteRequestId], references: [id], onDelete: Restrict)
+  quoteRequest          QuoteRequest?   @relation(fields: [quoteRequestId], references: [id], onDelete: Restrict)
   adminId               String
-  sequence              Int           @default(0)
-  followUpToId          String?       @unique
-  admin                 User          @relation(fields: [adminId], references: [id], onDelete: Restrict)
-  status                String        @default("DRAFT")
+  sequence              Int             @default(0)
+  followUpToId          String?         @unique
+  admin                 User            @relation(fields: [adminId], references: [id], onDelete: Restrict)
+  status                String          @default("DRAFT")
   subject               String
-  introduction          String        @db.Text
-  text                  String        @db.Text
-  html                  String        @db.Text
-  attributionHash       String        @unique
+  introduction          String          @db.Text
+  text                  String          @db.Text
+  html                  String          @db.Text
+  attributionHash       String          @unique
   attributionExpiresAt  DateTime
   attributionConsumedAt DateTime?
-  unsubscribeHash       String        @unique
-  emailDeliveryId       String?       @unique
+  unsubscribeHash       String          @unique
+  emailDeliveryId       String?         @unique
   approvedAt            DateTime?
   sentAt                DateTime?
   failedAt              DateTime?
   lastError             String?
-  createdAt             DateTime      @default(now())
-  updatedAt             DateTime      @updatedAt
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
 
   @@unique([prospectId, quoteRequestId, sequence])
   @@index([adminId, sentAt])
@@ -757,23 +767,27 @@ model OutreachMessage {
 }
 
 model RecruitmentTask {
-  id              String         @id @default(cuid())
-  dedupeKey       String?        @unique
+  kind            String?
+  id              String               @id @default(cuid())
+  dedupeKey       String?              @unique
   title           String
-  description     String?        @db.Text
+  description     String?              @db.Text
   assignedAdminId String
-  assignedAdmin   User           @relation(fields: [assignedAdminId], references: [id], onDelete: Restrict)
+  assignedAdmin   User                 @relation(fields: [assignedAdminId], references: [id], onDelete: Restrict)
   prospectId      String?
-  prospect        MoverProspect? @relation(fields: [prospectId], references: [id], onDelete: Restrict)
+  prospect        MoverProspect?       @relation(fields: [prospectId], references: [id], onDelete: Restrict)
   quoteRequestId  String?
-  quoteRequest    QuoteRequest?  @relation(fields: [quoteRequestId], references: [id], onDelete: Restrict)
-  priority        String         @default("NORMAL")
+  quoteRequest    QuoteRequest?        @relation(fields: [quoteRequestId], references: [id], onDelete: Restrict)
+  priority        String               @default("NORMAL")
   dueAt           DateTime
   completedAt     DateTime?
   cancelledAt     DateTime?
-  createdAt       DateTime       @default(now())
+  conversationId  String?
+  conversation    PartnerConversation? @relation(fields: [conversationId], references: [id], onDelete: Restrict)
+  createdAt       DateTime             @default(now())
 
   @@index([assignedAdminId, completedAt, dueAt])
+  @@index([conversationId, completedAt, dueAt])
 }
 
 model RecruitmentActivity {
@@ -807,6 +821,175 @@ model RecruitmentProviderEvent {
   type      String
   email     String
   createdAt DateTime @default(now())
+}
+
+model PartnerMailbox {
+  encryptedClientConfig String?   @db.Text
+  id                    String    @id @default("support")
+  address               String    @unique
+  encryptedRefreshToken String?   @db.Text
+  historyId             String?
+  initialPageToken      String?
+  initialHistoryId      String?
+  draftPageToken        String?
+  initialSyncComplete   Boolean   @default(false)
+  lastSyncedAt          DateTime?
+  nextAttemptAt         DateTime?
+  lastError             String?
+  failureCount          Int       @default(0)
+  leaseUntil            DateTime?
+  leaseOwner            String?
+  connectedAt           DateTime?
+  updatedAt             DateTime  @updatedAt
+}
+
+model PartnerConversation {
+  pendingProviderChanges Json?
+  providerChangeError    String?
+  providerChangeNextAt   DateTime?
+  providerChangeFailures Int                         @default(0)
+  linkReviewed           Boolean                     @default(false)
+  id                     String                      @id @default(cuid())
+  gmailThreadId          String?                     @unique
+  subject                String
+  preview                String                      @default("")
+  participants           String[]
+  prospectId             String?
+  prospect               MoverProspect?              @relation(fields: [prospectId], references: [id], onDelete: Restrict)
+  moverCompanyId         String?
+  moverCompany           MoverCompany?               @relation(fields: [moverCompanyId], references: [id], onDelete: SetNull)
+  assignedAdminId        String?
+  assignedAdmin          User?                       @relation(fields: [assignedAdminId], references: [id], onDelete: Restrict)
+  assignedAt             DateTime?
+  status                 String                      @default("OPEN")
+  waitingFor             String                      @default("TEAM")
+  labels                 String[]
+  version                Int                         @default(0)
+  unread                 Boolean                     @default(true)
+  archived               Boolean                     @default(false)
+  spam                   Boolean                     @default(false)
+  lastMessageAt          DateTime                    @default(now())
+  resolvedAt             DateTime?
+  draftOwnerId           String?
+  draftLeaseUntil        DateTime?
+  messages               PartnerMessage[]
+  notes                  PartnerInboxNote[]
+  tasks                  RecruitmentTask[]
+  activities             PartnerInboxActivity[]
+  contacts               PartnerContactAssociation[]
+  createdAt              DateTime                    @default(now())
+  updatedAt              DateTime                    @updatedAt
+
+  @@index([assignedAdminId, archived, lastMessageAt])
+  @@index([unread, lastMessageAt])
+  @@index([prospectId, lastMessageAt])
+}
+
+model PartnerMessage {
+  composeText          String?             @db.Text
+  outreachMessageId    String?             @unique
+  outreachMessage      OutreachMessage?    @relation(fields: [outreachMessageId], references: [id], onDelete: Restrict)
+  outreachUpdatedAt    DateTime?
+  draftDirty           Boolean             @default(false)
+  draftMirrorUncertain Boolean             @default(false)
+  draftMirrorUntil     DateTime?
+  purpose              String              @default("OUTREACH")
+  serviceReason        String?
+  id                   String              @id @default(cuid())
+  conversationId       String
+  conversation         PartnerConversation @relation(fields: [conversationId], references: [id], onDelete: Restrict)
+  gmailMessageId       String?             @unique
+  gmailDraftId         String?             @unique
+  rfcMessageId         String?
+  inReplyTo            String?
+  parentMessageId      String?
+  references           String[]
+  direction            String
+  status               String              @default("SYNCED")
+  from                 String
+  replyTo              String?
+  to                   String[]
+  cc                   String[]
+  bcc                  String[]
+  subject              String
+  text                 String              @db.Text
+  html                 String?             @db.Text
+  providerLabels       String[]
+  authorId             String?
+  author               User?               @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  attachments          PartnerAttachment[]
+  version              Int                 @default(0)
+  sendClaim            String?             @unique
+  lastError            String?
+  sentAt               DateTime?
+  receivedAt           DateTime            @default(now())
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  @@index([conversationId, receivedAt])
+  @@index([status, updatedAt])
+  @@index([rfcMessageId])
+}
+
+model PartnerAttachment {
+  updatedAt            DateTime       @updatedAt
+  id                   String         @id @default(cuid())
+  messageId            String
+  message              PartnerMessage @relation(fields: [messageId], references: [id], onDelete: Restrict)
+  providerPartId       String?
+  providerAttachmentId String?
+  contentId            String?
+  fileName             String
+  mimeType             String
+  size                 Int
+  storageKey           String?
+  scanStatus           String         @default("PENDING")
+  sha256               String?
+  createdAt            DateTime       @default(now())
+
+  @@unique([messageId, providerPartId])
+}
+
+model PartnerInboxNote {
+  id             String              @id @default(cuid())
+  conversationId String
+  conversation   PartnerConversation @relation(fields: [conversationId], references: [id], onDelete: Restrict)
+  authorId       String
+  author         User                @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  text           String              @db.Text
+  createdAt      DateTime            @default(now())
+}
+
+model PartnerInboxActivity {
+  id             String              @id @default(cuid())
+  conversationId String
+  conversation   PartnerConversation @relation(fields: [conversationId], references: [id], onDelete: Restrict)
+  actorId        String?
+  action         String
+  meta           Json?
+  createdAt      DateTime            @default(now())
+
+  @@index([conversationId, createdAt])
+}
+
+model PartnerContactAssociation {
+  id             String               @id @default(cuid())
+  email          String               @unique
+  prospectId     String?
+  prospect       MoverProspect?       @relation(fields: [prospectId], references: [id], onDelete: Restrict)
+  moverCompanyId String?
+  moverCompany   MoverCompany?        @relation(fields: [moverCompanyId], references: [id], onDelete: SetNull)
+  conversationId String?
+  conversation   PartnerConversation? @relation(fields: [conversationId], references: [id], onDelete: Restrict)
+  verifiedBy     String
+  verifiedAt     DateTime             @default(now())
+}
+
+model PartnerInboxOAuthState {
+  hash              String   @id
+  actorId           String
+  encryptedVerifier String
+  expiresAt         DateTime
 }
 
 model QuoteDraft {
