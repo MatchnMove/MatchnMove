@@ -4,9 +4,11 @@ import Link from "next/link";
 import { Search, ExternalLink, LoaderCircle } from "lucide-react";
 import type { DiscoveryCandidate } from "@/lib/mover-discovery";
 import type { DiscoveryMatch } from "@/lib/mover-discovery-duplicates";
+import { type PartnerBusinessType } from "@/lib/partner-business";
 type Item = DiscoveryCandidate & { match: DiscoveryMatch };
 export type DiscoveredProspectForm = {
   companyName: string;
+  businessType: PartnerBusinessType;
   email: string;
   phone: string;
   website: string;
@@ -29,6 +31,7 @@ export function MoverDiscovery({
   onChoose: (form: DiscoveredProspectForm) => void;
 }) {
   const [open, setOpen] = useState(false),
+    [businessType, setBusinessType] = useState<PartnerBusinessType>("MOVING"),
     [query, setQuery] = useState("movers"),
     [city, setCity] = useState("Auckland"),
     [data, setData] = useState<Results | null>(null),
@@ -38,6 +41,7 @@ export function MoverDiscovery({
   const pending = useRef(false);
   const lastQuery = useRef("movers");
   const lastCity = useRef("Auckland");
+  const lastBusinessType = useRef<PartnerBusinessType>("MOVING");
   async function request(body: unknown) {
     const response = await fetch("/api/admin/recruitment/discovery", {
       method: "POST",
@@ -67,12 +71,14 @@ export function MoverDiscovery({
       const selectedCity = paginating ? lastCity.current : city.trim();
       const value = await request({
         action: "maps_search",
+        businessType: paginating ? lastBusinessType.current : businessType,
         query: term,
         city: selectedCity,
         page,
       });
       lastQuery.current = term;
       lastCity.current = selectedCity;
+      if (!paginating) lastBusinessType.current = businessType;
       setData(value);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Search unavailable.");
@@ -90,6 +96,7 @@ export function MoverDiscovery({
       const value = await request({
         action: "maps_details",
         placeId: item.placeId,
+        businessType: lastBusinessType.current,
       });
       if (
         value.item.inactive ||
@@ -136,7 +143,7 @@ export function MoverDiscovery({
         }}
       >
         <Search size={17} />
-        Find movers online
+        Find partners online
       </button>
       {open && (
         <section
@@ -148,11 +155,11 @@ export function MoverDiscovery({
             id="mover-discovery-title"
             className="text-xl font-bold text-slate-950"
           >
-            Find moving companies by city
+            Find moving and cleaning companies by city
           </h2>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
             Search Google Maps business listings through SerpApi. Choose a New
-            Zealand city or town and try movers, removals or a company name.
+            Zealand city or town and try movers, removals, cleaners, cleaning services or a company name.
             Review each business before adding it. Search location does not
             confirm service coverage, and listings may include nearby areas.
           </p>
@@ -163,6 +170,20 @@ export function MoverDiscovery({
               void search();
             }}
           >
+            <label className="min-w-0 flex-1 text-sm font-semibold" htmlFor="discovery-business-type">
+              Business type
+              <select id="discovery-business-type" className={field + " mt-2 w-full"} value={businessType} disabled={busy}
+                onChange={event => {
+                  const next = event.target.value as PartnerBusinessType;
+                  setBusinessType(next);
+                  setQuery(next === "CLEANING" ? "cleaners" : "movers");
+                  setData(null);
+                  setError("");
+                }}>
+                <option value="MOVING">Moving companies</option>
+                <option value="CLEANING">Cleaning companies</option>
+              </select>
+            </label>
             <label
               className="min-w-0 flex-1 text-sm font-semibold"
               htmlFor="discovery-city"
@@ -226,7 +247,7 @@ export function MoverDiscovery({
               ) : (
                 <Search size={16} />
               )}
-              Search movers
+              Search {businessType === "CLEANING" ? "cleaners" : "movers"}
             </button>
           </form>
           {error && (
@@ -318,7 +339,7 @@ export function MoverDiscovery({
                           <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
                             {item.match.registered && (
                               <span className="rounded-full bg-sky-50 px-3 py-1 text-sky-800">
-                                Registered mover match
+                                Registered partner match
                               </span>
                             )}
                             {item.match.duplicate && (

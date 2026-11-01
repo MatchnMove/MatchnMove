@@ -171,6 +171,8 @@ export async function saveInboxDraft(actor: InboxActor, raw: unknown) {
           prospectId: prospect?.id || original?.prospectId || null,
           moverCompanyId:
             prospect?.moverCompanyId || original?.moverCompanyId || null,
+          cleanerCompanyId:
+            prospect?.cleanerCompanyId || original?.cleanerCompanyId || null,
           assignedAdminId: actor.id,
           waitingFor: "PARTNER",
           unread: false,
@@ -967,6 +969,7 @@ export async function bridgeRecruitmentMessages() {
             onboardingTracked: true,
             prospectId: item.prospectId,
             moverCompanyId: item.prospect.moverCompanyId,
+            cleanerCompanyId: item.prospect.cleanerCompanyId,
             assignedAdminId: item.prospect.assignedAdminId,
           },
         });
@@ -983,6 +986,7 @@ export async function bridgeRecruitmentMessages() {
           ],
           prospectId: item.prospectId,
           moverCompanyId: item.prospect.moverCompanyId,
+          cleanerCompanyId: item.prospect.cleanerCompanyId,
           assignedAdminId: item.prospect.assignedAdminId,
           archived: true,
           unread: false,

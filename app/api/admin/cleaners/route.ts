@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { syncRecruitmentOutcomes } from "@/lib/recruitment-outreach";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { requireAdminRequest } from "@/lib/admin-auth";
@@ -157,6 +158,7 @@ export async function PATCH(request: NextRequest) {
       });
       return updated;
     });
+    await syncRecruitmentOutcomes(cleaner.id, "CLEANING").catch(() => console.error("Cleaner recruitment sync deferred to scheduler"));
     return NextResponse.json({ ok: true, cleaner });
   } catch (error) {
     if (parsed.data.status === "ACTIVE" && error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {

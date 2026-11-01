@@ -45,12 +45,12 @@ function errorResponse(error: unknown) {
       { status: 400, headers },
     );
   console.error(
-    "Mover discovery failed",
+    "Partner discovery failed",
     error instanceof Error ? error.name : "Unknown",
   );
   return NextResponse.json(
     {
-      error: "Mover discovery is unavailable. Please try again.",
+      error: "Partner discovery is unavailable. Please try again.",
       code: "UNAVAILABLE",
     },
     { status: 503, headers },
@@ -122,6 +122,7 @@ export async function POST(req: NextRequest) {
                 query: input.query,
                 city: input.city,
                 page: input.page,
+                businessType: input.businessType,
               }
             : { provider: "SERPAPI", action: "review", placeId: input.placeId },
         );
@@ -143,7 +144,7 @@ export async function POST(req: NextRequest) {
       const [item] = await annotateDiscoveredMovers([candidate], actor);
       await locked((tx) => checkActor(tx, actor));
       return NextResponse.json(
-        { item, prefill: discoveryPrefill(candidate) },
+        { item, prefill: discoveryPrefill(candidate, input.businessType) },
         { headers },
       );
     }

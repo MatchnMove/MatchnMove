@@ -27,6 +27,7 @@ type Person = {
 };
 type Company = {
   id: string;
+  businessType?: string;
   companyName: string;
   email: string | null;
   phone: string | null;
@@ -122,6 +123,7 @@ type Conversation = {
     status: string;
     user: { email: string; emailVerifiedAt: string | null };
   } | null;
+  cleaner?: Conversation["mover"];
   communicationHistory?: Array<{
     id: string;
     subject: string;
@@ -193,7 +195,7 @@ const folders = [
   ["all", "All conversations"],
 ];
 const label = (value: string) =>
-  value
+  (value === "ACTIVE_MOVER" ? "ACTIVE_PARTNER" : value)
     .toLowerCase()
     .replaceAll("_", " ")
     .replace(/^./, (letter) => letter.toUpperCase());
@@ -949,7 +951,7 @@ export function PartnerInbox({
                     }
                   >
                     <option value="TEAM">Our team</option>
-                    <option value="PARTNER">Moving partner</option>
+                    <option value="PARTNER">Partner company</option>
                   </select>
                 </label>
                 <details className="mt-3 text-xs">
@@ -1312,7 +1314,7 @@ export function PartnerInbox({
                         followup:
                           "Hi,\n\nI am following up on our previous conversation. Please let us know if you need any further information or assistance.\n\nKind regards,\nThe Match 'n Move Team",
                         introduction:
-                          "Hi,\n\nWe would like to introduce Match 'n Move and discuss whether our moving quote platform could be useful for your business. Please let us know if you would like more information.\n\nKind regards,\nThe Match 'n Move Team",
+                          "Hi,\n\nWe would like to introduce Match 'n Move and discuss whether our moving and cleaning platform could be useful for your business. Please let us know if you would like more information.\n\nKind regards,\nThe Match 'n Move Team",
                       };
                       if (
                         event.target.value &&
@@ -1843,11 +1845,12 @@ function CompanyConversationPanel({
   const [companies, setCompanies] = useState<{
     prospects: Company[];
     movers: Array<{ id: string; companyName: string }>;
-  }>({ prospects: [], movers: [] });
+    cleaners: Array<{ id: string; companyName: string }>;
+  }>({ prospects: [], movers: [], cleaners: [] });
   const [link, setLink] = useState("");
   const [verifiedEmail, setVerifiedEmail] = useState("");
   const prospect = conversation.prospect;
-  const mover = conversation.mover;
+  const mover = conversation.cleaner || conversation.mover;
   return (
     <div className="space-y-4">
       <details className="rounded-2xl border bg-white p-4" open>
@@ -1889,13 +1892,15 @@ function CompanyConversationPanel({
           )}
           {mover && (
             <p>
-              Registered partner: {label(mover.status)} ·{" "}
-              <Link
-                className="text-teal-700 underline"
-                href={`/movers/${mover.id}`}
-              >
-                Partner profile
-              </Link>
+              Registered {conversation.cleaner ? "cleaning" : "moving"} partner: {label(mover.status)}
+              {(!conversation.cleaner || owner) && <>
+                {" · "}<Link
+                  className="text-teal-700 underline"
+                  href={conversation.cleaner ? "/admin/cleaners" : `/movers/${mover.id}`}
+                >
+                  Partner profile
+                </Link>
+              </>}
             </p>
           )}
           <details>
@@ -1927,15 +1932,18 @@ function CompanyConversationPanel({
               <option value="">Choose a company</option>
               {companies.prospects.map((company) => (
                 <option key={company.id} value={`prospect:${company.id}`}>
-                  {company.companyName} (prospect)
+                  {company.companyName} ({company.businessType === "CLEANING" ? "cleaning" : "moving"} prospect)
                 </option>
               ))}
               {owner &&
                 companies.movers.map((company) => (
                   <option key={company.id} value={`mover:${company.id}`}>
-                    {company.companyName} (registered)
+                    {company.companyName} (registered mover)
                   </option>
                 ))}
+              {owner && companies.cleaners?.map(company => (
+                <option key={company.id} value={`cleaner:${company.id}`}>{company.companyName} (registered cleaner)</option>
+              ))}
             </select>
             {owner && (
               <label className="mt-3 block text-xs">
@@ -1969,6 +1977,7 @@ function CompanyConversationPanel({
                 void onAction("link", {
                   prospectId: type === "prospect" ? value : null,
                   moverCompanyId: type === "mover" ? value : null,
+                  cleanerCompanyId: type === "cleaner" ? value : null,
                   verifiedEmail: verifiedEmail || undefined,
                 });
               }}

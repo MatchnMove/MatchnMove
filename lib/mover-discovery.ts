@@ -299,9 +299,10 @@ export async function getDiscoveredMover(nzbn: string, fetcher?: typeof fetch) {
     );
   return candidate;
 }
-export function discoveryPrefill(candidate: DiscoveryCandidate) {
+export function discoveryPrefill(candidate: DiscoveryCandidate, businessType: "MOVING" | "CLEANING" = "MOVING") {
   return {
     companyName: candidate.companyName,
+    businessType,
     email: candidate.email,
     phone: candidate.phone,
     website: candidate.website,
@@ -323,6 +324,6 @@ export function discoveryPrefill(candidate: DiscoveryCandidate) {
       candidate.registryUrl +
       "\nRecorded status at review: " +
       candidate.status +
-      "\nConfirm this is a moving business, its contact details and service coverage before outreach.",
+      `\nConfirm this is a ${businessType === "CLEANING" ? "cleaning" : "moving"} business, its contact details and service coverage before outreach.`,
   };
 }

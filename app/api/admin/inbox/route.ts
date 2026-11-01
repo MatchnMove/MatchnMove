@@ -54,6 +54,8 @@ const companySelect = {
   status: true,
   assignedAdminId: true,
   moverCompanyId: true,
+  cleanerCompanyId: true,
+  businessType: true,
   version: true,
   consentBasis: true,
 } as const;
@@ -244,7 +246,7 @@ export async function GET(req: NextRequest) {
         },
       });
       if (!conversation) fail("Conversation not found.", 404);
-      const [messages, count, mover, communicationHistory] = await Promise.all([
+      const [messages, count, mover, communicationHistory, cleaner] = await Promise.all([
         prisma.partnerMessage.findMany({
           where: { conversationId: conversation.id },
           select: {
@@ -301,9 +303,15 @@ export async function GET(req: NextRequest) {
               take: 20,
             })
           : [],
+        conversation.cleanerCompanyId
+          ? prisma.cleanerCompany.findUnique({
+              where: { id: conversation.cleanerCompanyId },
+              select: { id: true, companyName: true, contactPerson: true, phone: true, status: true, user: { select: { email: true, emailVerifiedAt: true } } },
+            })
+          : null,
       ]);
       const companyHistory =
-        conversation.prospectId || conversation.moverCompanyId
+        conversation.prospectId || conversation.moverCompanyId || conversation.cleanerCompanyId
           ? await prisma.partnerConversation.findMany({
               where: {
                 ...scope,
@@ -315,6 +323,7 @@ export async function GET(req: NextRequest) {
                   ...(conversation.moverCompanyId
                     ? [{ moverCompanyId: conversation.moverCompanyId }]
                     : []),
+                  ...(conversation.cleanerCompanyId ? [{ cleanerCompanyId: conversation.cleanerCompanyId }] : []),
                 ],
               },
               select: {
@@ -334,6 +343,7 @@ export async function GET(req: NextRequest) {
         messageCount: count,
         page,
         mover,
+        cleaner,
         communicationHistory,
       };
     } else if (view === "access") {
@@ -401,6 +411,12 @@ export async function GET(req: NextRequest) {
                 take: 50,
               })
             : [],
+        cleaners: actor.role === "OWNER"
+          ? await prisma.cleanerCompany.findMany({
+              where: { OR: [{ companyName: { contains: q, mode: "insensitive" } }, { user: { email: { contains: q, mode: "insensitive" } } }] },
+              select: { id: true, companyName: true, phone: true }, take: 50, orderBy: { companyName: "asc" },
+            })
+          : [],
       };
     } else if (view === "tasks") {
       const status = query.get("status") || "outstanding";
@@ -903,9 +919,12 @@ export async function POST(req: NextRequest) {
               select: { phone: true },
             })
           : null;
+        const cleaner = conversation.cleanerCompanyId
+          ? await tx.cleanerCompany.findUnique({ where: { id: conversation.cleanerCompanyId }, select: { phone: true } })
+          : null;
         if (
           input.kind === "CALL" &&
-          !validBusinessPhone(company?.phone || mover?.phone)
+          !validBusinessPhone(company?.phone || mover?.phone || cleaner?.phone)
         )
           fail(
             "No suitable phone is recorded. Create a contact research task instead.",
@@ -954,9 +973,12 @@ export async function POST(req: NextRequest) {
           .object({
             prospectId: z.string().nullable(),
             moverCompanyId: z.string().nullable(),
+            cleanerCompanyId: z.string().nullable().default(null),
             verifiedEmail: z.string().email().optional(),
           })
           .parse(body.data);
+        if (input.moverCompanyId && input.cleanerCompanyId)
+          fail("Choose one registered partner for the conversation.");
         if (input.prospectId) await ownedProspect(tx, actor, input.prospectId);
         if (input.moverCompanyId) {
           ownerOnly(actor);
@@ -967,18 +989,24 @@ export async function POST(req: NextRequest) {
           )
             fail("Moving company not found.");
         }
+        if (input.cleanerCompanyId) {
+          ownerOnly(actor);
+          if (!(await tx.cleanerCompany.count({ where: { id: input.cleanerCompanyId } })))
+            fail("Cleaning company not found.");
+        }
         await tx.partnerConversation.update({
           where: { id: conversation.id },
           data: {
             prospectId: input.prospectId,
             moverCompanyId: input.moverCompanyId,
+            cleanerCompanyId: input.cleanerCompanyId,
             linkReviewed: true,
             version: { increment: 1 },
           },
         });
         if (input.verifiedEmail) {
           ownerOnly(actor);
-          if (!input.prospectId && !input.moverCompanyId)
+          if (!input.prospectId && !input.moverCompanyId && !input.cleanerCompanyId)
             fail("Choose a company for the association.");
           const email = input.verifiedEmail.toLowerCase();
           if (
@@ -992,7 +1020,8 @@ export async function POST(req: NextRequest) {
           if (
             existing &&
             (existing.prospectId !== input.prospectId ||
-              existing.moverCompanyId !== input.moverCompanyId)
+              existing.moverCompanyId !== input.moverCompanyId ||
+              existing.cleanerCompanyId !== input.cleanerCompanyId)
           )
             fail(
               "This address is associated with another company. Review it before changing the association.",
@@ -1004,6 +1033,7 @@ export async function POST(req: NextRequest) {
               email,
               prospectId: input.prospectId,
               moverCompanyId: input.moverCompanyId,
+              cleanerCompanyId: input.cleanerCompanyId,
               conversationId: conversation.id,
               verifiedBy: actor.id,
             },
@@ -1072,7 +1102,10 @@ export async function POST(req: NextRequest) {
                 select: { phone: true },
               })
             : null;
-          if (!validBusinessPhone(company?.phone || mover?.phone))
+          const cleaner = conversation.cleanerCompanyId
+            ? await tx.cleanerCompany.findUnique({ where: { id: conversation.cleanerCompanyId }, select: { phone: true } })
+            : null;
+          if (!validBusinessPhone(company?.phone || mover?.phone || cleaner?.phone))
             fail(
               "Record a suitable phone number before adding Needs phone call. Use a research follow-up meanwhile.",
             );

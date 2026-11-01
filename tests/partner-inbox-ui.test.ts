@@ -70,6 +70,10 @@ test("inbox UI previews the final email, requires explicit send and keeps failed
     labels: [],
     version: 0,
     prospect: null,
+    cleaner: {
+      id: "registered-cleaner", companyName: "Example Cleaners", phone: "0211234567", contactPerson: "Cleaning Partner", status: "ACTIVE",
+      user: { email: "cleaner@example.com", emailVerifiedAt: new Date().toISOString() },
+    },
     assignedAdmin: null,
     assignedAdminId: "admin",
     draftOwnerId: null,
@@ -82,7 +86,7 @@ test("inbox UI previews the final email, requires explicit send and keeps failed
     messageCount: 1,
   };
   const summary = {
-    actor: { id: "admin", role: "RECRUITMENT_ADMIN", canInboxSend: true },
+    actor: { id: "admin", role: "OWNER", canInboxSend: true },
     configured: true,
     attachmentScanningConfigured: true,
     mailbox: {
@@ -146,6 +150,7 @@ test("inbox UI previews the final email, requires explicit send and keeps failed
     const query = new URL(String(input), dom.window.location.origin)
       .searchParams;
     const view = query.get("view");
+    if (view === "companies") return Response.json({ prospects: [], movers: [], cleaners: [{ id: "registered-cleaner", companyName: "Example Cleaners" }] });
     if (view === "conversation" && query.get("id") === "thread" && deferFirst)
       await new Promise<void>((resolve) => {
         finishFirst = resolve;
@@ -196,6 +201,20 @@ test("inbox UI previews the final email, requires explicit send and keeps failed
   );
   assert.ok(open);
   await React.act(async () => open.click());
+  assert.match(dom.window.document.body.textContent!, /Example Cleaners/);
+  assert.match(dom.window.document.body.textContent!, /Registered cleaning partner: Active/);
+  assert.ok(dom.window.document.querySelector('a[href="/admin/cleaners"]'));
+  await click("Find company");
+  await React.act(async () => {
+    const select = dom.window.document.querySelector<HTMLSelectElement>('[aria-label="Link company"]')!;
+    select.value = "cleaner:registered-cleaner";
+    select.dispatchEvent(new dom.window.Event("change", { bubbles: true }));
+  });
+  await click("Link conversation");
+  const link = calls.find(call => call.action === "link")!;
+  assert.equal(link.data.cleanerCompanyId, "registered-cleaner");
+  assert.equal(link.data.moverCompanyId, null);
+  assert.equal(link.data.prospectId, null);
   const privateNote = dom.window.document.querySelector(
     'textarea[placeholder="Private team note"]',
   ) as HTMLTextAreaElement;

@@ -9,6 +9,7 @@ import {
   consentBases,
   defaultIntroduction,
   defaultGeneralIntroduction,
+  defaultCleaningIntroduction,
   manualStatuses,
   normalizeCompany,
   recruitmentLeadSelect,
@@ -20,6 +21,7 @@ import {
   tokenHash,
 } from "@/lib/recruitment-policy";
 import { NZ_SERVICE_AREAS } from "@/lib/nz-regions";
+import { businessTypes, movingServices, cleaningServices } from "@/lib/partner-business";
 import { createHash } from "node:crypto";
 import { verifySmtpConnection } from "@/lib/email";
 import { contactFollowUp, prospectContactSchema, validBusinessEmail } from "@/lib/prospect-contacts";
@@ -117,6 +119,7 @@ export const recruitmentSettingsSchema = z.object({
     .max(1500)
     .default(defaultIntroduction),
   generalIntroduction: z.string().trim().min(20).max(1500).default(defaultGeneralIntroduction),
+  cleaningIntroduction: z.string().trim().min(20).max(1500).default(defaultCleaningIntroduction),
 });
 export async function settings(tx: Pick<Tx, "recruitmentSetting"> = prisma) {
   const row = await tx.recruitmentSetting.findUnique({
@@ -182,6 +185,7 @@ export async function verifyRecruitmentSender(actor: RecruitmentActor) {
 const optionalText = z.string().trim().max(1000).nullable().optional();
 export const prospectSchema = z.object({
   companyName: z.string().trim().min(2).max(200),
+  businessType: z.enum(businessTypes).optional(),
   contactName: z.string().trim().max(150).nullable().optional(),
   website: z
     .union([
@@ -197,8 +201,8 @@ export const prospectSchema = z.object({
   operatingRegion: z.enum(NZ_SERVICE_AREAS).nullable().optional(),
   serviceAreas: z.array(z.enum(NZ_SERVICE_AREAS)).max(16).default([]),
   serviceTypes: z
-    .array(z.enum(["HOUSEHOLD", "OFFICE", "PACKING", "STORAGE", "SPECIALTY"]))
-    .max(5)
+    .array(z.enum([...movingServices, ...cleaningServices]))
+    .max(9)
     .default([]),
   longDistance: z.boolean().default(false),
   consentBasis: z.enum(consentBases).default("UNKNOWN"),
@@ -215,6 +219,8 @@ export async function prepareDraft(
   followUpToId?: string,
 ) {
   const prospect = await ownedProspect(tx, actor, prospectId);
+  if (quoteRequestId && prospect.businessType === "CLEANING")
+    fail("Moving request invitations are for moving companies. Prepare a general cleaning invitation instead.");
   if (!validBusinessEmail(prospect.email)) fail("Business email is missing. Complete manual contact follow-up before preparing an email.");
   const user = await checkActor(tx, actor);
   if (quoteRequestId && actor.role !== "OWNER" && !user.canViewRecruitmentLeads)
@@ -265,9 +271,10 @@ export async function prepareDraft(
     existing?.introduction ||
     (parent
       ? `We are following up on our invitation to join Match 'n Move. If this is relevant to your business, you can review the platform and register below.${lead ? " Availability of the original moving request may have changed." : ""}`
-      : lead ? config.introduction : config.generalIntroduction);
+      : lead ? config.introduction : prospect.businessType === "CLEANING" ? config.cleaningIntroduction : config.generalIntroduction);
   const rendered = renderRecruitmentEmail({
     companyName: prospect.companyName,
+    businessType: prospect.businessType,
     introduction,
     lead: lead ? safeLeadSummary(lead) : null,
     registrationUrl: `${baseUrl()}/api/recruitment/attribution?token=${registrationToken}`,
@@ -355,11 +362,18 @@ export async function saveProspect(
   const parsed = prospectSchema.parse(raw);
   const prior = id ? await ownedProspect(tx, actor, id) : null;
   const data = { ...parsed,
+    businessType: parsed.businessType ?? prior?.businessType ?? "MOVING",
     email: parsed.email === undefined ? prior?.email ?? null : parsed.email,
     phone: parsed.phone === undefined ? prior?.phone ?? null : parsed.phone,
     emailAvailability: parsed.emailAvailability ?? prior?.emailAvailability ?? null,
     phoneAvailability: parsed.phoneAvailability ?? prior?.phoneAvailability ?? null,
   };
+  const allowedServices: readonly string[] = data.businessType === "CLEANING" ? cleaningServices : movingServices;
+  if (data.serviceTypes.some(service => !allowedServices.includes(service)))
+    fail("Choose services that match the company's business type.");
+  if (data.businessType === "CLEANING") data.longDistance = false;
+  if (prior && prior.businessType !== data.businessType && await tx.outreachMessage.count({ where: { prospectId: prior.id } }))
+    fail("The business type cannot change after an invitation has been prepared. Ask the owner to review the company record.", 409);
   if (!prior && !data.emailAvailability) fail("Select Business email availability before saving.");
   if (!prior && !data.phoneAvailability) fail("Select Phone number availability before saving.");
   // Revalidate after preserving a reviewed status on legacy/partial callers.

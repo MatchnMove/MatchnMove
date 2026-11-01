@@ -47,6 +47,7 @@ import {
 } from "@/lib/recruitment-reporting";
 import { rateLimit } from "@/lib/rate-limit";
 import { isRecruitmentMutationRequest } from "@/lib/recruitment-request";
+import { businessTypes } from "@/lib/partner-business";
 import { sendPasswordResetEmail } from "@/lib/mover-auth";
 import { contactFollowUp } from "@/lib/prospect-contacts";
 
@@ -169,6 +170,7 @@ export async function GET(req: NextRequest) {
       const missingPhone = { OR: [{ phone: null }, { phone: "" }] };
       const filter: Prisma.MoverProspectWhereInput = {
         ...scope,
+        ...(query.get("businessType") ? { businessType: z.enum(businessTypes).parse(query.get("businessType")) } : {}),
         AND: contactFilter === "followup" ? [{ OR: [missingEmail, missingPhone] }]
           : contactFilter === "email" ? [missingEmail]
           : contactFilter === "phone" ? [missingPhone]
@@ -275,6 +277,7 @@ export async function GET(req: NextRequest) {
       const prospects = await prisma.moverProspect.findMany({
         where: {
           ...scope,
+          businessType: "MOVING",
           status: {
             notIn: [
               "REGISTERED",
@@ -328,7 +331,7 @@ export async function GET(req: NextRequest) {
         prisma.outreachMessage.count({ where: { ...messageScope, status: "SENT" } }),
         prisma.outreachMessage.count({ where: { ...messageScope, status: "NEEDS_REVIEW" } }),
       ]);
-      data = { template: config.generalIntroduction, senderIdentity: config.senderIdentity,
+      data = { template: config.generalIntroduction, cleaningTemplate: config.cleaningIntroduction, senderIdentity: config.senderIdentity,
         sendingReady: config.sendingEnabled && await emailReady() && Boolean(config.senderIdentity.trim()),
         drafts, sent, needsReview };
     } else if (view === "tasks") {

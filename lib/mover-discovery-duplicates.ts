@@ -19,7 +19,7 @@ export async function annotateDiscoveredMovers(
   const emails = items.map((c) => c.email).filter(Boolean);
   const websites = items.map((c) => c.website).filter(Boolean);
   const phones = items.map((c) => c.phone).filter(Boolean);
-  const [prospects, registered, suppressions] = await Promise.all([
+  const [prospects, registeredMovers, registeredCleaners, suppressions] = await Promise.all([
     prisma.moverProspect.findMany({
       where: {
         OR: [
@@ -49,13 +49,24 @@ export async function annotateDiscoveredMovers(
             },
           })),
           ...(emails.length ? [{ user: { email: { in: emails } } }] : []),
+          ...(phones.length ? [{ phone: { in: phones } }] : []),
         ],
       },
       select: {
         nzbn: true,
         companyName: true,
+        phone: true,
         user: { select: { email: true } },
       },
+    }),
+    prisma.cleanerCompany.findMany({
+      where: { OR: [
+        { nzbn: { in: items.map(c => c.nzbn).filter(Boolean) } },
+        ...items.map(c => ({ companyName: { equals: c.companyName, mode: "insensitive" as const } })),
+        ...(emails.length ? [{ user: { email: { in: emails } } }] : []),
+        ...(phones.length ? [{ phone: { in: phones } }] : []),
+      ] },
+      select: { nzbn: true, companyName: true, user: { select: { email: true } }, phone: true },
     }),
     emails.length
       ? prisma.contactSuppression.findMany({
@@ -64,6 +75,7 @@ export async function annotateDiscoveredMovers(
         })
       : Promise.resolve([]),
   ]);
+  const registered = [...registeredMovers, ...registeredCleaners];
   return items.map((candidate) => {
     const duplicate = prospects.find(
       (p) =>
@@ -81,7 +93,8 @@ export async function annotateDiscoveredMovers(
             (Boolean(candidate.nzbn) && m.nzbn === candidate.nzbn) ||
             normalizeCompany(m.companyName) ===
               normalizeCompany(candidate.companyName) ||
-            (candidate.email && m.user.email === candidate.email),
+            (candidate.email && m.user.email === candidate.email) ||
+            (candidate.phone && m.phone === candidate.phone),
         ),
         suppressed:
           Boolean(candidate.email) &&

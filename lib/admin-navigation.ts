@@ -7,11 +7,11 @@ export type AdminNavigationActor = {
 export function adminNavigationFor(actor: AdminNavigationActor) {
   return [
     {
-      title: "Mover onboarding",
+      title: "Moving & cleaning onboarding",
       items: [
         { href: "/admin/recruitment", label: "Overview", icon: "overview", description: "Your companies, priorities and recent activity." },
         ...(actor.role === "OWNER" || actor.canAccessInbox ? [{ href: "/admin/inbox", label: "Inbox", icon: "email", description: "Shared partner email, company history and follow-ups." }] : []),
-        { href: "/admin/recruitment/prospects", label: "Company directory", icon: "companies", description: "Find companies, record contacts and track onboarding." },
+        { href: "/admin/recruitment/prospects", label: "Company directory", icon: "companies", description: "Find moving and cleaning companies, record contacts and track onboarding." },
         { href: "/admin/recruitment/messages", label: "Email station", icon: "email", description: "Write invitations, review drafts and track sent emails. No lead required." },
         { href: "/admin/recruitment/tasks", label: "Follow-ups", icon: "tasks", description: "Keep track of your next conversation and due dates." },
         ...(actor.canViewLeads ? [{ href: "/admin/recruitment/leads", label: "Lead opportunities", icon: "leads", description: "Prepare invitations around authorised moving requests." }] : []),

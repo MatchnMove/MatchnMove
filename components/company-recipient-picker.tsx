@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 export type RecipientCompany = {
   id: string;
   companyName: string;
+  businessType?: string;
   email: string | null;
   contactName: string | null;
   consentBasis: string;
@@ -69,6 +70,7 @@ export function CompanyRecipientPicker({ initialId = "", initialSearch = "", val
     <div id="recipient-company-results" role="group" aria-label="Matching companies" aria-busy={loading} className="max-h-64 overflow-y-auto rounded-xl border border-slate-200">
       {!loading && !error && results?.items.map(company => <button key={company.id} type="button" aria-pressed={value === company.id} onClick={() => { allowInitialSelection.current = false; onChange(company); }} className={`block w-full border-b border-slate-100 px-4 py-3 text-left text-sm last:border-b-0 hover:bg-teal-50 focus-visible:outline-teal-700 ${value === company.id ? "bg-teal-50 ring-1 ring-inset ring-teal-600" : "bg-white"}`}>
         <span className="block font-semibold text-slate-900">{company.companyName}</span>
+        <span className="block text-xs text-teal-700">{company.businessType === "CLEANING" ? "Cleaning company" : "Moving company"}</span>
         <span className={`mt-1 block break-all text-xs ${company.email ? "text-slate-600" : "text-amber-800"}`}>{company.email || "Missing email — follow-up required before preparing an email"}</span>
       </button>)}
     </div>

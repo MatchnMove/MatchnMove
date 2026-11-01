@@ -16,6 +16,7 @@ import {
   type DiscoveredProspectForm,
 } from "@/components/mover-discovery";
 import { recruitmentDateRange } from "@/lib/recruitment-dates";
+import { businessTypeLabel, movingServices, cleaningServices } from "@/lib/partner-business";
 import { NZ_SERVICE_AREAS } from "@/lib/nz-regions";
 import { contactFollowUp, prospectContactSchema, validBusinessEmail } from "@/lib/prospect-contacts";
 import { statuses as pipeline, manualStatuses as manual } from "@/lib/recruitment-stages";
@@ -48,6 +49,7 @@ type Activity = {
 };
 type Prospect = {
   id: string;
+  businessType: string;
   companyName: string;
   email: string | null;
   emailAvailability: string | null;
@@ -148,7 +150,7 @@ const buttonClass =
 const secondaryClass =
   "inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50";
 const label = (value: string) =>
-  value
+  (value === "ACTIVE_MOVER" ? "ACTIVE_PARTNER" : value)
     .toLowerCase()
     .replaceAll("_", " ")
     .replace(/^./, (letter) => letter.toUpperCase());
@@ -161,6 +163,7 @@ const date = (value: string | null) =>
     : "—";
 const emptyProspect = {
   companyName: "",
+  businessType: "MOVING",
   email: "",
   emailAvailability: "",
   phoneAvailability: "",
@@ -313,10 +316,10 @@ export function RecruitmentWorkspace({
     <div className="min-w-0">
       <header className="mb-7 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-teal-700">Mover onboarding</p>
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-teal-700">Moving &amp; cleaning onboarding</p>
           <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">{titles[section] || "Workspace"}</h1>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-500">
-            {section === "messages" ? "Introduce your business to movers, with or without a customer lead. Prepare, preview and send each email here."
+            {section === "messages" ? "Invite moving and cleaning companies, with or without a customer lead. Prepare, preview and send each email here."
               : section === "prospects" ? "One place for company details, contact history and the next onboarding step."
               : section === "dashboard" ? "Your companies, priorities and recent activity in one place."
               : "Keep your companies, conversations and next steps connected."}
@@ -368,8 +371,8 @@ function Dashboard({
     ["invitationsSent", "Invitations sent"],
     ["responses", "Responses received"],
     ["interested", "Interested companies"],
-    ["registered", "Registered movers"],
-    ["activated", "Activated movers"],
+    ["registered", "Registered partners"],
+    ["activated", "Activated partners"],
     ["followUpsDue", "Follow-ups due"],
   ];
   return (
@@ -439,7 +442,7 @@ function Dashboard({
               }
             }}
           >
-            Refresh mover outcomes
+            Refresh partner outcomes
           </button>
         )}
       </div>
@@ -672,6 +675,7 @@ function Prospects({ actor }: { actor: Actor }) {
   const router = useRouter();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("");
+  const [businessType, setBusinessType] = useState("");
   const [sort, setSort] = useState("recent");
   const [contact, setContact] = useState(search.get("contact") || "");
   const [page, setPage] = useState(1);
@@ -686,6 +690,7 @@ function Prospects({ actor }: { actor: Actor }) {
       view: "prospects",
       q,
       ...(status ? { status } : {}),
+      ...(businessType ? { businessType } : {}),
       sort,
       ...(contact ? { contact } : {}),
       page: String(page),
@@ -710,6 +715,16 @@ function Prospects({ actor }: { actor: Actor }) {
             }}
           />
         </div>
+        <select
+          aria-label="Filter business type"
+          className={`${inputClass} sm:w-48`}
+          value={businessType}
+          onChange={event => { setBusinessType(event.target.value); setPage(1); }}
+        >
+          <option value="">Moving &amp; cleaning</option>
+          <option value="MOVING">Moving companies</option>
+          <option value="CLEANING">Cleaning companies</option>
+        </select>
         <select
           aria-label="Filter recruitment status"
           className={`${inputClass} sm:w-48`}
@@ -769,13 +784,13 @@ function Prospects({ actor }: { actor: Actor }) {
           <Panel
             title={
               discoveryDraft
-                ? "Review discovered moving company"
-                : "New moving company"
+                ? `Review discovered ${businessTypeLabel(discoveryDraft.businessType).toLowerCase()} company`
+                : "New partner company"
             }
           >
             {discoveryDraft && (
               <p className="mb-5 rounded-xl bg-teal-50 p-4 text-sm leading-6 text-teal-950">
-                Public business details have been copied below. Confirm the moving
+                Public business details have been copied below. Confirm the
                 services, email and coverage before saving. No contact
                 permission has been inferred.
               </p>
@@ -849,6 +864,7 @@ function Prospects({ actor }: { actor: Actor }) {
                         >
                           {p.companyName}
                         </Link>
+                        <p className="mt-1 text-xs font-semibold text-teal-700">{businessTypeLabel(p.businessType)}</p>
                         <p className="mt-1 text-xs text-slate-500">{p.email || "No business email recorded"}</p>
                         <ContactInformationStatus prospect={p} compact />
                       </td>
@@ -874,7 +890,7 @@ function Prospects({ actor }: { actor: Actor }) {
           ) : (
             <Empty
               title="No companies here yet"
-              detail="Add your first moving company, record how it can be contacted and choose its service coverage."
+              detail="Add a moving or cleaning company, record how it can be contacted and choose its service coverage."
             />
           )}
           <div className="mt-4 flex items-center justify-between text-xs text-slate-500">
@@ -960,6 +976,13 @@ export function ProspectEditor({
   }
   return (
     <form onSubmit={submit} className="space-y-5">
+      <Field title="Business type">
+        <select aria-label="Business type" className={inputClass} value={form.businessType}
+          onChange={event => setForm(prior => ({ ...prior, businessType: event.target.value, serviceTypes: [], longDistance: false }))}>
+          <option value="MOVING">Moving company</option>
+          <option value="CLEANING">Cleaning company</option>
+        </select>
+      </Field>
       <div className="grid gap-4 sm:grid-cols-2">
         {[
           ["companyName", "Company name", "text"],
@@ -1035,7 +1058,7 @@ export function ProspectEditor({
           Services
         </legend>
         <div className="flex flex-wrap gap-4">
-          {["HOUSEHOLD", "OFFICE", "PACKING", "STORAGE", "SPECIALTY"].map(
+          {(form.businessType === "CLEANING" ? cleaningServices : movingServices).map(
             (service) => (
               <label key={service} className="flex items-center gap-2 text-sm">
                 <input
@@ -1056,14 +1079,14 @@ export function ProspectEditor({
           )}
         </div>
       </fieldset>
-      <label className="flex items-center gap-2 text-sm">
+      {form.businessType !== "CLEANING" && <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"
           checked={form.longDistance}
           onChange={(e) => update("longDistance", e.target.checked)}
         />
         Offers long-distance moves
-      </label>
+      </label>}
       <div className="grid gap-4 sm:grid-cols-2">
         <Field title="Reviewed contact permission">
           <select
@@ -1177,6 +1200,7 @@ function ProspectDetails({ actor, id }: { actor: Actor; id: string }) {
           >
             <div className="flex flex-wrap items-center gap-3">
               <Badge value={prospect.status} />
+              <span className="text-sm font-semibold text-teal-700">{businessTypeLabel(prospect.businessType)} company</span>
               <span className="text-sm text-slate-500">
                 {prospect.email || "No business email recorded"} ·{" "}
                 {prospect.contactName || "Contact not recorded"}
@@ -1279,7 +1303,7 @@ function ProspectDetails({ actor, id }: { actor: Actor; id: string }) {
                 </>
               )}
             </div>
-            {actor.canViewLeads && validBusinessEmail(prospect.email) && (
+            {actor.canViewLeads && prospect.businessType !== "CLEANING" && validBusinessEmail(prospect.email) && (
               <Link
                 className={`${buttonClass} mt-5`}
                 href={`/admin/recruitment/leads?prospectId=${id}`}
@@ -1643,6 +1667,7 @@ function Messages({ actor }: { actor: Actor }) {
 }
 type EmailStationData = {
   template: string;
+  cleaningTemplate: string;
   senderIdentity: string;
   sendingReady: boolean;
   drafts: number;
@@ -1676,7 +1701,7 @@ function GeneralEmailComposer({ station }: { station: EmailStationData }) {
   return <Panel title="Write a company introduction" action={<span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-bold text-teal-800">No lead required</span>}>
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
       <form onSubmit={prepare} className="space-y-4">
-        <p className="text-sm leading-6 text-slate-600">Invite a mover to join Match &apos;n Move at any time. Choose a company, then review and personalise the prefilled email before sending.</p>
+        <p className="text-sm leading-6 text-slate-600">Invite a moving or cleaning company to join Match &apos;n Move at any time. Choose a company, then review and personalise the prefilled email before sending.</p>
         <CompanyRecipientPicker initialId={search.get("company") || ""} initialSearch={search.get("q") || ""} value={companyId} onChange={chooseCompany} />
         <Link className="inline-block text-sm font-semibold text-teal-700 underline" href="/admin/recruitment/prospects?contact=email">Missing-email follow-up list →</Link>
         {company && <div className="rounded-xl bg-slate-50 p-3 text-sm"><p className="font-semibold">To: {company.email}</p><p className="mt-1 text-xs text-slate-500">{company.contactName || company.companyName}</p>{(company.consentBasis === "UNKNOWN" || !company.consentEvidence?.trim()) && <p className="mt-2 text-xs text-amber-800">Review this company&apos;s contact permission before preparing an invitation. <Link className="font-bold underline" href={`/admin/recruitment/prospects?id=${company.id}`}>Open company</Link></p>}</div>}
@@ -1688,7 +1713,7 @@ function GeneralEmailComposer({ station }: { station: EmailStationData }) {
         <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-teal-700">Prefilled introduction template</p>
         <h3 className="mt-3 font-bold">An invitation to join Match &apos;n Move</h3>
         <p className="mt-4 text-sm leading-7 text-slate-600">Hi {company?.companyName || "[company name]"},</p>
-        <p className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-600">{station.template}</p>
+        <p className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-600">{company?.businessType === "CLEANING" ? station.cleaningTemplate : station.template}</p>
         <p className="mt-4 text-xs leading-6 text-slate-500">Your preview includes the company&apos;s registration link, sender details and unsubscribe option. Existing drafts reopen without creating duplicates.</p>
       </div>
     </div>
@@ -2386,6 +2411,7 @@ type Config = {
   autoTasks: boolean;
   introduction: string;
   generalIntroduction: string;
+  cleaningIntroduction: string;
 };
 function OutreachSettings() {
   const { data, error, loading, load } = useData<{
@@ -2540,10 +2566,13 @@ function SettingsForm({
             placeholder="Match 'n Move · business contact details"
           />
         </Field>
-        <Field title="General introduction template (no lead required)">
+        <Field title="Moving introduction template (no lead required)">
           <textarea className={inputClass} rows={6} minLength={20} maxLength={1500} required value={form.generalIntroduction} onChange={e => setForm({ ...form, generalIntroduction: e.target.value })} />
         </Field>
-        <Field title="Lead invitation template">
+        <Field title="Cleaning introduction template (no lead required)">
+          <textarea className={inputClass} rows={6} minLength={20} maxLength={1500} required value={form.cleaningIntroduction} onChange={e => setForm({ ...form, cleaningIntroduction: e.target.value })} />
+        </Field>
+        <Field title="Moving lead invitation template">
           <textarea
             className={inputClass}
             rows={5}

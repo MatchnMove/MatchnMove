@@ -1,4 +1,6 @@
 import { randomBytes, randomInt } from "crypto";
+import { cookies } from "next/headers";
+import { claimRegistrationAttribution } from "@/lib/recruitment-outreach";
 import { AuthTokenType, Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { establishMoverSession } from "@/lib/mover-auth";
@@ -41,6 +43,7 @@ export async function createCleanerAccount(input: {
   const email = input.email.trim().toLowerCase();
   const passwordHash = await hashPassword(input.password || randomBytes(24).toString("hex"));
   const serviceAreas = sanitiseNzServiceAreas(input.serviceAreas);
+  const attributionToken = (await cookies()).get("mm_recruitment")?.value;
 
   const user = await prisma.$transaction(async (tx) => {
     const createdUser = await tx.user.create({
@@ -52,7 +55,7 @@ export async function createCleanerAccount(input: {
       },
     });
 
-    await tx.cleanerCompany.create({
+    const company = await tx.cleanerCompany.create({
       data: {
         userId: createdUser.id,
         companyName: input.companyName.trim(),
@@ -63,10 +66,12 @@ export async function createCleanerAccount(input: {
       },
     });
 
+    await claimRegistrationAttribution(tx, attributionToken, createdUser.id, email, company.id, "CLEANING");
     return createdUser;
   });
 
   await establishCleanerSession(user);
+  if (attributionToken) (await cookies()).delete("mm_recruitment");
   return user;
 }
 

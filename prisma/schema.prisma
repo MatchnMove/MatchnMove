@@ -124,6 +124,9 @@ model User {
 }
 
 model CleanerCompany {
+  recruitmentProspect  MoverProspect?
+  inboxConversations  PartnerConversation[]
+  inboxContacts       PartnerContactAssociation[]
   id                  String                 @id @default(cuid())
   userId              String                 @unique
   stripeCustomerId    String?                @unique
@@ -685,9 +688,15 @@ model AdminInvitation {
   updatedAt   DateTime  @updatedAt
 }
 
+enum PartnerBusinessType {
+  MOVING
+  CLEANING
+}
+
 model MoverProspect {
   id                  String                      @id @default(cuid())
   companyName         String
+  businessType        PartnerBusinessType         @default(MOVING)
   normalizedName      String
   email               String?                     @unique
   emailAvailability   String?
@@ -718,6 +727,8 @@ model MoverProspect {
   recruitedById       String?
   moverCompanyId      String?                     @unique
   moverCompany        MoverCompany?               @relation(fields: [moverCompanyId], references: [id], onDelete: Restrict)
+  cleanerCompanyId    String?                     @unique
+  cleanerCompany      CleanerCompany?             @relation(fields: [cleanerCompanyId], references: [id], onDelete: Restrict)
   duplicateOfId       String?
   duplicateReviewNote String?
   createdAt           DateTime                    @default(now())
@@ -859,6 +870,8 @@ model PartnerConversation {
   prospect               MoverProspect?              @relation(fields: [prospectId], references: [id], onDelete: Restrict)
   moverCompanyId         String?
   moverCompany           MoverCompany?               @relation(fields: [moverCompanyId], references: [id], onDelete: SetNull)
+  cleanerCompanyId       String?
+  cleanerCompany         CleanerCompany?             @relation(fields: [cleanerCompanyId], references: [id], onDelete: SetNull)
   assignedAdminId        String?
   assignedAdmin          User?                       @relation(fields: [assignedAdminId], references: [id], onDelete: Restrict)
   assignedAt             DateTime?
@@ -981,6 +994,8 @@ model PartnerContactAssociation {
   prospect       MoverProspect?       @relation(fields: [prospectId], references: [id], onDelete: Restrict)
   moverCompanyId String?
   moverCompany   MoverCompany?        @relation(fields: [moverCompanyId], references: [id], onDelete: SetNull)
+  cleanerCompanyId String?
+  cleanerCompany CleanerCompany?     @relation(fields: [cleanerCompanyId], references: [id], onDelete: SetNull)
   conversationId String?
   conversation   PartnerConversation? @relation(fields: [conversationId], references: [id], onDelete: Restrict)
   verifiedBy     String

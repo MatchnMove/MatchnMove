@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { manualStatuses, stoppedStatuses } from "@/lib/recruitment-stages";
 
-const label = (value: string) => value.toLowerCase().replaceAll("_", " ").replace(/^./, letter => letter.toUpperCase());
+const label = (value: string) => (value === "ACTIVE_MOVER" ? "ACTIVE_PARTNER" : value).toLowerCase().replaceAll("_", " ").replace(/^./, letter => letter.toUpperCase());
 
 export function CompanyStageSelect({ id, companyName, status, version, onSaved }: {
   id: string;

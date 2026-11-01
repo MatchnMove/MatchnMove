@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { tokenHash } from "@/lib/recruitment-policy";
+import { partnerRegistrationPath } from "@/lib/partner-business";
 
 export async function GET(req: NextRequest) {
   const token = req.nextUrl.searchParams.get("token") || "";
@@ -16,8 +17,10 @@ export async function GET(req: NextRequest) {
       status: true,
       attributionExpiresAt: true,
       attributionConsumedAt: true,
+      prospect: { select: { businessType: true } },
     },
   });
+  if (message) response.headers.set("Location", new URL(partnerRegistrationPath(message.prospect.businessType), req.url).toString());
   if (
     message?.status === "SENT" &&
     !message.attributionConsumedAt &&

@@ -2,6 +2,8 @@ import { z } from "zod";
 import { validBusinessEmail } from "@/lib/prospect-contacts";
 import { sendViaSmtp } from "@/lib/email";
 import { canMoverAccessLeads } from "@/lib/mover-lead-access";
+import { canCleanerAccessLeads } from "@/lib/cleaner-readiness";
+import type { PartnerBusinessType } from "@/lib/partner-business";
 import {
   RecruitmentActor,
   contactBlockReason,
@@ -67,6 +69,7 @@ export async function editDraft(tx: Tx, actor: RecruitmentActor, raw: unknown) {
   const config = await settings(tx);
   const rendered = renderRecruitmentEmail({
     companyName: prospect.companyName,
+    businessType: prospect.businessType,
     introduction: input.introduction,
     lead: quote ? safeLeadSummary(quote) : null,
     registrationUrl,
@@ -316,7 +319,8 @@ export async function claimRegistrationAttribution(
   token: string | undefined,
   userId: string,
   email: string,
-  moverCompanyId: string,
+  companyId: string,
+  businessType: PartnerBusinessType = "MOVING",
 ) {
   if (!token) return;
   await tx.$queryRaw`SELECT pg_advisory_xact_lock(724619833)::text`;
@@ -330,13 +334,15 @@ export async function claimRegistrationAttribution(
     message.attributionConsumedAt ||
     message.attributionExpiresAt < new Date() ||
     message.prospect.email !== email ||
-    message.prospect.moverCompanyId
+    message.prospect.moverCompanyId ||
+    message.prospect.cleanerCompanyId ||
+    message.prospect.businessType !== businessType
   )
     return;
   // Attribution credits a newly created account only; the token never signs a user in or claims an existing company.
-  const company = await tx.moverCompany.findFirst({
-    where: { id: moverCompanyId, userId },
-  });
+  const company = businessType === "CLEANING"
+    ? await tx.cleanerCompany.findFirst({ where: { id: companyId, userId } })
+    : await tx.moverCompany.findFirst({ where: { id: companyId, userId } });
   if (!company) return;
   await tx.outreachMessage.update({
     where: { id: message.id },
@@ -346,13 +352,17 @@ export async function claimRegistrationAttribution(
     where: { id: message.prospectId },
     data: {
       status: "REGISTRATION_STARTED",
-      moverCompanyId,
+      ...(businessType === "CLEANING" ? { cleanerCompanyId: companyId } : { moverCompanyId: companyId }),
       recruitedById: message.adminId,
       nextFollowUpAt: null,
       version: { increment: 1 },
     },
   });
   await cancelFollowUps(tx, message.prospectId);
+  await tx.partnerConversation.updateMany({
+    where: { prospectId: message.prospectId },
+    data: businessType === "CLEANING" ? { cleanerCompanyId: companyId } : { moverCompanyId: companyId },
+  });
   const config = await settings(tx);
   if (config.autoTasks)
     await tx.recruitmentTask.upsert({
@@ -371,11 +381,11 @@ export async function claimRegistrationAttribution(
     message.prospectId,
     message.adminId,
     "registration_started",
-    { moverCompanyId },
+    { ...(businessType === "CLEANING" ? { cleanerCompanyId: companyId } : { moverCompanyId: companyId }), businessType },
   );
 }
 
-export async function syncRecruitmentOutcomes(moverCompanyId?: string) {
+export async function syncRecruitmentOutcomes(companyId?: string, businessType: PartnerBusinessType = "MOVING") {
   return locked(async (tx) => {
     const uncertain = await tx.outreachMessage.findMany({
       where: {
@@ -437,10 +447,23 @@ export async function syncRecruitmentOutcomes(moverCompanyId?: string) {
       await activity(tx, prospect.id, null, "follow_up_due");
     }
     const prospects = await tx.moverProspect.findMany({
-      where: { moverCompanyId: moverCompanyId || { not: null } },
+      where: companyId
+        ? businessType === "CLEANING" ? { cleanerCompanyId: companyId } : { moverCompanyId: companyId }
+        : { OR: [{ moverCompanyId: { not: null } }, { cleanerCompanyId: { not: null } }] },
       take: 50,
       orderBy: { updatedAt: "asc" },
       include: {
+        cleanerCompany: {
+          include: {
+            user: { select: { emailVerifiedAt: true } },
+            purchases: {
+              where: { status: "PAID", amount: { gt: 0 } },
+              select: { purchasedAt: true },
+              take: 1,
+              orderBy: { purchasedAt: "asc" },
+            },
+          },
+        },
         moverCompany: {
           include: {
             user: {
@@ -458,10 +481,11 @@ export async function syncRecruitmentOutcomes(moverCompanyId?: string) {
     });
     for (const prospect of prospects) {
       const mover = prospect.moverCompany;
-      if (!mover) continue;
-      const registered = mover.user.emailVerifiedAt;
-      const active = canMoverAccessLeads(mover);
-      const paid = mover.leads[0]?.purchasedAt;
+      const cleaner = prospect.cleanerCompany;
+      if (!mover && !cleaner) continue;
+      const registered = cleaner ? cleaner.user.emailVerifiedAt : mover!.user.emailVerifiedAt;
+      const active = cleaner ? Boolean(registered) && canCleanerAccessLeads(cleaner) : canMoverAccessLeads(mover!);
+      const paid = cleaner ? cleaner.purchases[0]?.purchasedAt : mover!.leads[0]?.purchasedAt;
       const registeredAt = prospect.registeredAt || registered;
       const activatedAt = prospect.activatedAt || (active ? new Date() : null);
       const firstPaidLeadAt = prospect.firstPaidLeadAt || paid || null;
@@ -497,7 +521,7 @@ export async function syncRecruitmentOutcomes(moverCompanyId?: string) {
           tx,
           prospect.id,
           prospect.recruitedById,
-          "mover_activated",
+          cleaner ? "cleaner_activated" : "mover_activated",
         );
       if (!prospect.firstPaidLeadAt && paid)
         await activity(

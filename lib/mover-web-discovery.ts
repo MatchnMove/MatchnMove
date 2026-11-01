@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { businessTypes } from "@/lib/partner-business";
 import {
   DiscoveryError,
   safeDiscoveryWebsite,
@@ -20,12 +21,13 @@ export const webDiscoveryInputSchema = z.discriminatedUnion("action", [
   z
     .object({
       action: z.literal("maps_search"),
+      businessType: z.enum(businessTypes).default("MOVING"),
       query: term,
       city: term,
       page: z.number().int().min(1).max(6).default(1),
     })
     .strict(),
-  z.object({ action: z.literal("maps_details"), placeId }).strict(),
+  z.object({ action: z.literal("maps_details"), placeId, businessType: z.enum(businessTypes).default("MOVING") }).strict(),
 ]);
 
 const record = (v: unknown): Record<string, unknown> =>
