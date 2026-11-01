@@ -20,6 +20,7 @@ import { NZ_SERVICE_AREAS } from "@/lib/nz-regions";
 import { contactFollowUp, prospectContactSchema, validBusinessEmail } from "@/lib/prospect-contacts";
 import { statuses as pipeline, manualStatuses as manual } from "@/lib/recruitment-stages";
 import { CompanyStageSelect } from "@/components/company-stage-select";
+import { CompanyRecipientPicker, type RecipientCompany } from "@/components/company-recipient-picker";
 type Actor = {
   id: string;
   role: "OWNER" | "RECRUITMENT_ADMIN";
@@ -1652,17 +1653,14 @@ type EmailStationData = {
 function GeneralEmailComposer({ station }: { station: EmailStationData }) {
   const router = useRouter();
   const search = useSearchParams();
-  const [companySearch, setCompanySearch] = useState(search.get("q") || "");
-  const [debouncedSearch, setDebouncedSearch] = useState(companySearch);
   const [companyId, setCompanyId] = useState(search.get("company") || "");
+  const [company, setCompany] = useState<RecipientCompany | null>(null);
+  const chooseCompany = useCallback((selected: RecipientCompany | null) => {
+    setCompany(selected);
+    setCompanyId(selected?.id || "");
+  }, []);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(companySearch), 250);
-    return () => clearTimeout(timer);
-  }, [companySearch]);
-  const companies = useData<{ items: Prospect[]; count: number }>(`view=prospects&sort=name&q=${encodeURIComponent(debouncedSearch)}`);
-  const company = companies.data?.items.find(item => item.id === companyId);
   async function prepare(event: FormEvent) {
     event.preventDefault();
     if (!companyId || !validBusinessEmail(company?.email)) return;
@@ -1679,11 +1677,8 @@ function GeneralEmailComposer({ station }: { station: EmailStationData }) {
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
       <form onSubmit={prepare} className="space-y-4">
         <p className="text-sm leading-6 text-slate-600">Invite a mover to join Match &apos;n Move at any time. Choose a company, then review and personalise the prefilled email before sending.</p>
-        <Field title="Find a company"><input className={inputClass} type="search" placeholder="Search company name or email" value={companySearch} onChange={e => { setCompanySearch(e.target.value); setCompanyId(""); }} /></Field>
-        <Field title="Choose recipient company"><select required className={inputClass} value={companyId} onChange={e => setCompanyId(e.target.value)}><option value="">Choose a company…</option>{companies.data?.items.map(item => <option key={item.id} value={item.id} disabled={!validBusinessEmail(item.email)}>{item.companyName} · {item.email || "Missing email — follow-up required"}</option>)}</select></Field>
+        <CompanyRecipientPicker initialId={search.get("company") || ""} initialSearch={search.get("q") || ""} value={companyId} onChange={chooseCompany} />
         <Link className="inline-block text-sm font-semibold text-teal-700 underline" href="/admin/recruitment/prospects?contact=email">Missing-email follow-up list →</Link>
-        <State error={companies.error} loading={companies.loading} />
-        {companies.data && companies.data.count > 50 && <p className="text-xs text-slate-500">Showing the first 50 matches. Search by name or email to find another company.</p>}
         {company && <div className="rounded-xl bg-slate-50 p-3 text-sm"><p className="font-semibold">To: {company.email}</p><p className="mt-1 text-xs text-slate-500">{company.contactName || company.companyName}</p>{(company.consentBasis === "UNKNOWN" || !company.consentEvidence?.trim()) && <p className="mt-2 text-xs text-amber-800">Review this company&apos;s contact permission before preparing an invitation. <Link className="font-bold underline" href={`/admin/recruitment/prospects?id=${company.id}`}>Open company</Link></p>}</div>}
         <State error={error} loading={false} />
         <div className="flex flex-wrap items-center gap-3"><button className={buttonClass} disabled={busy || !companyId || !validBusinessEmail(company?.email)}>{busy ? "Preparing…" : "Prepare email preview"}<ArrowRight size={16} /></button><Link className={secondaryClass} href="/admin/recruitment/prospects?new=1"><Plus size={16} />Add company</Link></div>
