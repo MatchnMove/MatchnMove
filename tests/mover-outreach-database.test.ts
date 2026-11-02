@@ -9,6 +9,7 @@ import { addAucklandCalendar } from "../lib/recruitment-dates";
 import { manageCampaign, prepareCampaignStep, processMoverOutreachCampaigns, recordOutreachReply, stopOutreachAfterRegistration } from "../lib/mover-outreach-campaigns";
 import { bridgeRecruitmentMessages } from "../lib/partner-inbox-outgoing";
 import { persistGmailMessage } from "../lib/partner-inbox-sync";
+import { deliverQueuedEmail, sendAdminInvitationEmail, sendMoverPasswordResetEmail } from "../lib/email";
 
 const database = process.env.OUTREACH_TEST_DATABASE_URL;
 test("mover campaign persistence, real SMTP, reply import and manual re-engagement on disposable PostgreSQL", { skip: !database, timeout: 180000 }, async t => {
@@ -79,6 +80,8 @@ test("mover campaign persistence, real SMTP, reply import and manual re-engageme
     const results = await Promise.allSettled([send(initial), send(initial)]);
     assert.equal(results.filter(result => result.status === "fulfilled" && result.value.ok).length, 1);
     assert.equal(accepted.length, count + 1);
+    assert.match(accepted.at(-1)!, /^From:.*contact@matchnmove.co.nz/m);
+    assert.match(accepted.at(-1)!, /^Reply-To: contact@matchnmove.co.nz/m);
     const saved = await campaign(campaignId);
     assert.equal(saved.nextDueAt!.toISOString(), addAucklandCalendar(saved.initialSentAt!, { days: 7 }).toISOString());
     assert.equal(saved.revisitAt!.toISOString(), addAucklandCalendar(saved.initialSentAt!, { months: 3 }).toISOString());
@@ -102,6 +105,7 @@ test("mover campaign persistence, real SMTP, reply import and manual re-engageme
     assert.equal(first.quoteRequestId, null);
     assert.equal(first.subject, "Following up on your Match 'n Move invitation");
     assert.equal((await send(first, true)).ok, true);
+    assert.match(accepted.at(-1)!, /^From:.*contact@matchnmove.co.nz/m);
     assert.ok(/In-Reply-To:\s+<recruitment_invitation\./i.test(accepted.at(-1)!), "SMTP follow-up includes its parent's RFC message ID");
     const current = await campaign(campaignId);
     assert.equal(current.nextSequence, 2);
@@ -251,5 +255,33 @@ test("mover campaign persistence, real SMTP, reply import and manual re-engageme
     assert.equal(pending.sendAttempts, 3); assert.equal(pending.status, "NEEDS_REVIEW");
     assert.equal((await campaign(failed.campaignId)).status, "PAUSED");
     await assert.rejects(send(pending, true), /needs review|paused/);
+  });
+
+  await t.test("team invitations, admin recovery and legacy queued retries persist and send the contact identity", async () => {
+    process.env.EMAIL_FORCE_SMTP_USER_FROM = "true";
+    const invite = await sendAdminInvitationEmail({ email: `invite-${tag}@validation.invalid`, text: "Local test invitation", html: "<p>Local test invitation</p>" });
+    assert.equal(invite.sent, true);
+    const recovery = await sendMoverPasswordResetEmail({ email: `recovery-${tag}@validation.invalid`, resetUrl: "https://example.invalid/local-reset" }, true);
+    assert.equal(recovery.sent, true);
+    const queued = await prisma.emailDelivery.create({ data: { kind: "admin_team_invitation", recipient: `retry-${tag}@validation.invalid`, from: "support@matchnmove.co.nz", replyTo: "old@validation.invalid", subject: "Old queued invitation", text: "Local retry test", html: "<p>Local retry test</p>", status: "FAILED" } });
+    assert.equal((await deliverQueuedEmail(queued.id)).sent, true);
+    for (const id of [invite.emailDeliveryId!, recovery.emailDeliveryId!, queued.id]) {
+      const delivery = await prisma.emailDelivery.findUniqueOrThrow({ where: { id } });
+      assert.match(delivery.from, /contact@matchnmove.co.nz/);
+      assert.equal(delivery.replyTo, "contact@matchnmove.co.nz");
+    }
+    for (const raw of accepted.slice(-3)) {
+      assert.match(raw, /^From:.*contact@matchnmove.co.nz/m);
+      assert.match(raw, /^Reply-To: contact@matchnmove.co.nz/m);
+    }
+  });
+
+  await t.test("cleaning company invitations use the same contact sender and reply address", async () => {
+    const cleaner = await locked(tx => saveProspect(tx, actor, { companyName: `Contact Sender Cleaners ${tag}`, email: `cleaner-${tag}@validation.invalid`, emailAvailability: "PUBLIC", phoneAvailability: "NOT_PUBLIC", businessType: "CLEANING", serviceAreas: ["Auckland"], consentBasis: "EXPRESS", consentEvidence: "Isolated cleaning sender test permission" }));
+    const invitation = await locked(tx => prepareDraft(tx, actor, cleaner.id));
+    assert.match(invitation.text, /cleaning/i);
+    assert.equal((await send(invitation)).ok, true);
+    assert.match(accepted.at(-1)!, /^From:.*contact@matchnmove.co.nz/m);
+    assert.match(accepted.at(-1)!, /^Reply-To: contact@matchnmove.co.nz/m);
   });
 });

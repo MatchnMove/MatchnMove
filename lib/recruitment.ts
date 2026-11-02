@@ -24,6 +24,7 @@ import { NZ_SERVICE_AREAS } from "@/lib/nz-regions";
 import { businessTypes, movingServices, cleaningServices } from "@/lib/partner-business";
 import { createHash } from "node:crypto";
 import { verifySmtpConnection } from "@/lib/email";
+import { ADMIN_EMAIL_ADDRESS } from "@/lib/admin-email";
 import { contactFollowUp, prospectContactSchema, validBusinessEmail } from "@/lib/prospect-contacts";
 
 export class RecruitmentError extends Error {
@@ -136,11 +137,7 @@ export function baseUrl() {
   return url;
 }
 export function senderAddress() {
-  return (
-    process.env.RECRUITMENT_FROM_EMAIL?.trim() ||
-    process.env.DEFAULT_FROM_EMAIL?.trim() ||
-    ""
-  );
+  return ADMIN_EMAIL_ADDRESS;
 }
 function smtpConfigured() {
   return Boolean(
@@ -154,7 +151,7 @@ function smtpConfigured() {
 function senderFingerprint() {
   return createHash("sha256").update(JSON.stringify([
     process.env.SMTP_HOST, process.env.SMTP_PORT, process.env.SMTP_USER, process.env.SMTP_PASS,
-    process.env.SMTP_SECURE, process.env.SMTP_REQUIRE_TLS, senderAddress(), process.env.RECRUITMENT_REPLY_TO,
+    process.env.SMTP_SECURE, process.env.SMTP_REQUIRE_TLS, senderAddress(), ADMIN_EMAIL_ADDRESS,
   ])).digest("hex");
 }
 export async function emailReady(tx: Pick<Tx, "recruitmentSetting"> = prisma) {
@@ -168,8 +165,8 @@ export async function verifyRecruitmentSender(actor: RecruitmentActor) {
   await locked(tx => checkActor(tx, actor));
   if (!smtpConfigured()) fail("Complete the email server and sender configuration before checking the connection.", 503);
   const fingerprint = senderFingerprint();
-  try { await verifySmtpConnection(); }
-  catch { fail("The email connection could not be verified. Check the configured email service and try again.", 503); }
+  try { await verifySmtpConnection(true); }
+  catch { fail("The email connection could not be verified. Check the email service and that contact@matchnmove.co.nz is an authorised sender. For a different Google login, connect that same account in the inbox with contact as a verified Send mail as address.", 503); }
   return locked(async tx => {
     await checkActor(tx, actor);
     if (fingerprint !== senderFingerprint()) fail("Email settings changed during verification. Run the check again.", 409);

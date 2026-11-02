@@ -86,8 +86,8 @@ New variables are documented in `.env.example`:
 
 | Variable | Purpose |
 | --- | --- |
-| `RECRUITMENT_FROM_EMAIL` | Authenticated mailbox or provider-authorized sender alias; falls back to `DEFAULT_FROM_EMAIL` |
-| `RECRUITMENT_REPLY_TO` | Monitored mailbox that can also receive unsubscribe replies |
+| `RECRUITMENT_FROM_EMAIL` | Legacy setting; admin From is fixed to `contact@matchnmove.co.nz` |
+| `RECRUITMENT_REPLY_TO` | Legacy setting; admin Reply-To is fixed to `contact@matchnmove.co.nz` |
 | `RECRUITMENT_EMAIL_VERIFIED` | Defaults false; explicitly set true only after verifying the recruitment sender and account-invitation flow |
 | `RECRUITMENT_WEBHOOK_SECRET` | Optional 32+ character secret for the signed provider relay |
 | `CRON_SECRET` | Protects the serverless recruitment reconciliation endpoint |

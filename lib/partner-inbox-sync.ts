@@ -11,11 +11,11 @@ import {
   extractGmailContent,
   header,
   messageIds,
-  SUPPORT_MAILBOX,
   type GmailMessage,
 } from "@/lib/partner-inbox-policy";
 import { locked, type Tx } from "@/lib/recruitment";
 import { Prisma } from "@prisma/client";
+import { isAdminEmailAddress } from "@/lib/admin-email";
 
 // A company address alone never qualifies a thread. Only app-created onboarding
 // anchors, their Gmail thread IDs, or replies referencing an app-authored anchor qualify.
@@ -23,11 +23,13 @@ export async function onboardingConversation(
   tx: Tx,
   message: GmailMessage,
   gmailDraftId?: string,
+  accountAddress?: string,
 ) {
+  accountAddress ??= (await tx.partnerMailbox.findUnique({ where: { id: "support" }, select: { address: true } }))?.address;
   const rfc = messageIds(header(message.payload, "message-id"))[0];
   const ownOutbound =
     message.labelIds?.some((label) => ["SENT", "DRAFT"].includes(label)) &&
-    addresses(header(message.payload, "from"))[0] === SUPPORT_MAILBOX;
+    isAdminEmailAddress(addresses(header(message.payload, "from"))[0] || "", accountAddress);
   const anchor = await tx.partnerMessage.findFirst({
     where: {
       conversation: { onboardingTracked: true },
@@ -99,7 +101,8 @@ export async function persistGmailMessage(
     Number.isFinite(stamp) && stamp > 0 ? new Date(stamp) : new Date();
   const rfc = messageIds(header(message.payload, "message-id"))[0] || null;
   return locked(async (tx) => {
-    let conversation = await onboardingConversation(tx, message, gmailDraftId);
+    const accountAddress = (await tx.partnerMailbox.findUnique({ where: { id: "support" }, select: { address: true } }))?.address;
+    let conversation = await onboardingConversation(tx, message, gmailDraftId, accountAddress);
     if (!conversation) return null;
     const linked = await tx.partnerMessage.findFirst({
       where: {
@@ -107,7 +110,7 @@ export async function persistGmailMessage(
         OR: [
           { gmailMessageId: message.id },
           ...(gmailDraftId ? [{ gmailDraftId }] : []),
-          ...(rfc && direction === "OUTBOUND" && from === SUPPORT_MAILBOX
+          ...(rfc && direction === "OUTBOUND" && isAdminEmailAddress(from, accountAddress)
             ? [
                 {
                   rfcMessageId: rfc,
@@ -177,7 +180,7 @@ export async function persistGmailMessage(
       : await tx.partnerMessage.create({
           data: { ...data, rfcMessageId: rfc, conversationId: conversation.id },
         });
-    if (!linked && direction === "INBOUND" && conversation.prospectId && from !== SUPPORT_MAILBOX) {
+    if (!linked && direction === "INBOUND" && conversation.prospectId && !isAdminEmailAddress(from, accountAddress)) {
       const { recordOutreachReply, explicitReplyOptOut } = await import("@/lib/mover-outreach-campaigns");
       await recordOutreachReply(tx, conversation.prospectId, receivedAt, conversation.id, explicitReplyOptOut(content.text));
     }

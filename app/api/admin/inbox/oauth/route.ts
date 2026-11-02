@@ -7,6 +7,7 @@ import { sealInboxSecret } from "@/lib/partner-inbox-policy";
 import { ownerOnly } from "@/lib/recruitment";
 import { tokenHash } from "@/lib/recruitment-policy";
 import { prisma } from "@/lib/db";
+import { ADMIN_EMAIL_ADDRESS } from "@/lib/admin-email";
 
 export async function GET() {
   try {
@@ -33,7 +34,7 @@ export async function GET() {
       state,
       code_challenge: pkce.codeChallenge,
       code_challenge_method: CodeChallengeMethod.S256,
-      login_hint: "support@matchnmove.co.nz",
+      login_hint: ADMIN_EMAIL_ADDRESS,
     });
     const response = NextResponse.redirect(url);
     response.cookies.set("mm_inbox_oauth", state, {

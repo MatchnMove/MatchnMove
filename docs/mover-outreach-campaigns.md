@@ -56,7 +56,7 @@ Before automatic sends, the application requires:
 
 - A connected monitored partner inbox, completed initial sync and no pending reply-import page.
 - A successful sync within the last two minutes and no current sync error.
-- Recruitment replies directed to the monitored `PARTNER_INBOX_ADDRESS` (normally `support@matchnmove.co.nz`).
+- Recruitment From and Reply-To are fixed to `contact@matchnmove.co.nz`; the connected Google account must receive replies to that address and authorise it as its primary address or a verified send-as alias.
 - An active, authorised assigned admin with sending permission; verified/enabled sender settings; reviewed consent; an unsuppressed valid recipient; an eligible current campaign stage; and the existing contact limits.
 
 If inbox integration is missing, stale or catching up, automatic emails wait. The UI explicitly says reply status is unknown; no inference is made that a company ignored an email.

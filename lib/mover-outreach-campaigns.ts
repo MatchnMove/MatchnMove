@@ -5,7 +5,6 @@ import { addAucklandCalendar, aucklandMidnight, aucklandParts } from "@/lib/recr
 import { activity, baseUrl, cancelFollowUps, checkActor, fail, locked, ownedProspect, settings, type Tx } from "@/lib/recruitment";
 import { contactBlockReason, secureToken, tokenHash, type RecruitmentActor, type SafeLead } from "@/lib/recruitment-policy";
 import { MOVER_TEMPLATE_VERSION, moverEmailTemplates, moverTemplateKeys, renderMoverOutreachEmail, type MoverTemplateKey } from "@/lib/mover-outreach-templates";
-import { SUPPORT_MAILBOX } from "@/lib/partner-inbox-policy";
 
 export const openCampaignStatuses = ["DRAFT", "ACTIVE", "PAUSED", "REVIEW_DUE"];
 const followupKeys: Record<number, MoverTemplateKey> = { 1: "MOVER_FOLLOWUP_1", 2: "MOVER_FOLLOWUP_2", 3: "MOVER_FINAL", 4: "MOVER_REENGAGEMENT" };
@@ -24,13 +23,11 @@ export function nextOutreachDate(sequenceSent: number, sentAt: Date) {
 }
 
 export function mailboxAutomationBlock(mailbox: { address: string; encryptedRefreshToken: string | null; initialSyncComplete: boolean; initialPageToken?: string | null; lastSyncedAt: Date | null; lastError: string | null } | null, now = new Date()) {
-  if (!mailbox?.encryptedRefreshToken || mailbox.address.toLowerCase() !== SUPPORT_MAILBOX || !mailbox.initialSyncComplete)
+  if (!mailbox?.encryptedRefreshToken || !mailbox.initialSyncComplete)
     return "Connect the monitored partner inbox and complete its initial sync before automatic follow-ups can run.";
   if (mailbox.lastError || !mailbox.lastSyncedAt || now.getTime() - mailbox.lastSyncedAt.getTime() > 120000)
     return "Automatic follow-ups are waiting for a successful, current inbox sync. Reply status is unknown.";
   if (mailbox.initialPageToken) return "Automatic follow-ups are waiting for the inbox to finish importing all pending reply pages.";
-  if ((process.env.RECRUITMENT_REPLY_TO || SUPPORT_MAILBOX).toLowerCase() !== SUPPORT_MAILBOX)
-    return "Recruitment replies must be directed to the monitored partner inbox before automatic follow-ups can run.";
   return null;
 }
 

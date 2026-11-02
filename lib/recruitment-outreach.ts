@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { validBusinessEmail } from "@/lib/prospect-contacts";
-import { sendViaSmtp } from "@/lib/email";
+import { sendViaSmtp, verifyAdminSmtpSender } from "@/lib/email";
 import { canMoverAccessLeads } from "@/lib/mover-lead-access";
 import { canCleanerAccessLeads } from "@/lib/cleaner-readiness";
 import type { PartnerBusinessType } from "@/lib/partner-business";
@@ -165,6 +165,10 @@ export async function approveAndSend(actor: RecruitmentActor, raw: unknown, auto
       confirmed: z.literal(true),
     })
     .parse(raw);
+  // Validate the sender before claiming an approved send. Setup errors leave the
+  // draft available for review rather than creating an uncertain delivery.
+  await locked(tx => verifySend(tx, actor, input.id));
+  await verifyAdminSmtpSender();
   const delivery = await locked(async (tx) => {
     const { config, message, prospect } = await verifySend(tx, actor, input.id);
     if (automatic) {
@@ -201,7 +205,7 @@ export async function approveAndSend(actor: RecruitmentActor, raw: unknown, auto
         kind: "recruitment_invitation",
         recipient: prospect.email,
         from: senderAddress(),
-        replyTo: process.env.RECRUITMENT_REPLY_TO || SUPPORT_MAILBOX,
+        replyTo: SUPPORT_MAILBOX,
         subject: message.subject,
         text: message.text,
         html: message.html,
@@ -212,7 +216,7 @@ export async function approveAndSend(actor: RecruitmentActor, raw: unknown, auto
     const email = await tx.emailDelivery.upsert({
       where: { dedupeKey: deliveryData.dedupeKey },
       create: deliveryData,
-      update: { status: "SENDING", attempts: { increment: 1 }, lastError: null },
+      update: { from: deliveryData.from, replyTo: deliveryData.replyTo, status: "SENDING", attempts: { increment: 1 }, lastError: null },
     });
     await tx.outreachMessage.update({
       where: { id: message.id },

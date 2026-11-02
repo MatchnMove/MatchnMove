@@ -8,6 +8,7 @@ import { getCleanerInvoiceAvailableDedupeKey, getCleanerLeadUnlockedDedupeKey, g
 import { CLEANING_LEAD_PRICING } from "@/lib/cleaner-lead-pricing";
 import { resolveLocale } from "@/lib/i18n/config";
 import { SITE_EMAILS } from "@/lib/site-emails";
+import { ADMIN_EMAIL_ADDRESS, adminEmailEnvelope, isAdminEmailKind } from "@/lib/admin-email";
 
 type ContactEmailInput = {
   name: string;
@@ -113,6 +114,7 @@ type VerificationDecisionInput = {
 
 type EmailKind =
   | "admin_team_invitation"
+  | "admin_password_reset"
   | "recruitment_invitation"
   | "contact_notification"
   | "mover_verification"
@@ -361,8 +363,22 @@ function getTransporter(bounded = false) {
   return nodemailer.createTransport(options);
 }
 
-// Checks connection/authentication only. No recipient or message is submitted.
-export async function verifySmtpConnection() {
+// Google can replace an unauthorised From with the login address. Verify its
+// send-as identity before submitting any admin message, including queue retries.
+export async function verifyAdminSmtpSender() {
+  const host = process.env.SMTP_HOST?.trim().toLowerCase();
+  const user = process.env.SMTP_USER?.trim().toLowerCase();
+  if (["smtp.gmail.com", "smtp.googlemail.com"].includes(host || "") && user !== ADMIN_EMAIL_ADDRESS) {
+    const { gmailConnection } = await import("@/lib/partner-inbox-google");
+    const { mailbox } = await gmailConnection();
+    if (mailbox.address.toLowerCase() !== user)
+      throw new Error("Connect the same Google account used for SMTP, with contact@matchnmove.co.nz as a verified Send mail as address.");
+  }
+}
+
+// No recipient or message is submitted by these checks.
+export async function verifySmtpConnection(adminPanel = false) {
+  if (adminPanel) await verifyAdminSmtpSender();
   const transporter = getTransporter(true);
   try { await transporter.verify(); } finally { transporter.close(); }
 }
@@ -592,11 +608,13 @@ function getStableMessageId(emailDeliveryId: string, kind: EmailKind) {
 }
 
 export async function sendViaSmtp(message: EmailMessage, emailDeliveryId: string) {
+  if (isAdminEmailKind(message.kind)) await verifyAdminSmtpSender();
+  const envelope = adminEmailEnvelope(message.kind, message.from, message.replyTo);
   const transporter = getTransporter(message.kind === "recruitment_invitation");
   return transporter.sendMail({
-    from: message.from,
+    from: envelope.from,
     to: message.to,
-    replyTo: message.replyTo,
+    replyTo: envelope.replyTo ?? undefined,
     subject: message.subject,
     text: message.text,
     html: message.html,
@@ -613,12 +631,13 @@ export async function sendViaSmtp(message: EmailMessage, emailDeliveryId: string
 }
 
 async function queueAndTrySend(message: EmailMessage, configured: boolean): Promise<EmailSendResult> {
+  const envelope = adminEmailEnvelope(message.kind, message.from, message.replyTo);
   const createData = {
     dedupeKey: message.dedupeKey,
     kind: message.kind,
     recipient: message.to,
-    from: message.from,
-    replyTo: message.replyTo,
+    from: envelope.from,
+    replyTo: envelope.replyTo,
     subject: message.subject,
     text: message.text,
     html: message.html,
@@ -694,6 +713,7 @@ export async function deliverQueuedEmail(emailDeliveryId: string) {
       status: EmailDeliveryStatus.SENDING,
       attempts: { increment: 1 },
       lastError: null,
+      ...(isAdminEmailKind(current.kind) ? adminEmailEnvelope(current.kind, current.from, current.replyTo) : {}),
     },
   });
 
@@ -1021,7 +1041,7 @@ export async function sendMoverVerificationEmail(input: MoverAuthEmailInput) {
   return queueAndTrySend(message, config.configured);
 }
 
-export async function sendMoverPasswordResetEmail(input: MoverAuthEmailInput) {
+export async function sendMoverPasswordResetEmail(input: MoverAuthEmailInput, adminPanel = false) {
   const config = getAuthEmailConfig();
   if (!input.resetUrl) {
     return { sent: false, skipped: true as const, queued: false };
@@ -1053,7 +1073,7 @@ export async function sendMoverPasswordResetEmail(input: MoverAuthEmailInput) {
     `)}
   `;
   const message: EmailMessage = {
-    kind: "mover_password_reset",
+    kind: adminPanel ? "admin_password_reset" : "mover_password_reset",
     from: config.from,
     to: input.email,
     subject,

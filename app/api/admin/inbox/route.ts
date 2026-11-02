@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isAdminEmailAddress } from "@/lib/admin-email";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
@@ -210,7 +211,8 @@ export async function GET(req: NextRequest) {
         latestIncomingAt: incoming._max.receivedAt,
         mailbox: mailbox
           ? {
-              address: mailbox.address,
+              address: SUPPORT_MAILBOX,
+              accountAddress: mailbox.address,
               connectedAt: mailbox.connectedAt,
               lastSyncedAt: mailbox.lastSyncedAt,
               lastError: mailbox.lastError,
@@ -1009,9 +1011,10 @@ export async function POST(req: NextRequest) {
           if (!input.prospectId && !input.moverCompanyId && !input.cleanerCompanyId)
             fail("Choose a company for the association.");
           const email = input.verifiedEmail.toLowerCase();
+          const accountAddress = (await tx.partnerMailbox.findUnique({ where: { id: "support" }, select: { address: true } }))?.address;
           if (
             !conversation.participants.includes(email) ||
-            email === SUPPORT_MAILBOX
+            isAdminEmailAddress(email, accountAddress)
           )
             fail("Verify an external participant from this conversation.");
           const existing = await tx.partnerContactAssociation.findUnique({

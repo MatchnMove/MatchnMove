@@ -232,6 +232,7 @@ test("inbox UI previews the final email, requires explicit send and keeps failed
   );
   assert.equal(privateNote.value, "Keep this private note after a failed save");
   await click("Reply");
+  assert.ok(dom.window.document.body.textContent?.includes("From: Match 'n Move <contact@matchnmove.co.nz>"));
   const body = [...dom.window.document.querySelectorAll("textarea")].find(
     (item) => item.maxLength === 100000,
   )!;

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { CompanyStageSelect } from "@/components/company-stage-select";
 import { statuses } from "@/lib/recruitment-stages";
+import { ADMIN_EMAIL_ADDRESS, isAdminEmailAddress } from "@/lib/admin-email";
 
 type Person = {
   id: string;
@@ -139,6 +140,7 @@ type Summary = {
   attachmentScanningConfigured?: boolean;
   mailbox: {
     address: string;
+    accountAddress?: string;
     connected: boolean;
     lastSyncedAt?: string | null;
     lastError?: string | null;
@@ -448,7 +450,7 @@ export function PartnerInbox({
       mode === "replyAll" && message
         ? [...new Set([...message.to, ...message.cc])]
             .filter(
-              (email) => email !== summary.mailbox.address && email !== to,
+              (email) => !isAdminEmailAddress(email, summary.mailbox.accountAddress) && email !== to,
             )
             .join(", ")
         : "";
@@ -536,7 +538,7 @@ export function PartnerInbox({
             replies.
           </p>
           <p className="mt-2 text-sm text-slate-500">
-            {summary?.mailbox.address || "support@matchnmove.co.nz"} ·{" "}
+            {ADMIN_EMAIL_ADDRESS} ·{" "}
             {summary?.mailbox.connected
               ? `Last synced ${date(summary.mailbox.lastSyncedAt)}`
               : "Mailbox connection required"}
@@ -771,7 +773,7 @@ export function PartnerInbox({
                       >
                         {item.prospect?.companyName ||
                           item.participants.find(
-                            (email) => email !== summary?.mailbox.address,
+                            (email) => !isAdminEmailAddress(email, summary?.mailbox.accountAddress),
                           ) ||
                           "Unlinked conversation"}
                       </span>
@@ -797,7 +799,7 @@ export function PartnerInbox({
                   <p className="p-6 text-sm leading-6 text-slate-500">
                     {summary?.mailbox.connected
                     ? "No onboarding conversations match this view. Invitations sent through this admin panel and their replies will appear here."
-                      : "Connect the support mailbox to receive replies to admin-panel onboarding invitations."}
+                      : "Connect the contact mailbox to receive replies to admin-panel onboarding invitations."}
                   </p>
                 )}
               </div>
@@ -1163,6 +1165,7 @@ export function PartnerInbox({
                 </article>
               ))}
               <CompanyConversationPanel
+                accountAddress={summary?.mailbox.accountAddress}
                 onOpen={open}
                 key={conversation.id}
                 team={team}
@@ -1225,7 +1228,7 @@ export function PartnerInbox({
                 </button>
               </div>
               <p className="my-3 text-xs text-slate-500">
-                From: Match &apos;n Move &lt;{summary?.mailbox.address}&gt;
+                From: Match &apos;n Move &lt;{ADMIN_EMAIL_ADDRESS}&gt;
               </p>
               <fieldset
                 disabled={busy || preview}
@@ -1508,7 +1511,7 @@ export function PartnerInbox({
                           });
                           setComposer(null);
                           setPreview(false);
-                          setNotice("Email sent through the support mailbox.");
+                          setNotice("Email sent from contact@matchnmove.co.nz.");
                           await Promise.all([
                             reloadConversation(),
                             reloadList(),
@@ -1544,7 +1547,7 @@ export function PartnerInbox({
               </div>
               {!summary?.mailbox.connected && (
                 <p className="mt-3 text-xs text-amber-800">
-                  Sending is unavailable until the owner connects the support
+                  Sending is unavailable until the owner connects the contact
                   mailbox.
                 </p>
               )}
@@ -1625,7 +1628,7 @@ function InboxOwnerSetup({
       <summary className="cursor-pointer text-sm font-bold">
         {summary.mailbox.connected
           ? "Mailbox connection & team access"
-          : "Connect the real support mailbox"}
+          : "Connect the contact mailbox"}
       </summary>
       <div className="mt-4 space-y-4 text-sm">
         <p>
@@ -1705,14 +1708,14 @@ function InboxOwnerSetup({
         )}
         {summary.configured && !summary.mailbox.connected && (
           <a className={button} href="/api/admin/inbox/oauth">
-            Connect support@matchnmove.co.nz with Google
+            Connect contact@matchnmove.co.nz with Google
           </a>
         )}
         {summary.mailbox.connected && (
           <div className="flex flex-wrap items-center gap-3">
             <span className="inline-flex items-center gap-2 font-semibold text-teal-700">
               <Check size={16} />
-              Connected as {summary.mailbox.address}
+              Sending as {ADMIN_EMAIL_ADDRESS}
             </span>
             <a className={secondary} href="/api/admin/inbox/oauth">
               Reconnect
@@ -1819,6 +1822,7 @@ function InboxTeamAccess({ person }: { person: Person }) {
 }
 
 function CompanyConversationPanel({
+  accountAddress,
   conversation,
   owner,
   busy,
@@ -1827,6 +1831,7 @@ function CompanyConversationPanel({
   team,
   onOpen,
 }: {
+  accountAddress?: string;
   conversation: Conversation;
   owner: boolean;
   busy: boolean;
@@ -1957,7 +1962,7 @@ function CompanyConversationPanel({
                 >
                   <option value="">Link this conversation only</option>
                   {conversation.participants
-                    .filter((email) => email !== "support@matchnmove.co.nz")
+                    .filter((email) => !isAdminEmailAddress(email, accountAddress))
                     .map((email) => (
                       <option value={email} key={email}>
                         {email}

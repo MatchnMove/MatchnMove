@@ -9,6 +9,7 @@ import {
 import { audit, locked, ownerOnly } from "@/lib/recruitment";
 import { tokenHash } from "@/lib/recruitment-policy";
 import { prisma } from "@/lib/db";
+import { assertAdminGmailSender, type GmailSendAs } from "@/lib/admin-email";
 
 export async function GET(req: NextRequest) {
   const destination = new URL(
@@ -51,33 +52,45 @@ export async function GET(req: NextRequest) {
     const profile = await client.request<{ emailAddress: string }>({
       url: "https://gmail.googleapis.com/gmail/v1/users/me/profile",
     });
-    if (profile.data.emailAddress.toLowerCase() !== SUPPORT_MAILBOX) {
+    const accountAddress = profile.data.emailAddress.trim().toLowerCase();
+    try {
+      const senders = await client.request<{ sendAs?: GmailSendAs[] }>({
+        url: "https://gmail.googleapis.com/gmail/v1/users/me/settings/sendAs",
+      });
+      assertAdminGmailSender(senders.data);
+    } catch (error) {
       await client.revokeCredentials().catch(() => undefined);
-      throw new Error("Only the support mailbox can connect");
+      throw error;
     }
     await locked(async (tx) => {
       const { checkInboxActor } = await import("@/lib/partner-inbox-access");
       await checkInboxActor(tx, actor);
       ownerOnly(actor);
+      const previous = await tx.partnerMailbox.findUnique({ where: { id: "support" } });
       await tx.partnerMailbox.upsert({
         where: { id: "support" },
         create: {
           id: "support",
-          address: SUPPORT_MAILBOX,
+          address: accountAddress,
           encryptedRefreshToken: sealInboxSecret(tokens.refresh_token!),
           connectedAt: new Date(),
         },
         update: {
-          address: SUPPORT_MAILBOX,
+          address: accountAddress,
           encryptedRefreshToken: sealInboxSecret(tokens.refresh_token!),
           connectedAt: new Date(),
           lastError: null,
           failureCount: 0,
           nextAttemptAt: null,
+          ...(previous?.address.toLowerCase() !== accountAddress ? {
+            historyId: null, initialPageToken: null, initialHistoryId: null,
+            draftPageToken: null, initialSyncComplete: false, lastSyncedAt: null,
+          } : {}),
         },
       });
       await audit(tx, actor.id, "partner_inbox_connected", {
-        mailbox: SUPPORT_MAILBOX,
+        mailbox: accountAddress,
+        sender: SUPPORT_MAILBOX,
         provider: "Google Workspace",
       });
     });
@@ -85,7 +98,7 @@ export async function GET(req: NextRequest) {
   } catch {
     destination.searchParams.set(
       "connectionError",
-      "Google connection failed. Use the support account and check the owner setup instructions.",
+      "Google connection failed. Use the contact account, or an account with contact@matchnmove.co.nz as a verified Send mail as address, and check the owner setup instructions.",
     );
   }
   const response = NextResponse.redirect(destination);

@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { isAdminEmailAddress } from "@/lib/admin-email";
 import MailComposer from "nodemailer/lib/mail-composer";
 import { prisma } from "@/lib/db";
 import {
@@ -9,6 +10,7 @@ import {
 } from "@/lib/partner-inbox-access";
 import {
   draftSchema,
+  addresses,
   MAX_MESSAGE_BYTES,
   SUPPORT_MAILBOX,
   type GmailMessage,
@@ -191,6 +193,7 @@ export async function saveInboxDraft(actor: InboxActor, raw: unknown) {
           ).replace(/[\r\n]+/g, " ")
         : null;
     const data = {
+      from: SUPPORT_MAILBOX,
       to: input.to,
       cc: input.cc,
       bcc: input.bcc,
@@ -331,8 +334,9 @@ export async function buildInboxMime(messageId: string) {
 async function checkRecipients(
   message: Awaited<ReturnType<typeof buildInboxMime>>["message"],
 ) {
+  const accountAddress = (await prisma.partnerMailbox.findUnique({ where: { id: "support" }, select: { address: true } }))?.address;
   for (const email of [...message.to, ...message.cc, ...message.bcc]) {
-    if (email === SUPPORT_MAILBOX) continue;
+    if (isAdminEmailAddress(email, accountAddress)) continue;
     const suppressed = await prisma.contactSuppression.findUnique({
       where: { email },
     });
@@ -443,6 +447,8 @@ export async function sendInboxDraft(
           maxAttempts: 1,
         },
         update: {
+          from: SUPPORT_MAILBOX,
+          replyTo: SUPPORT_MAILBOX,
           status: "SENDING",
           attempts: { increment: 1 },
           lastError: null,
@@ -470,7 +476,7 @@ export async function sendInboxDraft(
     if (count >= 100) fail("Daily inbox send limit reached.", 429);
     await tx.partnerMessage.update({
       where: { id },
-      data: { status: "SENDING", sendClaim: claim, lastError: null },
+      data: { from: SUPPORT_MAILBOX, status: "SENDING", sendClaim: claim, lastError: null },
     });
     await inboxActivity(
       tx,
@@ -900,14 +906,13 @@ export async function bridgeRecruitmentMessages() {
   });
   for (const item of messages)
     await locked(async (tx) => {
-      const rfc = item.emailDeliveryId
-        ? (
-            await tx.emailDelivery.findUnique({
-              where: { id: item.emailDeliveryId },
-              select: { providerMessageId: true },
-            })
-          )?.providerMessageId || null
-        : null;
+      const delivery = item.emailDeliveryId
+        ? await tx.emailDelivery.findUnique({
+            where: { id: item.emailDeliveryId },
+            select: { providerMessageId: true, from: true },
+          }) : null;
+      const rfc = delivery?.providerMessageId || null;
+      const sentFrom = addresses(delivery?.from || "")[0] || SUPPORT_MAILBOX;
       const paired = await tx.partnerMessage.findUnique({
         where: { outreachMessageId: item.id },
       });
@@ -921,6 +926,7 @@ export async function bridgeRecruitmentMessages() {
           where: { id: paired.id },
           data: {
             status: "SENT",
+            from: sentFrom,
             sentAt: item.sentAt,
             receivedAt: item.sentAt!,
             rfcMessageId: rfc || paired.rfcMessageId,
@@ -955,7 +961,7 @@ export async function bridgeRecruitmentMessages() {
             where: {
               rfcMessageId: rfc,
               direction: "OUTBOUND",
-              from: SUPPORT_MAILBOX,
+              from: sentFrom,
               to: { has: item.prospect.email || "" },
               outreachMessageId: null,
             },
@@ -985,7 +991,7 @@ export async function bridgeRecruitmentMessages() {
           subject: item.subject,
           preview: item.text.slice(0, 250),
           participants: [
-            SUPPORT_MAILBOX,
+            sentFrom,
             ...(item.prospect.email ? [item.prospect.email] : []),
           ],
           prospectId: item.prospectId,
@@ -1006,7 +1012,7 @@ export async function bridgeRecruitmentMessages() {
           rfcMessageId: rfc,
           direction: "OUTBOUND",
           status: "SENT",
-          from: SUPPORT_MAILBOX,
+          from: sentFrom,
           to: item.prospect.email ? [item.prospect.email] : [],
           cc: [],
           bcc: [],

@@ -130,11 +130,11 @@ export async function sendVerificationEmail(user: { id: string; email: string; n
   return sendMoverVerificationEmail({ email: user.email, name: user.name, verificationUrl });
 }
 
-export async function sendPasswordResetEmail(user: { id: string; email: string; name?: string | null }) {
+export async function sendPasswordResetEmail(user: { id: string; email: string; name?: string | null }, adminPanel = false) {
   await purgeAuthTokens(user.id, AuthTokenType.RESET_PASSWORD);
   const token = await issueAuthToken(user.id, AuthTokenType.RESET_PASSWORD, 2);
   const resetUrl = `${getBaseUrl()}/mover/reset-password?token=${token}`;
-  return sendMoverPasswordResetEmail({ email: user.email, name: user.name, resetUrl });
+  return sendMoverPasswordResetEmail({ email: user.email, name: user.name, resetUrl }, adminPanel);
 }
 
 export async function sendSignInCodeEmail(user: { id: string; email: string; name?: string | null }) {

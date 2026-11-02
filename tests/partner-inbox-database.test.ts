@@ -107,7 +107,7 @@ test(
         prospectId: prospect.id,
         assignedAdminId: colleague.id,
         subject: "Previous admin onboarding invitation",
-        participants: [SUPPORT_MAILBOX, partner],
+        participants: ["support@matchnmove.co.nz", partner],
         labels: [],
         unread: false,
       },
@@ -119,7 +119,7 @@ test(
         purpose: "OUTREACH",
         direction: "OUTBOUND",
         status: "SENT",
-        from: SUPPORT_MAILBOX,
+        from: "support@matchnmove.co.nz",
         to: [partner],
         cc: [],
         bcc: [],
@@ -540,9 +540,12 @@ test(
           },
         });
         const draft = await reply();
+        // A saved draft from before the sender change must still use contact.
+        await prisma.partnerMessage.update({ where: { id: draft.id }, data: { from: "support@matchnmove.co.nz" } });
         const built = await buildInboxMime(draft.id),
           raw = Buffer.from(built.raw, "base64url").toString();
-        assert.match(raw, /^From:.*support@matchnmove.co.nz/m);
+        assert.match(raw, /^From:.*contact@matchnmove.co.nz/m);
+        assert.match(raw, /^Reply-To: contact@matchnmove.co.nz/m);
         assert.match(raw, /^In-Reply-To:/m);
         assert.match(raw, /^References:/m);
         assert.doesNotMatch(raw, /STRICTLY_PRIVATE_INTERNAL_NOTE/);
@@ -562,6 +565,7 @@ test(
           "base64url",
         ).toString();
         assert.match(serviceRaw, /^Bcc: audit@validation.invalid/m);
+        assert.match(serviceRaw, /^From:.*contact@matchnmove.co.nz/m);
         assert.doesNotMatch(serviceRaw, /INTERNAL_SERVICE_REASON/);
       },
     );

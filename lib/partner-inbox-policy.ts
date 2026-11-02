@@ -3,9 +3,10 @@ import addressParser from "nodemailer/lib/addressparser";
 import { z } from "zod";
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 
-export const SUPPORT_MAILBOX =
-  process.env.PARTNER_INBOX_ADDRESS?.trim().toLowerCase() ||
-  "support@matchnmove.co.nz";
+import { ADMIN_EMAIL_ADDRESS } from "@/lib/admin-email";
+
+// The database slot remains named "support" for existing mailbox connections.
+export const SUPPORT_MAILBOX = ADMIN_EMAIL_ADDRESS;
 export const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 export const MAX_MESSAGE_BYTES = 15 * 1024 * 1024;
 export function boundedInboxInput(value: unknown, depth = 0): boolean {

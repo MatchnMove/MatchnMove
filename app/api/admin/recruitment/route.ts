@@ -445,7 +445,7 @@ export async function POST(req: NextRequest) {
         });
         return user;
       });
-      return NextResponse.json(await sendPasswordResetEmail(user), { headers });
+      return NextResponse.json(await sendPasswordResetEmail(user, true), { headers });
     }
     const result = await locked(async (tx) => {
       await checkActor(tx, actor);

@@ -1,6 +1,7 @@
 import { OAuth2Client } from "google-auth-library";
 import { prisma } from "@/lib/db";
-import { openInboxSecret, SUPPORT_MAILBOX } from "@/lib/partner-inbox-policy";
+import { openInboxSecret } from "@/lib/partner-inbox-policy";
+import { assertAdminGmailSender, type GmailSendAs } from "@/lib/admin-email";
 
 export class InboxProviderError extends Error {
   constructor(public status: number) {
@@ -53,13 +54,13 @@ export async function gmailConnection() {
   const mailbox = await prisma.partnerMailbox.findUnique({
     where: { id: "support" },
   });
-  if (!mailbox?.encryptedRefreshToken || mailbox.address !== SUPPORT_MAILBOX)
-    throw new Error("The support mailbox must be connected by an owner.");
+  if (!mailbox?.encryptedRefreshToken)
+    throw new Error("The contact mailbox must be connected by an owner.");
   const client = await googleInboxClient();
   client.setCredentials({
     refresh_token: openInboxSecret(mailbox.encryptedRefreshToken),
   });
-  return {
+  const connection = {
     mailbox,
     async request<T>(path: string, method = "GET", body?: unknown): Promise<T> {
       if (!path.startsWith("/") || path.startsWith("//"))
@@ -85,4 +86,6 @@ export async function gmailConnection() {
         : (response.json() as Promise<T>);
     },
   };
+  assertAdminGmailSender(await connection.request<{ sendAs?: GmailSendAs[] }>("/settings/sendAs"));
+  return connection;
 }
