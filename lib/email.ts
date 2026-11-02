@@ -142,6 +142,8 @@ type EmailMessage = {
   subject: string;
   text: string;
   html: string;
+  inReplyTo?: string;
+  references?: string[];
 };
 
 type EmailSendResult = {
@@ -598,6 +600,8 @@ export async function sendViaSmtp(message: EmailMessage, emailDeliveryId: string
     subject: message.subject,
     text: message.text,
     html: message.html,
+    inReplyTo: message.inReplyTo,
+    references: message.references,
     messageId: getStableMessageId(emailDeliveryId, message.kind),
     headers: {
       "Auto-Submitted": "auto-generated",

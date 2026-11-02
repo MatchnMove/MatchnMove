@@ -4,11 +4,15 @@ import { sendViaSmtp } from "@/lib/email";
 import { canMoverAccessLeads } from "@/lib/mover-lead-access";
 import { canCleanerAccessLeads } from "@/lib/cleaner-readiness";
 import type { PartnerBusinessType } from "@/lib/partner-business";
+import { classifyOutreachFailure, mailboxAutomationBlock, opportunityEligible, recordCampaignSent, verifyCampaignSend } from "@/lib/mover-outreach-campaigns";
+import { MOVER_TEMPLATE_VERSION, renderMoverOutreachEmail, type MoverTemplateKey } from "@/lib/mover-outreach-templates";
+import { SUPPORT_MAILBOX } from "@/lib/partner-inbox-policy";
 import {
   RecruitmentActor,
   contactBlockReason,
   renderRecruitmentEmail,
   safeLeadSummary,
+  recruitmentLeadSelect,
   tokenHash,
 } from "@/lib/recruitment-policy";
 import {
@@ -28,7 +32,7 @@ export async function editDraft(tx: Tx, actor: RecruitmentActor, raw: unknown) {
   const input = z
     .object({
       id: z.string(),
-      introduction: z.string().trim().min(20).max(1500),
+      introduction: z.string().trim().max(1500),
       updatedAt: z.string().datetime(),
     })
     .parse(raw);
@@ -67,7 +71,10 @@ export async function editDraft(tx: Tx, actor: RecruitmentActor, raw: unknown) {
   if (!registrationUrl || !unsubscribeUrl)
     fail("Draft links are unavailable. Ask the owner to review.");
   const config = await settings(tx);
-  const rendered = renderRecruitmentEmail({
+  const rendered = message.campaignId ? renderMoverOutreachEmail({
+    templateKey: message.templateKey as MoverTemplateKey, companyName: prospect.companyName, contactName: prospect.contactName,
+    personalNote: input.introduction, lead: quote ? safeLeadSummary(quote) : null, registrationUrl, unsubscribeUrl,
+  }) : renderRecruitmentEmail({
     companyName: prospect.companyName,
     businessType: prospect.businessType,
     introduction: input.introduction,
@@ -78,7 +85,7 @@ export async function editDraft(tx: Tx, actor: RecruitmentActor, raw: unknown) {
   });
   const result = await tx.outreachMessage.update({
     where: { id: message.id },
-    data: { introduction: input.introduction, ...rendered },
+    data: { introduction: input.introduction, ...rendered, ...(message.campaignId ? { templateVersion: MOVER_TEMPLATE_VERSION } : {}) },
   });
   await activity(tx, prospect.id, actor.id, "draft_updated", {
     messageId: message.id,
@@ -106,14 +113,14 @@ export async function verifySend(tx: Tx, actor: RecruitmentActor, messageId: str
     where: { id: messageId },
     include: {
       quoteRequest: {
-        select: { recruitmentSharingAllowed: true, sharingConsentAt: true },
+        select: { ...recruitmentLeadSelect, recruitmentSharingAllowed: true, sharingConsentAt: true },
       },
     },
   });
   if (!message) fail("Invitation not found.", 404);
   if (message.quoteRequestId && actor.role !== "OWNER" && !user.canViewRecruitmentLeads)
     fail("The owner must enable your lead-summary permission for this invitation.", 403);
-  if (!message.text.includes(config.senderIdentity))
+  if (!message.campaignId && !message.text.includes(config.senderIdentity))
     fail(
       "Sender details changed. Save the draft again and review the refreshed preview before sending.",
       409,
@@ -129,17 +136,28 @@ export async function verifySend(tx: Tx, actor: RecruitmentActor, messageId: str
     ),
   );
   if (reason) fail(reason);
+  await verifyCampaignSend(tx, message, prospect);
   if (
     message.quoteRequestId && (!message.quoteRequest?.recruitmentSharingAllowed ||
     !message.quoteRequest.sharingConsentAt)
   )
     fail("Customer permission for this summary is no longer available.");
+  if (message.campaignId && message.quoteRequest && !opportunityEligible(message.quoteRequest))
+    fail("This moving opportunity is no longer current. Prepare a general invitation instead.");
+  if (message.campaignId) {
+    const registrationUrl = message.text.match(/Register: (https?:\/\/\S+)/)?.[1];
+    const unsubscribeUrl = message.text.match(/Unsubscribe: (https?:\/\/\S+)/)?.[1];
+    if (!registrationUrl || !unsubscribeUrl) fail("Refresh this draft's invitation links before sending.");
+    const current = renderMoverOutreachEmail({ templateKey: message.templateKey as MoverTemplateKey, companyName: prospect.companyName, contactName: prospect.contactName,
+      lead: message.quoteRequest ? safeLeadSummary(message.quoteRequest) : null, personalNote: message.introduction, registrationUrl, unsubscribeUrl });
+    if (current.text !== message.text || current.subject !== message.subject) fail("Company or approved summary details changed. Save the draft and review its refreshed preview before sending.", 409);
+  }
   if (message.attributionExpiresAt < new Date())
     fail("This draft has expired. Ask the owner to review.");
   return { config, message, prospect: { ...prospect, email: prospect.email } };
 }
 
-export async function approveAndSend(actor: RecruitmentActor, raw: unknown) {
+export async function approveAndSend(actor: RecruitmentActor, raw: unknown, automatic = false) {
   const input = z
     .object({
       id: z.string(),
@@ -149,8 +167,15 @@ export async function approveAndSend(actor: RecruitmentActor, raw: unknown) {
     .parse(raw);
   const delivery = await locked(async (tx) => {
     const { config, message, prospect } = await verifySend(tx, actor, input.id);
+    if (automatic) {
+      if (!config.automaticFollowUpsEnabled || !message.campaignId || message.sequence < 1 || message.sequence > 3)
+        fail("Automatic sending is limited to enabled, scheduled mover follow-ups.", 403);
+      const blocked = mailboxAutomationBlock(await tx.partnerMailbox.findUnique({ where: { id: "support" } }));
+      if (blocked) fail(blocked, 503);
+      if (message.sendAttempts >= 3 || (message.retryAt && message.retryAt > new Date())) fail("Retry is not due or its limit was reached.");
+    }
     if (
-      message.status !== "DRAFT" ||
+      (message.status !== "DRAFT" && !(automatic && message.status === "RETRY")) ||
       message.updatedAt.toISOString() !== input.updatedAt
     )
       fail(
@@ -164,27 +189,30 @@ export async function approveAndSend(actor: RecruitmentActor, raw: unknown) {
     if (recent >= config.dailyLimit)
       fail("Your rolling 24-hour send limit has been reached.", 429);
     const duplicateContact = await tx.outreachMessage.findFirst({
-      where: { prospectId: prospect.id, approvedAt: { gte: today } },
+      where: { prospectId: prospect.id, id: { not: message.id }, approvedAt: { gte: today } },
     });
     if (duplicateContact)
       fail(
         "This company has already had an invitation attempted in the last 24 hours.",
         409,
       );
-    const email = await tx.emailDelivery.create({
-      data: {
+    const deliveryData = {
         dedupeKey: `recruitment:${message.id}`,
         kind: "recruitment_invitation",
         recipient: prospect.email,
         from: senderAddress(),
-        replyTo: process.env.RECRUITMENT_REPLY_TO || senderAddress(),
+        replyTo: process.env.RECRUITMENT_REPLY_TO || SUPPORT_MAILBOX,
         subject: message.subject,
         text: message.text,
         html: message.html,
-        status: "SENDING",
-        maxAttempts: 1,
+        status: "SENDING" as const,
+        maxAttempts: automatic ? 3 : 1,
         attempts: 1,
-      },
+      };
+    const email = await tx.emailDelivery.upsert({
+      where: { dedupeKey: deliveryData.dedupeKey },
+      create: deliveryData,
+      update: { status: "SENDING", attempts: { increment: 1 }, lastError: null },
     });
     await tx.outreachMessage.update({
       where: { id: message.id },
@@ -193,6 +221,8 @@ export async function approveAndSend(actor: RecruitmentActor, raw: unknown) {
         adminId: actor.id,
         approvedAt: new Date(),
         emailDeliveryId: email.id,
+        sendAttempts: { increment: 1 },
+        retryAt: null,
       },
     });
     await activity(tx, prospect.id, actor.id, "email_approved", {
@@ -208,6 +238,13 @@ export async function approveAndSend(actor: RecruitmentActor, raw: unknown) {
         input.id,
       );
       if (message.status !== "SENDING") fail("Sending was cancelled.", 409);
+      if (automatic) {
+        const blocked = mailboxAutomationBlock(await tx.partnerMailbox.findUnique({ where: { id: "support" } }));
+        if (blocked) fail(blocked, 503);
+      }
+      const parent = message.followUpToId ? await tx.outreachMessage.findUnique({ where: { id: message.followUpToId } }) : null;
+      const parentDelivery = parent?.emailDeliveryId ? await tx.emailDelivery.findUnique({ where: { id: parent.emailDeliveryId }, select: { providerMessageId: true } }) : null;
+      const parentMessageId = parentDelivery?.providerMessageId;
       // This second, committed claim is never retried automatically, even after an ambiguous SMTP timeout.
       const result = await sendViaSmtp(
         {
@@ -218,11 +255,12 @@ export async function approveAndSend(actor: RecruitmentActor, raw: unknown) {
           subject: delivery.subject,
           html: delivery.html,
           text: delivery.text,
+          ...(parentMessageId ? { inReplyTo: parentMessageId, references: [parentMessageId] } : {}),
         },
         delivery.id,
       );
       if (result.rejected?.length && !result.accepted?.length)
-        throw new Error("SMTP rejected this recipient.");
+        throw Object.assign(new Error("SMTP rejected this recipient."), { responseCode: 550 });
       const now = new Date();
       await tx.emailDelivery.update({
         where: { id: delivery.id },
@@ -241,13 +279,14 @@ export async function approveAndSend(actor: RecruitmentActor, raw: unknown) {
         where: { id: prospect.id },
         data: {
           lastContactedAt: now,
-          nextFollowUpAt: config.autoTasks ? dueAt : null,
+          nextFollowUpAt: message.campaignId ? null : config.autoTasks ? dueAt : null,
           status:
             prospect.status === "NOT_CONTACTED" ? "CONTACTED" : prospect.status,
           version: { increment: 1 },
         },
       });
-      if (config.autoTasks)
+      await recordCampaignSent(tx, message, now);
+      if (config.autoTasks && !message.campaignId)
         await tx.recruitmentTask.upsert({
           where: { dedupeKey: `follow-up:${input.id}` },
           update: {},
@@ -267,7 +306,8 @@ export async function approveAndSend(actor: RecruitmentActor, raw: unknown) {
       });
       return { ok: true, status: "SENT" };
     });
-  } catch {
+  } catch (error) {
+    let retryScheduled = false;
     await locked(async (tx) => {
       await tx.emailDelivery.update({
         where: { id: delivery.id },
@@ -289,10 +329,32 @@ export async function approveAndSend(actor: RecruitmentActor, raw: unknown) {
       const message = await tx.outreachMessage.findUniqueOrThrow({
         where: { id: input.id },
       });
+      if (message.campaignId) {
+        const classification = classifyOutreachFailure(error);
+        const retry = automatic && classification === "RETRYABLE" && message.sendAttempts < 3;
+        retryScheduled = retry;
+        await tx.outreachMessage.update({ where: { id: message.id }, data: {
+          status: retry ? "RETRY" : "NEEDS_REVIEW", retryAt: retry ? new Date(Date.now() + (message.sendAttempts === 1 ? 5 : 15) * 60000) : null,
+          lastError: retry ? "Provider declined this attempt temporarily. A bounded retry is scheduled." : `Delivery ${classification.toLowerCase()}; review provider logs before further contact.`,
+        } });
+        await tx.emailDelivery.update({ where: { id: delivery.id }, data: {
+          lastError: retry ? "Temporary SMTP rejection; the campaign worker has a bounded retry scheduled." : `Delivery ${classification.toLowerCase()}; automatic retry is blocked. Review the provider outcome.`,
+          ...(retry ? { nextAttemptAt: new Date(Date.now() + (message.sendAttempts === 1 ? 5 : 15) * 60000) } : {}),
+        } });
+        await tx.outreachCampaign.updateMany({ where: { id: message.campaignId, status: { in: ["ACTIVE", "DRAFT"] } }, data: {
+          ...(!retry ? { status: classification === "PERMANENT" ? "STOPPED" : "PAUSED" } : {}),
+          reason: retry ? "Temporary provider rejection; retry scheduled." : `Delivery ${classification.toLowerCase()}; owner review required.`,
+        } });
+        if (classification === "PERMANENT" && [550, 551, 553].includes((error as { responseCode?: number }).responseCode || 0)) {
+          const { suppressContact } = await import("@/lib/recruitment");
+          const prospect = await tx.moverProspect.findUniqueOrThrow({ where: { id: message.prospectId } });
+          if (prospect.email) await suppressContact(tx, prospect.email, "Permanent SMTP recipient failure", "smtp");
+        }
+      }
       await activity(tx, message.prospectId, actor.id, "send_failed", {
         messageId: input.id,
       });
-      await tx.recruitmentTask.upsert({
+      if (!retryScheduled) await tx.recruitmentTask.upsert({
         where: { dedupeKey: `failed:${input.id}` },
         update: {},
         create: {
@@ -307,9 +369,9 @@ export async function approveAndSend(actor: RecruitmentActor, raw: unknown) {
     });
     return {
       ok: false,
-      status: "NEEDS_REVIEW",
+      status: retryScheduled ? "RETRY" : "NEEDS_REVIEW",
       error:
-        "Delivery was not confirmed. Review provider logs; sending again is blocked.",
+        retryScheduled ? "A temporary provider rejection has a bounded retry scheduled." : "Delivery was not confirmed. Review provider logs; sending again is blocked.",
     };
   }
 }
@@ -396,6 +458,7 @@ export async function syncRecruitmentOutcomes(companyId?: string, businessType: 
       take: 25,
     });
     for (const message of uncertain) {
+      if (message.campaignId) await tx.outreachCampaign.updateMany({ where: { id: message.campaignId, status: { in: ["DRAFT", "ACTIVE", "REVIEW_DUE"] } }, data: { status: "PAUSED", reason: "Delivery was interrupted; verify the provider outcome before any further contact." } });
       await tx.outreachMessage.update({
         where: { id: message.id },
         data: {

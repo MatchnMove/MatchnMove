@@ -1,5 +1,7 @@
 # Recruitment workspace: implementation and release guide
 
+The current approved mover email sequence is documented in [Approved mover onboarding and follow-ups](mover-outreach-campaigns.md). That guide supersedes the legacy manual-only mover template/scheduling descriptions below; cleaning and historical messages retain their existing workflow.
+
 Entry point: `/admin/recruitment`. This extends the existing application, PostgreSQL database, session cookie, admin authenticator flow, password hashing, SMTP transport and `EmailDelivery` records. No new runtime dependency or paid service was added.
 
 ## Admin navigation and Email station

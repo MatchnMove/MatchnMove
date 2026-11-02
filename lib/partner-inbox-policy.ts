@@ -96,9 +96,11 @@ export const draftSchema = z.object({
       (value) => !/[\r\n]/.test(value),
       "Subject cannot contain line breaks.",
     ),
-  text: z.string().min(1).max(100000),
+  text: z.string().max(100000),
   purpose: z.enum(["REPLY", "OUTREACH", "SERVICE"]),
   serviceReason: z.string().trim().max(1000).optional(),
+}).superRefine((value, context) => {
+  if (value.purpose !== "OUTREACH" && !value.text.trim()) context.addIssue({ code: z.ZodIssueCode.custom, path: ["text"], message: "Enter a message before saving." });
 });
 export function cleanFileName(name: string) {
   return name.replace(/[\\/\x00-\x1f\x7f]/g, "_").slice(0, 180) || "attachment";

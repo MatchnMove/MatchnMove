@@ -53,6 +53,7 @@ test("cleaner registration attribution links its cleaner account and inbox threa
     moverProspect: { update: async ({ data }: { data: Record<string, unknown> }) => { updates.push({ model: "prospect", data }); } },
     partnerConversation: { updateMany: async ({ data }: { data: Record<string, unknown> }) => { updates.push({ model: "conversation", data }); } },
     recruitmentTask: { updateMany: async () => ({}) },
+    outreachCampaign: { updateMany: async () => ({}) },
     recruitmentSetting: { findUnique: async () => ({ value: { autoTasks: false } }) },
     recruitmentActivity: { create: async () => ({}) },
   } as unknown as Tx;

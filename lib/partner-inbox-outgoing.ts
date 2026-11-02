@@ -152,7 +152,7 @@ export async function saveInboxDraft(actor: InboxActor, raw: unknown) {
       outreach = await editDraft(tx, actor, {
         id: record.id,
         updatedAt: record.updatedAt.toISOString(),
-        introduction: input.text,
+        introduction: input.text || (record.campaignId ? "" : record.introduction),
       });
     } else if (existing?.outreachMessageId)
       fail(
@@ -584,6 +584,7 @@ export async function sendInboxDraft(
           where: { id: failed.outreachMessageId! },
         });
         if (outreach.status === "SENDING") {
+          if (outreach.campaignId) await tx.outreachCampaign.updateMany({ where: { id: outreach.campaignId, status: { in: ["ACTIVE", "DRAFT", "REVIEW_DUE"] } }, data: { status: "PAUSED", reason: "Delivery through the inbox was blocked or uncertain; owner review required." } });
           await tx.outreachMessage.update({
             where: { id: outreach.id },
             data: {
@@ -641,13 +642,15 @@ export async function finishInboxOutreach(
     where: { id: prospect.id },
     data: {
       lastContactedAt: receivedAt,
-      nextFollowUpAt: config.autoTasks ? dueAt : null,
+      nextFollowUpAt: message.campaignId ? null : config.autoTasks ? dueAt : null,
       status:
         prospect.status === "NOT_CONTACTED" ? "CONTACTED" : prospect.status,
       version: { increment: 1 },
     },
   });
-  if (config.autoTasks)
+  const { recordCampaignSent } = await import("@/lib/mover-outreach-campaigns");
+  await recordCampaignSent(tx, message, receivedAt);
+  if (config.autoTasks && !message.campaignId)
     await tx.recruitmentTask.upsert({
       where: { dedupeKey: `follow-up:${outreachId}` },
       update: {},
@@ -892,7 +895,7 @@ export async function bridgeRecruitmentMessages() {
       ],
     },
     include: { prospect: true },
-    orderBy: { sentAt: "desc" },
+    orderBy: [{ sentAt: "asc" }, { createdAt: "asc" }],
     take: 50,
   });
   for (const item of messages)
@@ -975,7 +978,8 @@ export async function bridgeRecruitmentMessages() {
         });
         return;
       }
-      const conversation = await tx.partnerConversation.create({
+      const parent = item.followUpToId ? await tx.partnerMessage.findUnique({ where: { outreachMessageId: item.followUpToId }, include: { conversation: true } }) : null;
+      const conversation = parent?.conversation || await tx.partnerConversation.create({
         data: {
           onboardingTracked: true,
           subject: item.subject,
@@ -1009,7 +1013,8 @@ export async function bridgeRecruitmentMessages() {
           subject: item.subject,
           text: item.text,
           html: item.html,
-          references: [],
+          references: parent?.rfcMessageId ? [...parent.references, parent.rfcMessageId] : [],
+          inReplyTo: parent?.rfcMessageId,
           providerLabels: ["SENT"],
           sentAt: item.sentAt!,
           receivedAt: item.sentAt!,

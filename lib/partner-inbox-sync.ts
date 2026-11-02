@@ -177,6 +177,10 @@ export async function persistGmailMessage(
       : await tx.partnerMessage.create({
           data: { ...data, rfcMessageId: rfc, conversationId: conversation.id },
         });
+    if (!linked && direction === "INBOUND" && conversation.prospectId && from !== SUPPORT_MAILBOX) {
+      const { recordOutreachReply, explicitReplyOptOut } = await import("@/lib/mover-outreach-campaigns");
+      await recordOutreachReply(tx, conversation.prospectId, receivedAt, conversation.id, explicitReplyOptOut(content.text));
+    }
     if (
       linked?.status === "PROVIDER_DRAFT" &&
       linked.gmailMessageId !== message.id

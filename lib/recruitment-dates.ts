@@ -1,4 +1,4 @@
-function aucklandParts(date: Date) {
+export function aucklandParts(date: Date) {
   const parts = new Intl.DateTimeFormat("en-NZ", {
     timeZone: "Pacific/Auckland",
     year: "numeric",
@@ -14,6 +14,29 @@ function aucklandParts(date: Date) {
       .filter((part) => part.type !== "literal")
       .map((part) => [part.type, Number(part.value)]),
   );
+}
+
+// Preserve Auckland wall-clock time, clamp short months, and move a nonexistent
+// spring-forward time into the first valid hour. Weekends remain calendar days.
+export function addAucklandCalendar(date: Date, amount: { days?: number; months?: number }) {
+  const p = aucklandParts(date);
+  const target = new Date(Date.UTC(p.year, p.month - 1 + (amount.months || 0), 1));
+  const end = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
+  target.setUTCDate(Math.min(p.day, end) + (amount.days || 0));
+  target.setUTCHours(p.hour, p.minute, p.second, date.getUTCMilliseconds());
+  const desired = target.getTime();
+  let instant = desired;
+  const seen = new Set<number>();
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const local = aucklandParts(new Date(instant));
+    const represented = Date.UTC(local.year, local.month - 1, local.day, local.hour, local.minute, local.second, date.getUTCMilliseconds());
+    if (represented === desired) return new Date(instant);
+    const candidate = instant + desired - represented;
+    if (seen.has(candidate)) return new Date(Math.max(...seen));
+    seen.add(candidate);
+    instant = candidate;
+  }
+  throw new Error("Unable to calculate the Auckland outreach date.");
 }
 export function aucklandMidnight(day: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(day))

@@ -1,5 +1,6 @@
 import { bridgeRecruitmentMessages } from "@/lib/partner-inbox-outgoing";
 import { syncPartnerInbox } from "@/lib/partner-inbox-sync";
+import { processMoverOutreachCampaigns } from "@/lib/mover-outreach-campaigns";
 
 type State = { running: boolean; timer?: NodeJS.Timeout };
 const globalInbox = globalThis as typeof globalThis & {
@@ -17,6 +18,7 @@ export function startPartnerInboxWorker() {
     try {
       await bridgeRecruitmentMessages();
       await syncPartnerInbox();
+      await processMoverOutreachCampaigns();
     } catch {
       console.error("Partner inbox worker failed; the next tick will retry.");
     } finally {

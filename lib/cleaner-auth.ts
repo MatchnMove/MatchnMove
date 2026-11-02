@@ -1,6 +1,7 @@
 import { randomBytes, randomInt } from "crypto";
 import { cookies } from "next/headers";
 import { claimRegistrationAttribution } from "@/lib/recruitment-outreach";
+import { stopOutreachAfterRegistration } from "@/lib/mover-outreach-campaigns";
 import { AuthTokenType, Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { establishMoverSession } from "@/lib/mover-auth";
@@ -67,6 +68,7 @@ export async function createCleanerAccount(input: {
     });
 
     await claimRegistrationAttribution(tx, attributionToken, createdUser.id, email, company.id, "CLEANING");
+    await stopOutreachAfterRegistration(tx, email);
     return createdUser;
   });
 

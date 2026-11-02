@@ -112,6 +112,7 @@ export const recruitmentSettingsSchema = z.object({
   dailyLimit: z.number().int().min(1).max(100).default(20),
   followUpDays: z.number().int().min(1).max(60).default(5),
   autoTasks: z.boolean().default(true),
+  automaticFollowUpsEnabled: z.boolean().default(false),
   introduction: z
     .string()
     .trim()
@@ -234,6 +235,14 @@ export async function prepareDraft(
     ),
   );
   if (blocked) fail(blocked);
+  if (prospect.businessType === "MOVING") {
+    const { prepareMoverCampaignDraft, opportunityEligible } = await import("@/lib/mover-outreach-campaigns");
+    const quote = !followUpToId && quoteRequestId ? await tx.quoteRequest.findFirst({
+      where: { id: quoteRequestId, recruitmentSharingAllowed: true, sharingConsentAt: { not: null } }, select: recruitmentLeadSelect,
+    }) : null;
+    if (!followUpToId && quoteRequestId && (!quote || !opportunityEligible(quote))) fail("An authorised, current moving opportunity was not found.", 404);
+    return prepareMoverCampaignDraft(tx, actor, prospect, quote ? safeLeadSummary(quote) : null, followUpToId ? null : quoteRequestId, followUpToId);
+  }
   const lead = quoteRequestId ? await tx.quoteRequest.findFirst({
     where: {
       id: quoteRequestId,
@@ -309,8 +318,12 @@ export async function prepareDraft(
 }
 
 export async function cancelFollowUps(tx: Tx, prospectId: string) {
+  await tx.outreachCampaign.updateMany({
+    where: { prospectId, status: { in: ["DRAFT", "ACTIVE", "PAUSED", "REVIEW_DUE"] } },
+    data: { status: "STOPPED", reason: "Outreach stopped by a response, registration or company status.", nextDueAt: null },
+  });
   await tx.outreachMessage.updateMany({
-    where: { prospectId, status: "DRAFT", followUpToId: { not: null } },
+    where: { prospectId, status: { in: ["DRAFT", "RETRY"] }, followUpToId: { not: null } },
     data: { status: "CANCELLED" },
   });
   await tx.recruitmentTask.updateMany({

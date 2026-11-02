@@ -110,6 +110,8 @@ test("general company emails work without customer leads or lead permissions", {
     assert.equal(task.quoteRequestId, null);
   });
   await t.test("general follow-ups remain lead-independent and obey the company contact limit", async () => {
+    await assert.rejects(locked(tx => prepareDraft(tx, actor, prospect.id, null, draft.id)), /not due yet/);
+    await prisma.outreachCampaign.update({ where: { id: draft.campaignId! }, data: { nextDueAt: new Date(Date.now() - 1000) } });
     const follow = await locked(tx => prepareDraft(tx, actor, prospect.id, null, draft.id));
     assert.equal(follow.quoteRequestId, null);
     assert.equal(follow.text.includes("original moving request"), false);

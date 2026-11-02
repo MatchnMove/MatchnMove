@@ -234,7 +234,7 @@ function emptyComposer(): Composer {
     to: "",
     cc: "",
     bcc: "",
-    subject: "",
+    subject: "An invitation to join Match 'n Move",
     text: "",
     purpose: "OUTREACH",
     serviceReason: "",
@@ -483,7 +483,7 @@ export function PartnerInbox({
       cc: message.cc.join(", "),
       bcc: message.bcc.join(", "),
       subject: message.subject,
-      text: message.composeText || message.text,
+      text: message.composeText ?? message.text,
       purpose: message.purpose,
       serviceReason: message.serviceReason || "",
     });
@@ -508,7 +508,7 @@ export function PartnerInbox({
             parentId: draft.parentMessageId || undefined,
             subject: draft.subject,
             attachmentIds: [],
-            text: draft.composeText || draft.text,
+            text: draft.composeText ?? draft.text,
           }
         : prior,
     );
@@ -1280,6 +1280,8 @@ export function PartnerInbox({
                     Promotional email still needs reviewed company contact
                     permission and outreach approval. A public address alone
                     does not approve sending.
+                    The approved invitation and signature are added when you save;
+                    the message box is an optional personal note.
                   </p>
                 )}
                 {composer.purpose === "SERVICE" && (
@@ -1301,7 +1303,7 @@ export function PartnerInbox({
                   </label>
                 )}
                 <label className="block text-xs font-semibold">
-                  Insert a response template
+                  {composer.purpose === "OUTREACH" ? "Invitation content" : "Insert a response template"}
                   <select
                     className={`${input} mt-1`}
                     defaultValue=""
@@ -1313,8 +1315,7 @@ export function PartnerInbox({
                           "Hi,\n\nThanks for your message. Please sign in to your partner dashboard and open Documents to review any outstanding requirements. Let us know if you need help.\n\nKind regards,\nThe Match 'n Move Team",
                         followup:
                           "Hi,\n\nI am following up on our previous conversation. Please let us know if you need any further information or assistance.\n\nKind regards,\nThe Match 'n Move Team",
-                        introduction:
-                          "Hi,\n\nWe would like to introduce Match 'n Move and discuss whether our moving and cleaning platform could be useful for your business. Please let us know if you would like more information.\n\nKind regards,\nThe Match 'n Move Team",
+                        introduction: "",
                       };
                       if (
                         event.target.value &&
@@ -1333,7 +1334,7 @@ export function PartnerInbox({
                     <option value="">Choose template…</option>
                     {composer.purpose === "OUTREACH" ? (
                       <option value="introduction">
-                        Partnership introduction
+                        Use approved invitation (no personal note)
                       </option>
                     ) : (
                       <>
@@ -1347,11 +1348,11 @@ export function PartnerInbox({
                   </select>
                 </label>
                 <label className="block text-xs font-semibold">
-                  Email body
+                  {composer.purpose === "OUTREACH" ? "Personal note (optional)" : "Email body"}
                   <textarea
                     className={`${input} mt-1 min-h-56`}
-                    required
-                    maxLength={100000}
+                    required={composer.purpose !== "OUTREACH"}
+                    maxLength={composer.purpose === "OUTREACH" ? 1500 : 100000}
                     value={composer.text}
                     onChange={(event) =>
                       setComposer({ ...composer, text: event.target.value })
@@ -1568,7 +1569,7 @@ export function PartnerInbox({
 }
 
 function SafeEmailBody({ message }: { message: Message }) {
-  const [formatted, setFormatted] = useState(false);
+  const [formatted, setFormatted] = useState(Boolean(message.html && message.purpose === "OUTREACH" && message.direction === "OUTBOUND"));
   return (
     <div className="mt-4">
       {message.html && (
@@ -1585,7 +1586,7 @@ function SafeEmailBody({ message }: { message: Message }) {
           className="h-80 w-full rounded-lg border"
           sandbox=""
           referrerPolicy="no-referrer"
-          srcDoc={`<!doctype html><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; form-action 'none'; base-uri 'none'"><style>body{font:14px/1.6 Arial,sans-serif;overflow-wrap:anywhere;color:#334155}table{max-width:100%}a{color:#0f766e}</style>${message.html}`}
+          srcDoc={`<!doctype html><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https://www.matchnmove.co.nz/logo-mark.png; style-src 'unsafe-inline'; form-action 'none'; base-uri 'none'"><style>body{font:14px/1.6 Arial,sans-serif;overflow-wrap:anywhere;color:#334155}table{max-width:100%}a{color:#0f766e}</style>${message.html}`}
         />
       ) : (
         <div className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-700">

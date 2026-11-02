@@ -9,6 +9,7 @@ import { sanitiseNzServiceAreas } from "@/lib/nz-regions";
 import { hashPassword } from "@/lib/password";
 import { cookies } from "next/headers";
 import { claimRegistrationAttribution } from "@/lib/recruitment-outreach";
+import { stopOutreachAfterRegistration } from "@/lib/mover-outreach-campaigns";
 
 type MoverAccountInput = {
   name: string;
@@ -67,6 +68,7 @@ export async function createMoverAccount(input: MoverAccountInput) {
     });
 
     await claimRegistrationAttribution(tx, attributionToken, createdUser.id, email, company.id);
+    await stopOutreachAfterRegistration(tx, email);
     return createdUser;
   }, { maxWait: 10000, timeout: 20000 });
 

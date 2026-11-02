@@ -48,6 +48,8 @@ import {
 import { rateLimit } from "@/lib/rate-limit";
 import { isRecruitmentMutationRequest } from "@/lib/recruitment-request";
 import { businessTypes } from "@/lib/partner-business";
+import { manageCampaign, moverOutreachHealth, prepareMoverCampaignDraft } from "@/lib/mover-outreach-campaigns";
+import { moverEmailTemplates } from "@/lib/mover-outreach-templates";
 import { sendPasswordResetEmail } from "@/lib/mover-auth";
 import { contactFollowUp } from "@/lib/prospect-contacts";
 
@@ -240,6 +242,15 @@ export async function GET(req: NextRequest) {
       });
       if (!prospect) fail("Company not found.", 404);
       data = prospect;
+    } else if (view === "campaigns") {
+      const items = await prisma.outreachCampaign.findMany({
+        where: { prospect: scope, ...(query.get("prospectId") ? { prospectId: query.get("prospectId")! } : { status: "REVIEW_DUE" }) },
+        include: {
+          prospect: { select: { id: true, companyName: true, contactName: true, email: true, respondedAt: true, registeredAt: true, status: true } },
+          messages: { select: { id: true, templateKey: true, templateVersion: true, sequence: true, status: true, sentAt: true, scheduledAt: true, lastError: true, quoteRequestId: true }, orderBy: { sequence: "asc" } },
+        }, orderBy: { createdAt: "desc" }, take: 50,
+      });
+      data = { items, health: await moverOutreachHealth() };
     } else if (view === "leads") {
       if (!actor.canViewLeads)
         fail("Lead summaries have not been authorised for your account.", 403);
@@ -331,7 +342,7 @@ export async function GET(req: NextRequest) {
         prisma.outreachMessage.count({ where: { ...messageScope, status: "SENT" } }),
         prisma.outreachMessage.count({ where: { ...messageScope, status: "NEEDS_REVIEW" } }),
       ]);
-      data = { template: config.generalIntroduction, cleaningTemplate: config.cleaningIntroduction, senderIdentity: config.senderIdentity,
+      data = { template: moverEmailTemplates.MOVER_GENERAL.body, cleaningTemplate: config.cleaningIntroduction, senderIdentity: config.senderIdentity,
         sendingReady: config.sendingEnabled && await emailReady() && Boolean(config.senderIdentity.trim()),
         drafts, sent, needsReview };
     } else if (view === "tasks") {
@@ -366,7 +377,7 @@ export async function GET(req: NextRequest) {
       };
     } else if (view === "settings") {
       ownerOnly(actor);
-      data = { settings: await settings(), emailReady: await emailReady(), senderAddress: senderAddress() };
+      data = { settings: await settings(), emailReady: await emailReady(), senderAddress: senderAddress(), outreach: await moverOutreachHealth() };
     } else fail("Unknown view.", 404);
     return NextResponse.json(data, { headers });
   } catch (error) {
@@ -521,6 +532,12 @@ export async function POST(req: NextRequest) {
       if (body.action === "prepare_general") {
         const input = z.object({ prospectId: z.string().min(1) }).parse(body.data);
         return prepareDraft(tx, actor, input.prospectId);
+      }
+      if (body.action === "campaign") return manageCampaign(tx, actor, body.data);
+      if (body.action === "start_mover_campaign") {
+        const input = z.object({ prospectId: z.string(), confirmed: z.literal(true) }).parse(body.data);
+        const prospect = await ownedProspect(tx, actor, input.prospectId);
+        return prepareMoverCampaignDraft(tx, actor, prospect, null, null, undefined, true);
       }
       if (body.action === "edit_draft") return editDraft(tx, actor, body.data);
       if (body.action === "prepare_followup") {

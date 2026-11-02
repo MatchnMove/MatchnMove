@@ -23,6 +23,7 @@ import {
   claimRegistrationAttribution,
   editDraft,
   syncRecruitmentOutcomes,
+  verifySend,
 } from "../lib/recruitment-outreach";
 import { recruitmentMetrics } from "../lib/recruitment-reporting";
 import { secureToken, tokenHash } from "../lib/recruitment-policy";
@@ -299,7 +300,7 @@ test(
         });
         await assert.rejects(
           locked((tx) => prepareDraft(tx, carli, prospect.id, privateLead.id)),
-          /authorised lead/,
+          /authorised.*(?:lead|opportunity)/,
         );
         const unknown = await locked((tx) =>
           saveProspect(tx, carli, {
@@ -401,14 +402,8 @@ test(
         canViewLeads: true,
       }),
     );
-    await assert.rejects(
-      approveAndSend(carli, {
-        id: draft.id,
-        updatedAt: draft.updatedAt.toISOString(),
-        confirmed: true,
-      }),
-      /Sender details changed/,
-    );
+    const verifiedDraft = await locked(tx => verifySend(tx, carli, draft.id));
+    assert.match(verifiedDraft.message.text, /The Match 'n Move Team/);
     draft = await locked((tx) =>
       editDraft(tx, carli, {
         id: draft.id,
@@ -458,6 +453,8 @@ test(
     await t.test(
       "follow-up preparation is idempotent and does not send email",
       async () => {
+        await assert.rejects(locked(tx => prepareDraft(tx, carli, prospect.id, quote.id, draft.id)), /not due yet/);
+        await prisma.outreachCampaign.update({ where: { id: draft.campaignId! }, data: { nextDueAt: new Date(Date.now() - 1000) } });
         const followUp = await locked((tx) =>
           prepareDraft(tx, carli, prospect.id, quote.id, draft.id),
         );
@@ -734,7 +731,7 @@ test(
               updatedAt: failed.updatedAt.toISOString(),
               confirmed: true,
             }),
-            /already attempted/,
+            /already attempted|suppressed|needs review/,
           );
           assert.equal(accepted.length, 1);
         } finally {

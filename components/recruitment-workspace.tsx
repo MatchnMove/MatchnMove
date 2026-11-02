@@ -85,6 +85,9 @@ type Message = {
   status: string;
   subject: string;
   introduction: string;
+  campaignId?: string | null;
+  templateKey?: string | null;
+  templateVersion?: string | null;
   text: string;
   html: string;
   updatedAt: string;
@@ -154,6 +157,7 @@ const label = (value: string) =>
     .toLowerCase()
     .replaceAll("_", " ")
     .replace(/^./, (letter) => letter.toUpperCase());
+const moverTemplateLabel = (value: string) => (({ MOVER_GENERAL: "1A · General invitation", MOVER_OPPORTUNITY: "1B · Moving opportunity", MOVER_FOLLOWUP_1: "2 · First follow-up", MOVER_FOLLOWUP_2: "3 · Second follow-up", MOVER_FINAL: "4 · Final follow-up", MOVER_REENGAGEMENT: "5 · Re-engagement" } as Record<string, string>)[value] || label(value));
 const date = (value: string | null) =>
   value
     ? new Intl.DateTimeFormat("en-NZ", {
@@ -1333,6 +1337,7 @@ function ProspectDetails({ actor, id }: { actor: Actor; id: string }) {
               />
             </Panel>
           )}
+          {prospect.businessType === "MOVING" && <MoverOutreachCampaigns actor={actor} prospectId={prospect.id} />}
           <div className="grid gap-5 xl:grid-cols-2">
             <Panel title="Contact permission & notes">
               <Badge value={prospect.consentBasis} />
@@ -1711,9 +1716,9 @@ function GeneralEmailComposer({ station }: { station: EmailStationData }) {
       </form>
       <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
         <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-teal-700">Prefilled introduction template</p>
-        <h3 className="mt-3 font-bold">An invitation to join Match &apos;n Move</h3>
-        <p className="mt-4 text-sm leading-7 text-slate-600">Hi {company?.companyName || "[company name]"},</p>
-        <p className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-600">{company?.businessType === "CLEANING" ? station.cleaningTemplate : station.template}</p>
+        <h3 className="mt-3 font-bold">{company?.businessType === "CLEANING" ? "An invitation to join Match 'n Move" : "Invitation to join the Match 'n Move mover network"}</h3>
+        <p className="mt-4 text-sm leading-7 text-slate-600">{company?.contactName?.trim() ? `Hi ${company.contactName.trim()} from ${company.companyName},` : `Hi ${company?.companyName || "[company name]"} team,`}</p>
+        <p className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-600">{company?.businessType === "CLEANING" ? station.cleaningTemplate : station.template.replaceAll("[Company Name]", company?.companyName || "[company name]")}</p>
         <p className="mt-4 text-xs leading-6 text-slate-500">Your preview includes the company&apos;s registration link, sender details and unsubscribe option. Existing drafts reopen without creating duplicates.</p>
       </div>
     </div>
@@ -1789,6 +1794,7 @@ function EmailReview({
       }
     >
       <p className="text-sm font-semibold">{message.subject}</p>
+      {message.templateKey && <p className="mt-1 text-xs text-slate-500">{moverTemplateLabel(message.templateKey)} · version {message.templateVersion}</p>}
       <p className="mt-1 text-xs text-slate-500">
         To: {message.prospect?.email} · Sent: {date(message.sentAt)}
       </p>
@@ -1796,7 +1802,7 @@ function EmailReview({
       {open && (
         <div className="mt-5 space-y-4">
           {message.status === "DRAFT" && (
-            <Field title="Edit personal introduction">
+            <Field title={message.campaignId ? "Optional personal note for this email" : "Edit personal introduction"}>
               <textarea
                 className={inputClass}
                 rows={4}
@@ -1810,7 +1816,7 @@ function EmailReview({
             <button className={secondaryClass} onClick={copy}>
               Copy Email
             </button>
-            {message.status === "SENT" && (
+            {message.status === "SENT" && (!message.campaignId || !["MOVER_FINAL", "MOVER_REENGAGEMENT"].includes(message.templateKey || "")) && (
               <button
                 className={secondaryClass}
                 disabled={busy}
@@ -2073,11 +2079,64 @@ function TaskForm({
     </form>
   );
 }
+type OutreachCampaignView = {
+  id: string; status: string; reason: string | null; updatedAt: string; initialSentAt: string | null;
+  lastSentAt: string | null; nextDueAt: string | null; revisitAt: string | null; nextSequence: number;
+  prospect: { id: string; companyName: string; contactName: string | null; email: string | null; respondedAt: string | null; registeredAt: string | null; status: string };
+  messages: Array<{ id: string; templateKey: string; templateVersion: string; sequence: number; status: string; sentAt: string | null; scheduledAt: string | null; lastError: string | null; quoteRequestId: string | null }>;
+};
+
+export function MoverOutreachCampaigns({ actor, prospectId }: { actor: Actor; prospectId?: string }) {
+  const router = useRouter();
+  const { data, error, loading, load } = useData<{ items: OutreachCampaignView[]; health: { enabled: boolean; blocked: string | null } }>(`view=campaigns${prospectId ? `&prospectId=${encodeURIComponent(prospectId)}` : ""}`);
+  const [busy, setBusy] = useState(false);
+  const [actionError, setActionError] = useState("");
+  async function act(campaign: OutreachCampaignView, operation: string) {
+    if (["cancel", "dismiss"].includes(operation) && !window.confirm(operation === "cancel" ? "Cancel this sequence and its pending follow-ups?" : "Close this re-engagement review without sending an email?")) return;
+    setBusy(true); setActionError("");
+    try {
+      const result = await mutate<{ id?: string }>("campaign", { campaignId: campaign.id, operation, updatedAt: campaign.updatedAt });
+      if (operation === "reengage" && result.id) router.push(`/admin/recruitment/messages?id=${result.id}`);
+      else await load();
+    } catch (error) { setActionError((error as Error).message); }
+    finally { setBusy(false); }
+  }
+  const clock = (value: string | null) => value ? new Intl.DateTimeFormat("en-NZ", { timeZone: "Pacific/Auckland", dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : "Not scheduled";
+  return <Panel title={prospectId ? "Mover outreach sequence" : "Revisit due · three-month review"} action={<button className={secondaryClass} disabled={busy || loading} onClick={() => void load()}>Refresh</button>}>
+    <p className="text-xs leading-6 text-slate-500">Auckland time. Initial invitations and re-engagement require explicit approval. Follow-ups run after 7 days, another 21 days, then one calendar month. Later delays preserve those intervals. The three-month review always starts from the original invitation.</p>
+    {data && (!data.health.enabled || data.health.blocked) && <p role="status" className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">{!data.health.enabled ? "Automatic follow-ups are disabled in Email templates & settings. " : ""}{data.health.blocked || ""} No response recorded does not establish that an email was ignored.</p>}
+    <State error={error || actionError} loading={loading} />
+    {data?.items.map(campaign => <article key={campaign.id} className="mt-5 rounded-2xl border border-slate-200 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2"><Link className="font-bold text-teal-800" href={`/admin/recruitment/prospects?id=${campaign.prospect.id}`}>{campaign.prospect.companyName}</Link><Badge value={campaign.status} /></div>
+      <p className="mt-2 text-sm text-slate-600">{campaign.prospect.contactName || "Contact person not recorded"} · {campaign.prospect.email || "Email not recorded"}</p>
+      <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
+        {[["Initial template", moverTemplateLabel(campaign.messages.find(message => message.sequence === 0)?.templateKey || "Not prepared")], ["Initial invitation sent", campaign.initialSentAt ? clock(campaign.initialSentAt) : "Not sent"], ["Most recent email", campaign.lastSentAt ? clock(campaign.lastSentAt) : "Not sent"], ["Next follow-up", ["ACTIVE", "DRAFT"].includes(campaign.status) ? clock(campaign.nextDueAt) : "Paused or stopped"], ["Response", campaign.prospect.respondedAt ? `Response received · ${clock(campaign.prospect.respondedAt)}` : "No response recorded"], ["Registration", campaign.prospect.registeredAt ? `Registered · ${clock(campaign.prospect.registeredAt)}` : label(campaign.prospect.status)], ["Re-engagement review", clock(campaign.revisitAt)]].map(([title, value]) => <div key={title}><dt className="text-xs text-slate-500">{title}</dt><dd className="mt-1">{value}</dd></div>)}
+      </dl>
+      {campaign.reason && <p className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{campaign.reason}</p>}
+      <div className="mt-4 overflow-x-auto"><table className="w-full text-left text-xs"><thead><tr><th className="p-2">Template / version</th><th className="p-2">Status</th><th className="p-2">Sent (provider accepted)</th><th className="p-2">Review</th></tr></thead><tbody>{campaign.messages.map(message => <tr key={message.id} className="border-t border-slate-100"><td className="p-2">{moverTemplateLabel(message.templateKey)}<span className="block text-slate-400">{message.templateVersion}</span></td><td className="p-2">{label(message.status)}{message.lastError && <p className="mt-1 max-w-xs text-amber-800">{message.lastError}</p>}</td><td className="p-2">{message.sentAt ? clock(message.sentAt) : "Not sent"}</td><td className="p-2">{!message.quoteRequestId || actor.canViewLeads ? <Link className="font-semibold text-teal-700 underline" href={`/admin/recruitment/messages?id=${message.id}`}>Preview / history</Link> : "Lead-summary access required"}</td></tr>)}</tbody></table></div>
+      <div className="mt-4 flex flex-wrap gap-2">
+        {["DRAFT", "ACTIVE", "REVIEW_DUE"].includes(campaign.status) && <button className={secondaryClass} disabled={busy} onClick={() => void act(campaign, "pause")}>Pause follow-ups</button>}
+        {campaign.status === "PAUSED" && (!campaign.reason?.startsWith("Delivery") || actor.role === "OWNER") && <button className={secondaryClass} disabled={busy} onClick={() => void act(campaign, "resume")}>{campaign.reason?.startsWith("Delivery") ? "Resume after delivery review" : "Resume eligible sequence"}</button>}
+        {["DRAFT", "ACTIVE", "PAUSED"].includes(campaign.status) && <button className={secondaryClass} disabled={busy} onClick={() => void act(campaign, "cancel")}>Cancel pending follow-ups</button>}
+        {campaign.status === "REVIEW_DUE" && <><button className={buttonClass} disabled={busy} onClick={() => void act(campaign, "reengage")}>Preview re-engagement</button><button className={secondaryClass} disabled={busy} onClick={() => void act(campaign, "postpone")}>Postpone review 14 days</button><button className={secondaryClass} disabled={busy} onClick={() => void act(campaign, "dismiss")}>Dismiss / close</button></>}
+      </div>
+    </article>)}
+    {data && !data.items.length && <p className="mt-4 text-sm text-slate-500">{prospectId ? "No approved mover sequence yet. Prepare an initial invitation to preview it." : "No three-month reviews are due."}</p>}
+    {prospectId && data && !data.items.some(campaign => ["DRAFT", "ACTIVE", "PAUSED", "REVIEW_DUE"].includes(campaign.status)) && <button className={`${secondaryClass} mt-4`} disabled={busy} onClick={async () => {
+      if (!window.confirm("Start a separate outreach sequence? Review previous contact history, responses and consent first. This prepares a draft and sends no email.")) return;
+      setBusy(true); setActionError("");
+      try { const result = await mutate<{ id: string }>("start_mover_campaign", { prospectId, confirmed: true }); router.push(`/admin/recruitment/messages?id=${result.id}`); }
+      catch (error) { setActionError((error as Error).message); } finally { setBusy(false); }
+    }}>Start a new reviewed sequence</button>}
+  </Panel>;
+}
+
 function Tasks({ actor }: { actor: Actor }) {
   const { data, error, loading, load } = useData<Task[]>("view=tasks");
   const [create, setCreate] = useState(false);
   return (
     <div className="space-y-5">
+      <MoverOutreachCampaigns actor={actor} />
       <div className="flex justify-end">
         <button className={buttonClass} onClick={() => setCreate(!create)}>
           <Plus size={16} />
@@ -2409,6 +2468,7 @@ type Config = {
   dailyLimit: number;
   followUpDays: number;
   autoTasks: boolean;
+  automaticFollowUpsEnabled: boolean;
   introduction: string;
   generalIntroduction: string;
   cleaningIntroduction: string;
@@ -2418,6 +2478,7 @@ function OutreachSettings() {
     settings: Config;
     emailReady: boolean;
     senderAddress: string;
+    outreach?: { enabled: boolean; blocked: string | null; templates: Array<{ key: string; name: string; subject: string; version: string; body: string }> };
   }>("view=settings");
   return (
     <>
@@ -2425,6 +2486,11 @@ function OutreachSettings() {
       {data && (
         <SenderVerification verified={data.emailReady} sender={data.senderAddress} onVerified={load} />
       )}
+      {data?.outreach && <div className="mb-5"><Panel title="Approved mover templates">
+        <p className="text-sm leading-6 text-slate-600">Six versioned templates share the official logo, team signature, pricing link and tracked registration link. Company details populate at preview time. A personal note changes only the selected email.</p>
+        {data.outreach.blocked && <p className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{data.outreach.blocked}</p>}
+        {data.outreach.templates.map(template => <details className="mt-4 rounded-xl border p-4" key={template.key}><summary className="cursor-pointer font-semibold">{template.name}</summary><p className="mt-3 text-sm font-bold">{template.subject}</p><p className="mt-1 text-xs text-slate-500">Version {template.version}</p><p className="mt-4 whitespace-pre-wrap text-sm leading-7 text-slate-600">{template.body}</p></details>)}
+      </Panel></div>}
       {data && (
         <SettingsForm
           key={JSON.stringify(data.settings)}
@@ -2566,21 +2632,8 @@ function SettingsForm({
             placeholder="Match 'n Move · business contact details"
           />
         </Field>
-        <Field title="Moving introduction template (no lead required)">
-          <textarea className={inputClass} rows={6} minLength={20} maxLength={1500} required value={form.generalIntroduction} onChange={e => setForm({ ...form, generalIntroduction: e.target.value })} />
-        </Field>
         <Field title="Cleaning introduction template (no lead required)">
           <textarea className={inputClass} rows={6} minLength={20} maxLength={1500} required value={form.cleaningIntroduction} onChange={e => setForm({ ...form, cleaningIntroduction: e.target.value })} />
-        </Field>
-        <Field title="Moving lead invitation template">
-          <textarea
-            className={inputClass}
-            rows={5}
-            minLength={20}
-            maxLength={1500}
-            value={form.introduction}
-            onChange={(e) => setForm({ ...form, introduction: e.target.value })}
-          />
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field title="Per-admin limit (rolling 24 hours)">
@@ -2595,7 +2648,7 @@ function SettingsForm({
               }
             />
           </Field>
-          <Field title="Follow-up reminder after (days)">
+          <Field title="Cleaning / legacy follow-up reminder (days)">
             <input
               className={inputClass}
               type="number"
@@ -2625,14 +2678,17 @@ function SettingsForm({
               setForm({ ...form, sendingEnabled: e.target.checked })
             }
           />
-          Enable individually approved outreach sending
+          Enable outreach sending
         </label>
         <p className="text-xs leading-6 text-slate-500">
-          Each message requires a recorded permission basis, an unsuppressed
-          recipient, a reviewed draft and explicit send confirmation. Selecting
-          companies only creates drafts. Replies are recorded by the assigned
-          admin through recruitment status updates.
+          Initial invitations and re-engagement require a reviewed preview and explicit approval.
+          Scheduled mover follow-ups require the automatic setting below, recorded contact permission
+          and a healthy monitored inbox. Replies, registration, declines and opt-outs stop the sequence.
         </p>
+        <label className="flex items-start gap-3 text-sm">
+          <input type="checkbox" className="mt-1" checked={form.automaticFollowUpsEnabled} onChange={event => setForm({ ...form, automaticFollowUpsEnabled: event.target.checked })} />
+          Enable automatic mover follow-ups for newly approved sequences (Day 7, Day 28, then one calendar month). The three-month email always requires manual approval.
+        </label>
         <State error={error} loading={false} />
         <button disabled={busy} className={buttonClass}>
           Save settings

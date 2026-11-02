@@ -127,6 +127,7 @@ model CleanerCompany {
   recruitmentProspect  MoverProspect?
   inboxConversations  PartnerConversation[]
   inboxContacts       PartnerContactAssociation[]
+
   id                  String                 @id @default(cuid())
   userId              String                 @unique
   stripeCustomerId    String?                @unique
@@ -738,6 +739,7 @@ model MoverProspect {
   activities          RecruitmentActivity[]
   inboxConversations  PartnerConversation[]
   inboxContacts       PartnerContactAssociation[]
+  outreachCampaigns   OutreachCampaign[]
 
   @@index([assignedAdminId, status, nextFollowUpAt])
   @@index([normalizedName])
@@ -745,6 +747,13 @@ model MoverProspect {
 }
 
 model OutreachMessage {
+  campaignId            String?
+  campaign              OutreachCampaign? @relation(fields: [campaignId], references: [id], onDelete: Restrict)
+  templateKey           String?
+  templateVersion       String?
+  scheduledAt           DateTime?
+  sendAttempts          Int             @default(0)
+  retryAt               DateTime?
   inboxMessage          PartnerMessage?
   id                    String          @id @default(cuid())
   prospectId            String
@@ -772,9 +781,30 @@ model OutreachMessage {
   createdAt             DateTime        @default(now())
   updatedAt             DateTime        @updatedAt
 
-  @@unique([prospectId, quoteRequestId, sequence])
+  @@unique([campaignId, sequence])
   @@index([adminId, sentAt])
   @@index([status, createdAt])
+}
+
+model OutreachCampaign {
+  id              String         @id @default(cuid())
+  prospectId      String
+  prospect        MoverProspect  @relation(fields: [prospectId], references: [id], onDelete: Restrict)
+  createdById     String
+  status          String         @default("DRAFT")
+  reason          String?
+  initialSentAt   DateTime?
+  lastSentAt      DateTime?
+  nextSequence    Int            @default(1)
+  nextDueAt       DateTime?
+  revisitAt       DateTime?
+  messages        OutreachMessage[]
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([status, nextDueAt])
+  @@index([status, revisitAt])
+  @@index([prospectId, createdAt])
 }
 
 model RecruitmentTask {

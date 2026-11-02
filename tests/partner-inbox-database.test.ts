@@ -99,6 +99,7 @@ test(
       }),
     );
     const partner = prospect.email!;
+    let promotionalProspectId = "";
     const seededConversation = await prisma.partnerConversation.create({
       data: {
         onboardingTracked: true,
@@ -831,15 +832,21 @@ test(
             },
           },
         });
+        await assert.rejects(saveInboxDraft(colleague, { mode: "new", to: [partner], subject: "Company invitation", text: "We would like to introduce our partner network.", purpose: "OUTREACH" }), /response has been received/);
+        const promotional = await locked(tx => saveProspect(tx, colleague, {
+          companyName: `Uncontacted Promo ${tag}`, email: `promo-${tag}@validation.invalid`, emailAvailability: "PUBLIC", phoneAvailability: "NOT_PUBLIC", serviceAreas: ["Auckland"], consentBasis: "EXPRESS", consentEvidence: "Isolated test permission for a new uncontacted company",
+        }));
+        promotionalProspectId = promotional.id;
         const draft = await saveInboxDraft(colleague, {
           mode: "new",
-          to: [partner],
+          to: [promotional.email!],
           subject: "Company invitation",
-          text: "Hello, we would like to introduce our moving quote platform to your company.",
+          text: "",
           purpose: "OUTREACH",
         });
         assert.ok(draft.outreachMessageId);
-        assert.match(draft.text, /Business contact details/);
+        assert.match(draft.text, /The Match 'n Move Team/);
+        assert.match(draft.text, /contact@matchnmove.co.nz/);
         assert.match(draft.text, /unsubscribe/i);
         await assert.rejects(
           sendInboxDraft(colleague, draft.id, draft.version, connect),
@@ -914,7 +921,7 @@ test(
       "legacy outreach bridge is idempotent and never resends",
       async () => {
         const outreach = await prisma.outreachMessage.findFirstOrThrow({
-          where: { prospectId: prospect.id },
+          where: { prospectId: promotionalProspectId },
         });
         await prisma.outreachMessage.update({
           where: { id: outreach.id },
