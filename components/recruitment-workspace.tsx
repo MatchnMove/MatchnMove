@@ -24,6 +24,7 @@ import { CompanyStageSelect } from "@/components/company-stage-select";
 import { RemoveCompanyButton } from "@/components/remove-company-button";
 import { CompanyEmailProgress, EmailSequenceTimeline } from "@/components/company-email-progress";
 import { companyEmailProgress, outreachStageName } from "@/lib/outreach-progress";
+import { EmailOutreachStation } from "@/components/email-outreach-station";
 import { CompanyRecipientPicker, type RecipientCompany } from "@/components/company-recipient-picker";
 type Actor = {
   id: string;
@@ -329,7 +330,7 @@ export function RecruitmentWorkspace({
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-teal-700">Moving &amp; cleaning onboarding</p>
           <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">{titles[section] || "Workspace"}</h1>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-500">
-            {section === "messages" ? "Invite moving and cleaning companies, with or without a customer lead. Prepare, preview and send each email here."
+            {section === "messages" ? "Track company outreach, sent emails and upcoming follow-ups for moving and cleaning partners."
               : section === "prospects" ? "One place for company details, contact history and the next onboarding step."
               : section === "dashboard" ? "Your companies, priorities and recent activity in one place."
               : "Keep your companies, conversations and next steps connected."}
@@ -1619,72 +1620,31 @@ function LeadOpportunities({ actor }: { actor: Actor }) {
 function Messages({ actor }: { actor: Actor }) {
   const search = useSearchParams();
   const id = search.get("id");
-  const [page, setPage] = useState(1);
-  const [status, setStatus] = useState("");
-  const [kind, setKind] = useState("");
-  const station = useData<EmailStationData>(`view=email_station&message=${encodeURIComponent(id || "")}`);
-  const { data, error, loading, load } = useData<Message[]>(
-    `view=messages&page=${page}${id ? `&id=${encodeURIComponent(id)}` : `${status ? `&status=${status}` : ""}${kind ? `&kind=${kind}` : ""}`}`,
-  );
-  return (
-    <div className="space-y-5">
-      <State error={station.error} loading={station.loading} />
-      {!id && station.data && <>
-        <div className="grid gap-3 sm:grid-cols-3">
-          {([["DRAFT", "Saved drafts", station.data.drafts], ["SENT", "SMTP accepted", station.data.sent], ["NEEDS_REVIEW", "Needs review", station.data.needsReview]] as const).map(([value, title, count]) =>
-            <button key={value} onClick={() => { setStatus(value); setPage(1); }} className={`rounded-2xl border bg-white p-5 text-left transition hover:border-teal-500 ${status === value ? "border-teal-600 ring-1 ring-teal-600" : "border-slate-200"}`}><span className="text-xs font-semibold text-slate-500">{title}</span><span className="mt-2 block text-3xl font-black">{count}</span></button>)}
-        </div>
-        <GeneralEmailComposer key={`${search.get("company") || ""}:${search.get("compose") || ""}`} station={station.data} />
-        <div className="flex flex-wrap items-end justify-between gap-3 pt-3">
-          <div><h2 className="text-xl font-bold">Drafts & sending history</h2><p className="mt-1 text-xs text-slate-500">SMTP accepted means your mail server accepted the email; inbox delivery is not confirmed.</p></div>
-          <div className="flex flex-wrap gap-3">
-            <Field title="Status"><select className={inputClass} value={status} onChange={e => { setStatus(e.target.value); setPage(1); }}><option value="">All statuses</option><option value="DRAFT">Drafts</option><option value="SENT">SMTP accepted</option><option value="NEEDS_REVIEW">Needs review</option><option value="SENDING">Sending</option><option value="CANCELLED">Cancelled</option></select></Field>
-            {actor.canViewLeads && <Field title="Email type"><select className={inputClass} value={kind} onChange={e => { setKind(e.target.value); setPage(1); }}><option value="">All email types</option><option value="general">General introductions</option><option value="lead">Lead invitations</option></select></Field>}
-          </div>
-        </div>
-      </>}
-      <State error={error} loading={loading} />
-      {id && (
-        <Link
-          className="text-sm font-bold text-teal-700"
-          href="/admin/recruitment/messages"
-        >
-          ← Sending history
-        </Link>
-      )}
-      {data?.length
-        ? data.map((message) => (
-            <EmailReview
-              key={`${message.id}:${message.updatedAt}`}
-              actor={actor}
-              message={message}
-              sendingReady={station.data?.sendingReady ?? false}
-              onSaved={async () => { await Promise.all([load(), station.load()]); }}
-              expanded={Boolean(id) || data.length === 1}
-            />
-          ))
-        : !loading && (
-            <Empty
-              title="No emails in this view yet"
-              detail="Choose a company above and prepare your first introduction, or change the history filters. A customer lead is not required."
-            />
-          )}
-      {!id && (
-        <div className="flex justify-between text-sm">
-          <button disabled={page === 1} onClick={() => setPage(page - 1)}>
-            Previous
-          </button>
-          <button
-            disabled={!data || data.length < 50}
-            onClick={() => setPage(page + 1)}
-          >
-            Next
-          </button>
-        </div>
-      )}
-    </div>
-  );
+  return id ? <EmailMessageDetails key={id} actor={actor} id={id} /> : <EmailStationHome key={(search.get("company") || "") + ":" + (search.get("compose") || "")} actor={actor} />;
 }
+
+function EmailStationHome({ actor }: { actor: Actor }) {
+  const search = useSearchParams();
+  const [compose, setCompose] = useState(search.get("compose") === "1");
+  return <EmailOutreachStation actor={actor} initialCompanyId={search.get("company") || ""} onCompose={() => setCompose(value => !value)} composer={compose ? <StationComposer /> : undefined} />;
+}
+
+function StationComposer() {
+  const station = useData<EmailStationData>("view=email_station");
+  return <><State error={station.error} loading={station.loading} />{station.data && <GeneralEmailComposer station={station.data} />}</>;
+}
+
+function EmailMessageDetails({ actor, id }: { actor: Actor; id: string }) {
+  const station = useData<EmailStationData>("view=email_station");
+  const { data, error, loading, load } = useData<Message[]>("view=messages&id=" + encodeURIComponent(id));
+  return <div className="space-y-5">
+    <Link className="inline-flex items-center gap-1 text-sm font-bold text-teal-700" href="/admin/recruitment/messages"><ChevronLeft size={16} />Email station</Link>
+    <State error={error || station.error} loading={loading} />
+    {data?.map(message => <EmailReview key={message.id + ":" + message.updatedAt} actor={actor} message={message} sendingReady={station.data?.sendingReady ?? false} onSaved={async () => { await Promise.all([load(), station.load()]); }} expanded />)}
+    {!loading && data?.length === 0 && <Empty title="Email not found" detail="Return to the Email station and select a company to review its emails." />}
+  </div>;
+}
+
 type EmailStationData = {
   template: string;
   cleaningTemplate: string;
@@ -1722,7 +1682,7 @@ function GeneralEmailComposer({ station }: { station: EmailStationData }) {
     } finally { setBusy(false); }
   }
   return <Panel title="Write a company introduction" action={<span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-bold text-teal-800">No lead required</span>}>
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+    <div className="max-w-3xl">
       <form onSubmit={prepare} className="space-y-4">
         <p className="text-sm leading-6 text-slate-600">Invite a moving or cleaning company to join Match &apos;n Move at any time. Choose a company, then review and personalise the prefilled email before sending.</p>
         <CompanyRecipientPicker initialId={search.get("company") || ""} initialSearch={search.get("q") || ""} value={companyId} onChange={chooseCompany} />
@@ -1733,13 +1693,7 @@ function GeneralEmailComposer({ station }: { station: EmailStationData }) {
         <div className="flex flex-wrap items-center gap-3"><button className={buttonClass} disabled={busy || !companyId || !validBusinessEmail(company?.email)}>{busy ? "Preparing…" : "Prepare email preview"}<ArrowRight size={16} /></button><Link className={secondaryClass} href="/admin/recruitment/prospects?new=1"><Plus size={16} />Add company</Link></div>
         {!station.sendingReady && <p className="rounded-xl bg-amber-50 p-3 text-xs leading-5 text-amber-900">You can prepare drafts. Sending becomes available once the owner enables outreach and verifies the sender in Email templates &amp; settings.</p>}
       </form>
-      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-teal-700">Prefilled introduction template</p>
-        <h3 className="mt-3 font-bold">{company?.businessType === "CLEANING" ? cleaningTemplate === "CLEANER_OPPORTUNITY" ? "Cleaning opportunities with Match 'n Move" : "Invitation to join the Match 'n Move cleaner network" : "Invitation to join the Match 'n Move mover network"}</h3>
-        <p className="mt-4 text-sm leading-7 text-slate-600">{company?.contactName?.trim() ? `Hi ${company.contactName.trim()} from ${company.companyName},` : `Hi ${company?.companyName || "[company name]"} team,`}</p>
-        <p className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-600">{(company?.businessType === "CLEANING" ? cleaningTemplate === "CLEANER_OPPORTUNITY" ? station.cleaningOpportunityTemplate || station.cleaningTemplate : station.cleaningTemplate : station.template).replaceAll("[Company Name]", company?.companyName || "[company name]")}</p>
-        <p className="mt-4 text-xs leading-6 text-slate-500">Your preview includes the company&apos;s registration link, sender details and unsubscribe option. Existing drafts reopen without creating duplicates.</p>
-      </div>
+
     </div>
   </Panel>;
 }

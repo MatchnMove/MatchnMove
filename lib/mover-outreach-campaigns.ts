@@ -185,7 +185,19 @@ export async function manageCampaign(tx: Tx, actor: RecruitmentActor, raw: unkno
   const campaign = await tx.outreachCampaign.findUniqueOrThrow({ where: { id: input.campaignId } });
   const prospect = await ownedProspect(tx, actor, campaign.prospectId);
   if (campaign.updatedAt.toISOString() !== input.updatedAt) fail("The campaign changed. Reload before continuing.", 409);
-  if (input.operation === "reengage") return prepareCampaignStep(tx, actor, campaign.id, 4);
+  if (input.operation === "reengage") {
+    // A due review may be opened before the scheduled worker's next pass. The
+    // explicit preview action advances to review only; it never sends an email.
+    if (campaign.status === "ACTIVE" && campaign.revisitAt && campaign.revisitAt <= new Date()) {
+      await eligibleProspect(tx, prospect);
+      await tx.outreachCampaign.update({ where: { id: campaign.id }, data: { status: "REVIEW_DUE", nextSequence: 4, nextDueAt: null } });
+      await tx.outreachMessage.updateMany({ where: { campaignId: campaign.id, sequence: { lt: 4 }, status: { in: ["DRAFT", "RETRY"] } }, data: { status: "CANCELLED" } });
+      await tx.recruitmentTask.updateMany({ where: { prospectId: prospect.id, kind: "MOVER_OUTREACH", completedAt: null, cancelledAt: null }, data: { cancelledAt: new Date() } });
+      await tx.moverProspect.update({ where: { id: prospect.id }, data: { nextFollowUpAt: null, version: { increment: 1 } } });
+      await activity(tx, prospect.id, actor.id, "outreach_review_opened", { campaignId: campaign.id });
+    }
+    return prepareCampaignStep(tx, actor, campaign.id, 4);
+  }
   if (["resume", "postpone"].includes(input.operation)) await eligibleProspect(tx, prospect);
   if (input.operation === "resume" && campaign.status !== "PAUSED") fail("Only an eligible, paused sequence can resume.");
   if (input.operation === "resume" && campaign.reason?.startsWith("Delivery") && (actor.role !== "OWNER" || await tx.outreachMessage.count({ where: { campaignId: campaign.id, status: { in: ["SENDING", "NEEDS_REVIEW"] } } }))) fail("Delivery uncertainty requires a confirmed provider outcome and owner review before resuming.");

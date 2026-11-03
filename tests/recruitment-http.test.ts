@@ -134,6 +134,23 @@ test(
     );
     const carliProspect = await createProspect(carli, "CarliCompany");
     const tiaanProspect = await createProspect(tiaan, "TiaanCompany");
+    await t.test("Email station progress and template previews preserve company access and send no mail", async () => {
+      const before = await prisma.emailDelivery.count();
+      const list = await get("/api/admin/recruitment?view=email_outreach&q=CarliCompany", carli);
+      assert.equal(list.status, 200);
+      const records = await list.json();
+      assert.equal(records.count, 1);
+      assert.equal(records.items[0].id, carliProspect.id);
+      const outside = await get("/api/admin/recruitment?view=email_outreach&q=TiaanCompany", carli);
+      assert.equal((await outside.json()).count, 0);
+      assert.equal((await get(`/api/admin/recruitment?view=email_outreach_company&id=${tiaanProspect.id}`, carli)).status, 404);
+      assert.equal((await get(`/api/admin/recruitment?view=email_template_preview&prospectId=${tiaanProspect.id}&templateKey=MOVER_GENERAL`, carli)).status, 404);
+      const preview = await get(`/api/admin/recruitment?view=email_template_preview&prospectId=${carliProspect.id}&templateKey=MOVER_GENERAL`, carli);
+      assert.equal(preview.status, 200);
+      assert.match((await preview.json()).html, /Match/);
+      assert.equal((await get("/api/admin/recruitment?view=email_outreach", carli, false)).status, 401);
+      assert.equal(await prisma.emailDelivery.count(), before);
+    });
     await t.test("email-only colleagues can prepare and review general invitations without lead access", async () => {
       const emailUser = await makeUser("EmailOnly", "RECRUITMENT_ADMIN");
       const emailOnly = await prisma.user.update({ where: { id: emailUser.id }, data: { canViewRecruitmentLeads: false } });

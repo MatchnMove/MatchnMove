@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import {
   activity,
+  baseUrl,
   audit,
   checkActor,
   emailReady,
@@ -47,9 +48,10 @@ import {
 } from "@/lib/recruitment-reporting";
 import { rateLimit } from "@/lib/rate-limit";
 import { isRecruitmentMutationRequest } from "@/lib/recruitment-request";
-import { businessTypes } from "@/lib/partner-business";
+import { businessTypes, partnerRegistrationPath } from "@/lib/partner-business";
 import { manageCampaign, moverOutreachHealth, prepareMoverCampaignDraft } from "@/lib/mover-outreach-campaigns";
-import { moverEmailTemplates, cleanerEmailTemplates, cleanerTemplateKeys } from "@/lib/mover-outreach-templates";
+import { moverEmailTemplates, cleanerEmailTemplates, cleanerTemplateKeys, moverTemplateKeys, templateKeysForBusiness, renderMoverOutreachEmail } from "@/lib/mover-outreach-templates";
+import { emailStationCompanies, emailStationCompany } from "@/lib/email-station";
 import { companyEmailProgress } from "@/lib/outreach-progress";
 import { discardOutreachDraft, removeDirectoryCompany, restoreDirectoryCompany } from "@/lib/recruitment-removal";
 import { sendPasswordResetEmail } from "@/lib/mover-auth";
@@ -98,7 +100,18 @@ export async function GET(req: NextRequest) {
     const page = Math.max(1, Math.min(10000, Number(query.get("page")) || 1));
     const q = (query.get("q") || "").slice(0, 100);
     let data: unknown;
-    if (view === "dashboard") {
+    if (view === "email_outreach") {
+      data = await emailStationCompanies(actor, { q: query.get("q") || "", status: query.get("status") || undefined, businessType: query.get("businessType") || undefined, page });
+    } else if (view === "email_outreach_company") {
+      data = await emailStationCompany(actor, z.string().min(1).parse(query.get("id")));
+    } else if (view === "email_template_preview") {
+      const company = await prisma.moverProspect.findFirst({ where: { id: query.get("prospectId") || "", removedAt: null, ...scope }, select: { companyName: true, contactName: true, businessType: true } });
+      if (!company) fail("Company not found.", 404);
+      const templateKey = z.enum([...moverTemplateKeys, ...cleanerTemplateKeys]).parse(query.get("templateKey"));
+      if (!(templateKeysForBusiness(company.businessType) as readonly string[]).includes(templateKey)) fail("Choose a template for this company's business type.");
+      if (templateKey === "MOVER_OPPORTUNITY") fail("Choose an authorised moving request in Lead opportunities to preview this invitation.");
+      data = renderMoverOutreachEmail({ templateKey, companyName: company.companyName, contactName: company.contactName, lead: null, registrationUrl: `${baseUrl()}${partnerRegistrationPath(company.businessType)}`, unsubscribeUrl: `${baseUrl()}/recruitment/unsubscribe?token=template-preview` });
+    } else if (view === "dashboard") {
       const range = reportingRange(query.get("start"), query.get("end"));
       const [metrics, tasks, recent, team] = await Promise.all([
         recruitmentMetrics(actor, range),

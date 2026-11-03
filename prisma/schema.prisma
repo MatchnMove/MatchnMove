@@ -785,6 +785,7 @@ model OutreachMessage {
 
   @@unique([campaignId, sequence])
   @@index([adminId, sentAt])
+  @@index([prospectId, createdAt])
   @@index([status, createdAt])
 }
 
