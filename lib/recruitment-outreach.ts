@@ -5,7 +5,7 @@ import { canMoverAccessLeads } from "@/lib/mover-lead-access";
 import { canCleanerAccessLeads } from "@/lib/cleaner-readiness";
 import type { PartnerBusinessType } from "@/lib/partner-business";
 import { classifyOutreachFailure, mailboxAutomationBlock, opportunityEligible, recordCampaignSent, verifyCampaignSend } from "@/lib/mover-outreach-campaigns";
-import { MOVER_TEMPLATE_VERSION, renderMoverOutreachEmail, type MoverTemplateKey } from "@/lib/mover-outreach-templates";
+import { MOVER_TEMPLATE_VERSION, renderMoverOutreachEmail, type PartnerTemplateKey } from "@/lib/mover-outreach-templates";
 import { SUPPORT_MAILBOX } from "@/lib/partner-inbox-policy";
 import {
   RecruitmentActor,
@@ -72,7 +72,7 @@ export async function editDraft(tx: Tx, actor: RecruitmentActor, raw: unknown) {
     fail("Draft links are unavailable. Ask the owner to review.");
   const config = await settings(tx);
   const rendered = message.campaignId ? renderMoverOutreachEmail({
-    templateKey: message.templateKey as MoverTemplateKey, companyName: prospect.companyName, contactName: prospect.contactName,
+    templateKey: message.templateKey as PartnerTemplateKey, companyName: prospect.companyName, contactName: prospect.contactName,
     personalNote: input.introduction, lead: quote ? safeLeadSummary(quote) : null, registrationUrl, unsubscribeUrl,
   }) : renderRecruitmentEmail({
     companyName: prospect.companyName,
@@ -148,7 +148,7 @@ export async function verifySend(tx: Tx, actor: RecruitmentActor, messageId: str
     const registrationUrl = message.text.match(/Register: (https?:\/\/\S+)/)?.[1];
     const unsubscribeUrl = message.text.match(/Unsubscribe: (https?:\/\/\S+)/)?.[1];
     if (!registrationUrl || !unsubscribeUrl) fail("Refresh this draft's invitation links before sending.");
-    const current = renderMoverOutreachEmail({ templateKey: message.templateKey as MoverTemplateKey, companyName: prospect.companyName, contactName: prospect.contactName,
+    const current = renderMoverOutreachEmail({ templateKey: message.templateKey as PartnerTemplateKey, companyName: prospect.companyName, contactName: prospect.contactName,
       lead: message.quoteRequest ? safeLeadSummary(message.quoteRequest) : null, personalNote: message.introduction, registrationUrl, unsubscribeUrl });
     if (current.text !== message.text || current.subject !== message.subject) fail("Company or approved summary details changed. Save the draft and review its refreshed preview before sending.", 409);
   }

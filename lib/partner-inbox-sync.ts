@@ -116,7 +116,7 @@ export async function persistGmailMessage(
                   rfcMessageId: rfc,
                   direction: "OUTBOUND",
                   OR: [
-                    { status: { in: ["DRAFT", "SENDING", "NEEDS_REVIEW"] } },
+                    { status: { in: ["DRAFT", "SENDING", "NEEDS_REVIEW", "DELETED"] } },
                     { status: "SENT", gmailMessageId: null },
                   ],
                 },
@@ -125,6 +125,8 @@ export async function persistGmailMessage(
         ],
       },
     });
+    if (linked?.status === "DELETED" && message.labelIds?.includes("DRAFT"))
+      return tx.partnerMessage.update({ where: { id: linked.id }, data: { gmailDraftId: gmailDraftId || linked.gmailDraftId, gmailMessageId: message.id, draftMirrorUncertain: false, draftDirty: true } });
     if (
       linked &&
       message.labelIds?.includes("DRAFT") &&

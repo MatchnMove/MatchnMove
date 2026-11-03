@@ -25,6 +25,7 @@ import {
 } from "@/lib/recruitment";
 import { editDraft, verifySend } from "@/lib/recruitment-outreach";
 import { contactBlockReason } from "@/lib/recruitment-policy";
+import { discardOutreachDraft } from "@/lib/recruitment-removal";
 import {
   gmailConnection,
   InboxProviderError,
@@ -34,6 +35,25 @@ import {
   onboardingConversation,
   persistGmailMessage,
 } from "@/lib/partner-inbox-sync";
+
+export async function discardInboxDraft(actor: InboxActor, id: string, version: number) {
+  return locked(async tx => {
+    await checkInboxActor(tx, actor, true);
+    const draft = await tx.partnerMessage.findUnique({ where: { id } });
+    if (!draft) fail("Draft not found.", 404);
+    await inboxConversation(tx, actor, draft.conversationId);
+    if (!["DRAFT", "PROVIDER_DRAFT"].includes(draft.status) || draft.version !== version || draft.sentAt)
+      fail("This draft changed or sending has been attempted. Reload before removing it.", 409);
+    if (draft.authorId && draft.authorId !== actor.id && actor.role !== "OWNER") fail("Only the draft author or an owner can remove it.", 403);
+    if (draft.outreachMessageId) {
+      const outreach = await tx.outreachMessage.findUniqueOrThrow({ where: { id: draft.outreachMessageId } });
+      await discardOutreachDraft(tx, actor, { id: outreach.id, updatedAt: outreach.updatedAt.toISOString(), confirmed: true });
+    } else await tx.partnerMessage.update({ where: { id }, data: { status: "DELETED", draftDirty: true, version: { increment: 1 } } });
+    await tx.partnerConversation.update({ where: { id: draft.conversationId }, data: { draftOwnerId: null, draftLeaseUntil: null } });
+    await inboxActivity(tx, draft.conversationId, actor.id, "email_draft_removed");
+    return { ok: true };
+  });
+}
 
 export async function saveInboxDraft(actor: InboxActor, raw: unknown) {
   const input = draftSchema.parse(raw);
@@ -780,7 +800,8 @@ export async function syncInboxDrafts(
     if (
       existing?.draftDirty ||
       existing?.status === "SENDING" ||
-      existing?.status === "SENT"
+      existing?.status === "SENT" ||
+      existing?.status === "DELETED"
     )
       continue;
     await persistGmailMessage(
@@ -794,6 +815,17 @@ export async function syncInboxDrafts(
     where: { id: "support" },
     data: { draftPageToken: providerDrafts.nextPageToken || null },
   });
+  const removed = await prisma.partnerMessage.findMany({ where: { status: "DELETED", draftDirty: true, gmailDraftId: { not: null } }, take: 25 });
+  for (const draft of removed) {
+    await renew();
+    try {
+      try { await gmail.request(`/drafts/${encodeURIComponent(draft.gmailDraftId!)}`, "DELETE"); }
+      catch (error) { if (!(error instanceof InboxProviderError && error.status === 404)) throw error; }
+      await prisma.partnerMessage.updateMany({ where: { id: draft.id, status: "DELETED", gmailDraftId: draft.gmailDraftId }, data: { draftDirty: false, lastError: null } });
+    } catch {
+      await prisma.partnerMessage.updateMany({ where: { id: draft.id, status: "DELETED" }, data: { lastError: "Draft removed locally. Removal from Gmail will retry on the next inbox sync." } });
+    }
+  }
   const drafts = await prisma.partnerMessage.findMany({
     where: {
       status: "DRAFT",
@@ -848,7 +880,7 @@ export async function syncInboxDrafts(
       );
       // Always retain the returned provider ID even if the user edited while Gmail was responding.
       await prisma.partnerMessage.updateMany({
-        where: { id: draft.id, status: "DRAFT" },
+        where: { id: draft.id, status: { in: ["DRAFT", "DELETED"] } },
         data: {
           gmailDraftId: saved.id,
           gmailMessageId: saved.message.id,

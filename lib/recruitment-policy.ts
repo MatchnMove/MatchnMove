@@ -1,4 +1,5 @@
 import { createHash, randomBytes } from "crypto";
+import { outreachEmailLayout } from "@/lib/outreach-email-layout";
 import { stoppedStatuses } from "@/lib/recruitment-stages";
 import type { PartnerBusinessType } from "@/lib/partner-business";
 export { statuses, manualStatuses, stoppedStatuses } from "@/lib/recruitment-stages";
@@ -44,9 +45,11 @@ export function contactBlockReason(
     status: string;
     consentBasis: string;
     consentEvidence: string | null;
+    removedAt?: Date | string | null;
   },
   suppressed: boolean,
 ) {
+  if (prospect.removedAt) return "This company has been removed from the directory. Outreach is stopped.";
   if (suppressed || stoppedStatuses.includes(prospect.status))
     return "This company is suppressed or no longer eligible for recruitment.";
   if (
@@ -208,6 +211,9 @@ export function renderRecruitmentEmail(input: {
     "You can also reply to request no further recruitment emails.",
   ].join("\n\n");
   const e = escapeHtml;
-  const html = `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;background:#f1f5f9;font:16px Arial,sans-serif;color:#0f172a"><main style="max-width:600px;margin:24px auto;background:#fff;border-radius:20px;overflow:hidden"><header style="background:#0f172a;padding:28px;color:white;font-size:24px;font-weight:bold">Match 'n Move</header><section style="padding:28px"><h1 style="font-size:24px">An invitation to grow with us</h1><p>Hi ${e(input.companyName)},</p><p style="line-height:1.7">${e(input.introduction).replaceAll("\n", "<br>")}</p><div style="padding:20px;background:#f0fdfa;border-radius:12px;line-height:1.8">${e(details).replaceAll("\n", "<br>")}</div><p style="line-height:1.6">${e(disclaimer)}</p><p style="padding:16px 0"><a href="${e(input.registrationUrl)}" style="background:#0f766e;color:white;padding:16px 24px;border-radius:8px;text-decoration:none;display:inline-block">Join Match 'n Move</a></p><p>${e(input.sender)}</p><hr style="border:0;border-top:1px solid #e2e8f0"><p style="font-size:13px;line-height:1.7"><a href="${e(input.unsubscribeUrl)}">Unsubscribe from recruitment invitations</a><br>You can also reply to request no further recruitment emails.</p></section></main></body></html>`;
+  const html = outreachEmailLayout({ businessType: input.businessType, title: "You're invited to grow with us.", preheader: "Free to join. Relevant enquiries. Your choice of leads.",
+    body: `<p style="margin:0 0 20px">Hi ${e(input.companyName)},</p><p style="margin:0 0 20px">${e(input.introduction).replaceAll("\n", "<br>")}</p><div style="padding:20px;background:#f0fdfa;border-radius:8px">${e(details).replaceAll("\n", "<br>")}</div><p style="margin:24px 0"><a href="${e(input.registrationUrl)}" style="display:inline-block;background:#0f766e;color:white;padding:12px 20px;border-radius:6px;text-decoration:none;font-weight:bold">Join Match 'n Move</a></p><p>${e(input.sender)}</p>`,
+    footer: `${e(disclaimer)}<br><a href="${e(input.unsubscribeUrl)}" style="color:#475569">Unsubscribe from recruitment invitations</a><br>You can also reply to request no further recruitment emails.`,
+  });
   return { subject, text, html };
 }

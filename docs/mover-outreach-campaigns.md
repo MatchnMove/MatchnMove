@@ -1,10 +1,10 @@
-# Approved mover onboarding and follow-ups
+# Moving and cleaning onboarding and follow-ups
 
-The six supplied mover emails are integrated into the existing company directory, Email station, partner inbox and job worker. Cleaning invitations retain their separate workflow. No real campaign, customer email or paid provider call was sent while developing or testing this change.
+The supplied mover sequence and six matching cleaner templates are integrated into the company directory, Email station, partner inbox and job worker. Both business types use the same follow-up stages and scheduling rules. No real campaign, customer email or paid provider call was sent while developing or testing this change.
 
 ## Approved content
 
-`lib/mover-outreach-templates.ts` is the canonical source, version `2026-11-03.v1`. The repeated re-engagement body in the supplied request is represented once. The supplied wording, paragraphs, emphasis and lists are preserved. Technical additions are the tracked registration destination, personalised fields, a discreet unsubscribe footer and the existing availability/booking disclaimer.
+`lib/mover-outreach-templates.ts` is the canonical source, version `2026-11-03.v2`. The mover wording is preserved. Cleaner templates use cleaning company/service language, `/cleaner/partner` pricing information and tracked `/cleaner/register` registration. Cleaning Template 1B introduces the opportunity model without claiming a specific job or disclosing moving-customer details. The shared table-based layout adds a branded invitation header, prominent registration link and a two-column logo/team signature that stacks on phones.
 
 | Template | Exact subject | Use |
 | --- | --- | --- |
@@ -26,12 +26,12 @@ The general invitation and signature were visually checked at 320px and 700px wi
 1. Open **Company directory**, add or edit a **Moving company**, enter its contact person, business email and real service coverage, then record the reviewed contact-permission basis and evidence.
 2. Use **Write email / Email station** for Template 1A. To use 1B, open **Lead opportunities**, review an authorised summary and prepare the invitation there. A draft sequence has only one Day 0 email; choosing the other initial template replaces that unsent initial draft.
 3. Review the populated subject, recipient, greeting, full HTML/plain-text body, links, signature and any approved summary. An optional personal note is available. Save edits to refresh the preview, then explicitly approve sending.
-4. In **Inbox**, an outreach draft can use an empty personal-note field. Saving inserts the approved mover invitation or existing cleaning invitation. The formatted preview displays the signature; arbitrary external images remain blocked.
-5. The company's **Mover outreach sequence** panel shows Day 0, most recent send, current stage, next follow-up, response/registration state, review date and template/version history. **Pause follow-ups**, **Resume eligible sequence** and **Cancel pending follow-ups** operate on the saved sequence.
+4. In **Inbox**, an outreach draft can use an empty personal-note field. Saving inserts the approved invitation for the company’s business type. The formatted preview displays the signature; arbitrary external images remain blocked.
+5. The company's **Company email sequence** panel shows Day 0, most recent send, current stage, next follow-up, response/registration state, review date and template/version history. **Pause follow-ups**, **Resume eligible sequence** and **Cancel pending follow-ups** operate on the saved sequence.
 6. Open **Follow-ups → Revisit due · three-month review** for due reviews. **Preview re-engagement** prepares Template 5 without sending it. Review it in the Email station and explicitly approve sending, or postpone the review 14 days or dismiss/close it.
 7. Starting a later campaign requires the separate **Start a new reviewed sequence** action and confirmation. Replies, registrations, permanent suppressions and unresolved delivery outcomes still block it. Closing a sequence never automatically repeats it.
 
-Existing emails remain in their history. Legacy records are **not automatically enrolled**. Staff must review their history and explicitly start a new eligible sequence. Cleaning companies are not enrolled in this mover campaign.
+Existing emails remain in their history. Legacy records are **not automatically enrolled**. Staff must review their history and explicitly start a new eligible sequence. Newly approved cleaning invitations use the same campaign milestones with cleaner-specific template keys.
 
 ## Calendar and worker behaviour
 
@@ -50,7 +50,7 @@ The shared recruitment database lock, per-campaign stage uniqueness, a single op
 
 ## Setup and stopping conditions
 
-The owner must verify the existing SMTP sender connection and enable **outreach sending**. The separate **Enable automatic mover follow-ups** setting defaults to **off**. Turning it on does not enrol historical emails and never sends initial invitations or Template 5 automatically.
+The owner must verify the existing SMTP sender connection and enable **outreach sending**. The separate **Enable automatic moving and cleaning follow-ups** setting defaults to **off**. Turning it on does not enrol historical emails and never sends initial invitations or Template 5 automatically.
 
 Before automatic sends, the application requires:
 

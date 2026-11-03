@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
 import test from "node:test";
 import { JSDOM } from "jsdom";
-import { MOVER_TEMPLATE_VERSION, moverGreeting, moverTemplateKeys, renderMoverOutreachEmail } from "../lib/mover-outreach-templates";
+import { MOVER_TEMPLATE_VERSION, moverGreeting, moverTemplateKeys, cleanerTemplateKeys, renderMoverOutreachEmail } from "../lib/mover-outreach-templates";
 import { addAucklandCalendar, aucklandParts } from "../lib/recruitment-dates";
 import { classifyOutreachFailure, explicitReplyOptOut, mailboxAutomationBlock, nextOutreachDate, opportunityEligible } from "../lib/mover-outreach-campaigns";
 import { safeLeadSummary } from "../lib/recruitment-policy";
@@ -26,7 +26,7 @@ test("all six approved subjects, populated bodies, links and shared signatures r
     dom.window.close();
   });
   assert.ok(existsSync("public/logo-mark.png"));
-  assert.equal(MOVER_TEMPLATE_VERSION, "2026-11-03.v1");
+  assert.equal(MOVER_TEMPLATE_VERSION, "2026-11-03.v2");
 });
 
 test("personalisation escapes markup and missing people use the approved team greeting", () => {
@@ -34,8 +34,28 @@ test("personalisation escapes markup and missing people use the approved team gr
   const result = renderMoverOutreachEmail({ ...input, templateKey: "MOVER_GENERAL", companyName: '<script>alert("x")</script> & Co', contactName: "<img onerror='bad'>", personalNote: "<b>Private adjustment</b>" });
   assert.doesNotMatch(result.html, /<script>|onerror='bad'|<b>Private adjustment/);
   assert.match(result.html, /&lt;script&gt;/);
-  assert.equal(new JSDOM(result.html).window.document.querySelectorAll("img").length, 1);
+  assert.equal(new JSDOM(result.html).window.document.querySelectorAll("img").length, 2);
   assert.throws(() => moverGreeting("undefined"), /company name is required/);
+});
+
+test("all six cleaner emails use the shared design and cleaning copy, pricing and registration", () => {
+  for (const templateKey of cleanerTemplateKeys) {
+    const email = renderMoverOutreachEmail({ ...input, companyName: "Example Cleaners", templateKey, lead: null });
+    assert.match(email.text, /cleaning/i);
+    assert.doesNotMatch(email.text + email.html + email.subject, /moving companies|moving services|mover network|\/mover\/|Moving from:|Moving to:|Preferred moving date|\[Company Name\]|{{/);
+    assert.match(email.text, /https:\/\/www.matchnmove.co.nz\/cleaner\/partner/);
+    assert.match(email.text, /Register: https:\/\/www.matchnmove.co.nz\/api\/recruitment\/attribution/);
+    const dom = new JSDOM(email.html);
+    assert.ok(dom.window.document.querySelector("h1"));
+    assert.equal(dom.window.document.querySelector(".signature-details strong")?.textContent, "The Match 'n Move Team");
+    assert.ok(dom.window.document.querySelector('a[href="mailto:contact@matchnmove.co.nz"]'));
+    assert.ok(dom.window.document.querySelector(`a[href="${input.unsubscribeUrl}"]`));
+    assert.match(dom.window.document.querySelector("style")!.textContent!, /max-width:480px/);
+    dom.window.close();
+  }
+  assert.throws(() => renderMoverOutreachEmail({ ...input, templateKey: "CLEANER_OPPORTUNITY" }), /moving summary cannot/);
+  const opportunity = renderMoverOutreachEmail({ ...input, templateKey: "CLEANER_OPPORTUNITY", lead: null });
+  assert.doesNotMatch(opportunity.text, /we have a cleaning opportunity|received a cleaning request|following details/i);
 });
 
 test("opportunity rendering rejects missing approval and omits unapproved or missing details", () => {

@@ -13,12 +13,9 @@ import {
   manualStatuses,
   normalizeCompany,
   recruitmentLeadSelect,
-  renderRecruitmentEmail,
   safeLeadSummary,
   scopeProspects,
-  secureToken,
   stoppedStatuses,
-  tokenHash,
 } from "@/lib/recruitment-policy";
 import { NZ_SERVICE_AREAS } from "@/lib/nz-regions";
 import { businessTypes, movingServices, cleaningServices } from "@/lib/partner-business";
@@ -215,6 +212,7 @@ export async function prepareDraft(
   prospectId: string,
   quoteRequestId: string | null = null,
   followUpToId?: string,
+  initialTemplate?: import("@/lib/mover-outreach-templates").PartnerTemplateKey,
 ) {
   const prospect = await ownedProspect(tx, actor, prospectId);
   if (quoteRequestId && prospect.businessType === "CLEANING")
@@ -232,86 +230,12 @@ export async function prepareDraft(
     ),
   );
   if (blocked) fail(blocked);
-  if (prospect.businessType === "MOVING") {
-    const { prepareMoverCampaignDraft, opportunityEligible } = await import("@/lib/mover-outreach-campaigns");
-    const quote = !followUpToId && quoteRequestId ? await tx.quoteRequest.findFirst({
-      where: { id: quoteRequestId, recruitmentSharingAllowed: true, sharingConsentAt: { not: null } }, select: recruitmentLeadSelect,
-    }) : null;
-    if (!followUpToId && quoteRequestId && (!quote || !opportunityEligible(quote))) fail("An authorised, current moving opportunity was not found.", 404);
-    return prepareMoverCampaignDraft(tx, actor, prospect, quote ? safeLeadSummary(quote) : null, followUpToId ? null : quoteRequestId, followUpToId);
-  }
-  const lead = quoteRequestId ? await tx.quoteRequest.findFirst({
-    where: {
-      id: quoteRequestId,
-      recruitmentSharingAllowed: true,
-      sharingConsentAt: { not: null },
-    },
-    select: recruitmentLeadSelect,
+  const { prepareMoverCampaignDraft, opportunityEligible } = await import("@/lib/mover-outreach-campaigns");
+  const quote = !followUpToId && quoteRequestId ? await tx.quoteRequest.findFirst({
+    where: { id: quoteRequestId, recruitmentSharingAllowed: true, sharingConsentAt: { not: null } }, select: recruitmentLeadSelect,
   }) : null;
-  if (quoteRequestId && !lead) fail("An authorised lead summary was not found.", 404);
-  const parent = followUpToId
-    ? await tx.outreachMessage.findFirst({
-        where: { id: followUpToId, prospectId, quoteRequestId, status: "SENT" },
-      })
-    : null;
-  if (followUpToId && !parent)
-    fail("Choose a successfully sent invitation for follow-up.");
-  if (parent && prospect.respondedAt)
-    fail(
-      "This company has responded. Record and manage its next step directly.",
-    );
-  const existing = await tx.outreachMessage.findFirst({
-    where: followUpToId
-      ? { followUpToId }
-      : { prospectId, quoteRequestId, sequence: 0 },
-  });
-  if (
-    existing &&
-    (existing.status !== "DRAFT" || existing.attributionExpiresAt > new Date())
-  )
-    return existing;
-  const config = await settings(tx);
-  const registrationToken = secureToken();
-  const unsubscribeToken = secureToken();
-  const introduction =
-    existing?.introduction ||
-    (parent
-      ? `We are following up on our invitation to join Match 'n Move. If this is relevant to your business, you can review the platform and register below.${lead ? " Availability of the original moving request may have changed." : ""}`
-      : lead ? config.introduction : prospect.businessType === "CLEANING" ? config.cleaningIntroduction : config.generalIntroduction);
-  const rendered = renderRecruitmentEmail({
-    companyName: prospect.companyName,
-    businessType: prospect.businessType,
-    introduction,
-    lead: lead ? safeLeadSummary(lead) : null,
-    registrationUrl: `${baseUrl()}/api/recruitment/attribution?token=${registrationToken}`,
-    unsubscribeUrl: `${baseUrl()}/recruitment/unsubscribe?token=${unsubscribeToken}`,
-    sender: config.senderIdentity || "Match 'n Move",
-  });
-  const data = {
-    prospectId,
-    quoteRequestId,
-    adminId: actor.id,
-    ...rendered,
-    introduction,
-    sequence: parent ? parent.sequence + 1 : 0,
-    followUpToId,
-    attributionHash: tokenHash(registrationToken),
-    attributionExpiresAt: new Date(Date.now() + 30 * 86400000),
-    unsubscribeHash: tokenHash(unsubscribeToken),
-  };
-  const message = existing
-    ? await tx.outreachMessage.update({ where: { id: existing.id }, data })
-    : await tx.outreachMessage.create({ data });
-  await activity(
-    tx,
-    prospectId,
-    actor.id,
-    existing ? "draft_links_refreshed" : "draft_created",
-    {
-      messageId: message.id,
-    },
-  );
-  return message;
+  if (!followUpToId && quoteRequestId && (!quote || !opportunityEligible(quote))) fail("An authorised, current moving opportunity was not found.", 404);
+  return prepareMoverCampaignDraft(tx, actor, prospect, quote ? safeLeadSummary(quote) : null, followUpToId ? null : quoteRequestId, followUpToId, false, initialTemplate);
 }
 
 export async function cancelFollowUps(tx: Tx, prospectId: string) {
@@ -371,6 +295,7 @@ export async function saveProspect(
 ) {
   const parsed = prospectSchema.parse(raw);
   const prior = id ? await ownedProspect(tx, actor, id) : null;
+  if (prior?.removedAt) fail("This company has been removed from the directory.", 409);
   const data = { ...parsed,
     businessType: parsed.businessType ?? prior?.businessType ?? "MOVING",
     email: parsed.email === undefined ? prior?.email ?? null : parsed.email,
@@ -515,6 +440,7 @@ export async function setProspectStatus(
   version: number,
 ) {
   const prospect = await ownedProspect(tx, actor, id);
+  if (prospect.removedAt) fail("This company has been removed from the directory.", 409);
   if (prospect.version !== version)
     fail("This record changed. Reload before updating.", 409);
   if (status === "DO_NOT_CONTACT") {

@@ -20,6 +20,7 @@ import {
   reviewInboxSend,
   saveInboxDraft,
   sendInboxDraft,
+  discardInboxDraft,
 } from "@/lib/partner-inbox-outgoing";
 import { syncPartnerInbox } from "@/lib/partner-inbox-sync";
 import {
@@ -250,7 +251,7 @@ export async function GET(req: NextRequest) {
       if (!conversation) fail("Conversation not found.", 404);
       const [messages, count, mover, communicationHistory, cleaner] = await Promise.all([
         prisma.partnerMessage.findMany({
-          where: { conversationId: conversation.id },
+          where: { conversationId: conversation.id, status: { not: "DELETED" } },
           select: {
             id: true,
             conversationId: true,
@@ -282,7 +283,7 @@ export async function GET(req: NextRequest) {
           skip: (page - 1) * 30,
         }),
         prisma.partnerMessage.count({
-          where: { conversationId: conversation.id },
+          where: { conversationId: conversation.id, status: { not: "DELETED" } },
         }),
         conversation.moverCompanyId
           ? prisma.moverCompany.findUnique({
@@ -391,6 +392,7 @@ export async function GET(req: NextRequest) {
       result = {
         prospects: await prisma.moverProspect.findMany({
           where: {
+            removedAt: null,
             ...(actor.role === "OWNER" ? {} : { assignedAdminId: actor.id }),
             ...(q
               ? {
@@ -622,6 +624,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(await saveInboxDraft(actor, body.data), {
         headers,
       });
+    if (body.action === "discard_draft") {
+      const input = z.object({ id: z.string(), version: z.number().int(), confirmed: z.literal(true) }).parse(body.data);
+      return NextResponse.json(await discardInboxDraft(actor, input.id, input.version), { headers });
+    }
     if (body.action === "send") {
       const input = z
         .object({

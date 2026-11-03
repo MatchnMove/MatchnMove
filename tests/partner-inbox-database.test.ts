@@ -29,6 +29,7 @@ import {
   saveInboxDraft,
   sendInboxDraft,
   syncInboxDrafts,
+  discardInboxDraft,
 } from "../lib/partner-inbox-outgoing";
 import {
   inboxAttachmentBytes,
@@ -1039,6 +1040,30 @@ test(
         }
       },
     );
+    await t.test("removed inbox drafts are deleted from Gmail and never imported again", async () => {
+      const draft = await saveInboxDraft(owner, { mode: "new", conversationId: serviceContext.id, to: [partner], subject: "Draft removal test", text: "This saved message must never be sent.", purpose: "SERVICE", serviceReason: "Local service request used to verify draft removal" });
+      const gmail = await connect();
+      for (let i = 0; i < 10; i++) {
+        await syncInboxDrafts(gmail);
+        if ((await prisma.partnerMessage.findUniqueOrThrow({ where: { id: draft.id } })).gmailDraftId) break;
+      }
+      const mirrored = await prisma.partnerMessage.findUniqueOrThrow({ where: { id: draft.id } });
+      assert.ok(mirrored.gmailDraftId);
+      const providerMessage = messages.get(mirrored.gmailMessageId!)!;
+      assert.ok(providerMessage);
+      const before = sentRaw.length;
+      await assert.rejects(discardInboxDraft(owner, draft.id, draft.version - 1), /draft changed/);
+      await discardInboxDraft(owner, draft.id, mirrored.version);
+      await assert.rejects(sendInboxDraft(owner, draft.id, mirrored.version, connect), /changed|already|saved draft/i);
+      await syncInboxDrafts(gmail);
+      assert.equal(providerDrafts.has(mirrored.gmailDraftId!), false);
+      assert.equal((await prisma.partnerMessage.findUniqueOrThrow({ where: { id: draft.id } })).status, "DELETED");
+      // Even a stale provider response must not restore the app draft.
+      await persistGmailMessage(providerMessage, mirrored.gmailDraftId!);
+      assert.equal((await prisma.partnerMessage.findUniqueOrThrow({ where: { id: draft.id } })).status, "DELETED");
+      assert.equal(sentRaw.length, before);
+    });
+
     await t.test(
       "missing scanner, oversized attachments and unreviewed contact suppression fail safely",
       async () => {

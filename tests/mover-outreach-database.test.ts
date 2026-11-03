@@ -10,6 +10,7 @@ import { manageCampaign, prepareCampaignStep, processMoverOutreachCampaigns, rec
 import { bridgeRecruitmentMessages } from "../lib/partner-inbox-outgoing";
 import { persistGmailMessage } from "../lib/partner-inbox-sync";
 import { deliverQueuedEmail, sendAdminInvitationEmail, sendMoverPasswordResetEmail } from "../lib/email";
+import { discardOutreachDraft, removeDirectoryCompany, restoreDirectoryCompany } from "../lib/recruitment-removal";
 
 const database = process.env.OUTREACH_TEST_DATABASE_URL;
 test("mover campaign persistence, real SMTP, reply import and manual re-engagement on disposable PostgreSQL", { skip: !database, timeout: 180000 }, async t => {
@@ -283,5 +284,69 @@ test("mover campaign persistence, real SMTP, reply import and manual re-engageme
     assert.equal((await send(invitation)).ok, true);
     assert.match(accepted.at(-1)!, /^From:.*contact@matchnmove.co.nz/m);
     assert.match(accepted.at(-1)!, /^Reply-To: contact@matchnmove.co.nz/m);
+    assert.equal(invitation.templateKey, "CLEANER_GENERAL");
+    for (const [sequence, key] of [[1, "CLEANER_FOLLOWUP_1"], [2, "CLEANER_FOLLOWUP_2"], [3, "CLEANER_FINAL"]] as const) {
+      const next = await dueStep(invitation.campaignId!, sequence);
+      assert.equal(next.templateKey, key);
+      assert.doesNotMatch(next.text, /moving companies|mover network|\/mover\//);
+      assert.equal((await send(next, true)).ok, true);
+    }
+    await prisma.outreachCampaign.update({ where: { id: invitation.campaignId! }, data: { revisitAt: new Date(Date.now() - 1000) } });
+    await processMoverOutreachCampaigns(0, async () => undefined);
+    const reengagement = await locked(tx => prepareCampaignStep(tx, actor, invitation.campaignId!, 4));
+    assert.equal(reengagement.templateKey, "CLEANER_REENGAGEMENT");
+    assert.equal(reengagement.status, "DRAFT");
+  });
+
+  await t.test("draft removal enforces ownership and versions, pauses follow-ups and allows an explicit replacement", async () => {
+    const p = await company(), draft = await locked(tx => prepareDraft(tx, actor, p.id));
+    const input = { id: draft.id, updatedAt: draft.updatedAt.toISOString(), confirmed: true };
+    await assert.rejects(locked(tx => discardOutreachDraft(tx, { ...actor, id: colleague.id, role: "RECRUITMENT_ADMIN" }, input)), /Company not found/);
+    await assert.rejects(locked(tx => discardOutreachDraft(tx, actor, { ...input, updatedAt: new Date(0).toISOString() })), /draft changed/);
+    const before = accepted.length;
+    await locked(tx => discardOutreachDraft(tx, actor, input));
+    assert.equal((await prisma.outreachMessage.findUniqueOrThrow({ where: { id: draft.id } })).status, "DISCARDED");
+    await assert.rejects(send(draft), /changed|already attempted/);
+    const replacement = await locked(tx => prepareDraft(tx, actor, p.id));
+    assert.equal(replacement.status, "DRAFT");
+    assert.equal(replacement.id, draft.id);
+    assert.notEqual(replacement.attributionHash, draft.attributionHash);
+    assert.equal(accepted.length, before);
+    assert.equal((await send(replacement)).ok, true);
+    const next = await dueStep(replacement.campaignId!, 1);
+    await locked(tx => discardOutreachDraft(tx, actor, { id: next.id, updatedAt: next.updatedAt.toISOString(), confirmed: true }));
+    assert.equal((await campaign(replacement.campaignId!)).status, "PAUSED");
+    const paused = await campaign(replacement.campaignId!);
+    await locked(tx => manageCampaign(tx, actor, { campaignId: paused.id, updatedAt: paused.updatedAt.toISOString(), operation: "resume" }));
+    assert.equal((await locked(tx => prepareCampaignStep(tx, actor, paused.id, 1))).status, "DRAFT");
+  });
+
+  await t.test("directory removal stops pending mail and preserves sent history, with no extra email sent", async () => {
+    const tracked = await makeSent();
+    const next = await dueStep(tracked.campaignId, 1);
+    let p = await prisma.moverProspect.findUniqueOrThrow({ where: { id: tracked.prospect.id } });
+    const input = { id: p.id, version: p.version, confirmed: true };
+    await assert.rejects(locked(tx => removeDirectoryCompany(tx, { ...actor, id: colleague.id, role: "RECRUITMENT_ADMIN" }, input)), /Company not found/);
+    await assert.rejects(locked(tx => removeDirectoryCompany(tx, actor, { ...input, version: -1 })), /company changed/);
+    await prisma.outreachMessage.update({ where: { id: next.id }, data: { status: "SENDING" } });
+    await assert.rejects(locked(tx => removeDirectoryCompany(tx, actor, input)), /active or uncertain/);
+    await prisma.outreachMessage.update({ where: { id: next.id }, data: { status: "DRAFT" } });
+    const before = accepted.length;
+    await locked(tx => removeDirectoryCompany(tx, actor, input));
+    p = await prisma.moverProspect.findUniqueOrThrow({ where: { id: p.id } });
+    assert.ok(p.removedAt);
+    assert.equal(await prisma.moverProspect.count({ where: { id: p.id, removedAt: null } }), 0);
+    assert.equal((await campaign(tracked.campaignId)).status, "STOPPED");
+    assert.equal((await prisma.outreachMessage.findUniqueOrThrow({ where: { id: tracked.message.id } })).status, "SENT");
+    assert.notEqual((await prisma.outreachMessage.findUniqueOrThrow({ where: { id: next.id } })).status, "DRAFT");
+    await assert.rejects(locked(tx => prepareDraft(tx, actor, p.id)), /removed from the directory/);
+    await assert.rejects(send(next), /removed from the directory/);
+    assert.equal(accepted.length, before);
+    await assert.rejects(locked(tx => restoreDirectoryCompany(tx, actor, input)), /company changed/);
+    await locked(tx => restoreDirectoryCompany(tx, actor, { ...input, version: p.version }));
+    assert.equal((await prisma.moverProspect.findUniqueOrThrow({ where: { id: p.id } })).removedAt, null);
+    assert.equal((await campaign(tracked.campaignId)).status, "STOPPED");
+    assert.notEqual((await prisma.outreachMessage.findUniqueOrThrow({ where: { id: next.id } })).status, "DRAFT");
+    assert.equal(accepted.length, before);
   });
 });

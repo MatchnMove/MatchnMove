@@ -699,6 +699,7 @@ model MoverProspect {
   companyName         String
   businessType        PartnerBusinessType         @default(MOVING)
   normalizedName      String
+  removedAt           DateTime?
   email               String?                     @unique
   emailAvailability   String?
   phoneAvailability   String?
@@ -743,6 +744,7 @@ model MoverProspect {
 
   @@index([assignedAdminId, status, nextFollowUpAt])
   @@index([normalizedName])
+  @@index([removedAt])
   @@index([recruitedById, registeredAt])
 }
 

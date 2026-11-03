@@ -130,7 +130,7 @@ test("inbox UI previews the final email, requires explicit send and keeps failed
       if (body.action === "draft") {
         const draft = {
           ...inbound,
-          id: "draft",
+          id: `draft-${calls.filter(item => item.action === "draft").length}`,
           from: "support@matchnmove.co.nz",
           to: [inbound.from],
           direction: "OUTBOUND",
@@ -145,6 +145,11 @@ test("inbox UI previews the final email, requires explicit send and keeps failed
         conversation.messages.push(draft);
         return Response.json(draft);
       }
+      if (body.action === "send") {
+        const draft = (conversation.messages as Array<{ id: string; status: string }>).find(item => item.id === body.data.id);
+        if (draft) draft.status = "SENT";
+      }
+      if (body.action === "discard_draft") conversation.messages = (conversation.messages as Array<{ id: string }>).filter(item => item.id !== body.data.id);
       return Response.json({ ok: true });
     }
     const query = new URL(String(input), dom.window.location.origin)
@@ -260,6 +265,16 @@ test("inbox UI previews the final email, requires explicit send and keeps failed
     calls.find((item) => item.action === "send")!.data.confirmed,
     true,
   );
+  await click("Reply");
+  await textValue([...dom.window.document.querySelectorAll("textarea")].find(item => item.maxLength === 100000)!, "This reply will be removed before sending.");
+  await click("Save draft");
+  await click("Remove email draft");
+  const removed = calls.find(item => item.action === "discard_draft")!;
+  assert.ok(removed.data.id);
+  assert.equal(removed.data.version, 1);
+  assert.equal(removed.data.confirmed, true);
+  assert.equal(calls.filter(item => item.action === "send").length, 1);
+  assert.equal(buttons().some(item => item.textContent?.trim() === "Remove email draft"), false);
   const reader = dom.window.document.querySelector(
     '[aria-label="Conversation details"]',
   ) as HTMLElement;

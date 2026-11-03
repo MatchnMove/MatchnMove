@@ -1487,6 +1487,14 @@ export function PartnerInbox({
                     </div>
                   ))}
               <div className="mt-4 flex flex-wrap gap-2">
+                {composer.id && <button type="button" className="rounded-xl border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50" disabled={busy} onClick={() => {
+                  if (!window.confirm("Remove this saved email draft? It will not be sent. Removing an outreach follow-up also pauses its sequence.")) return;
+                  void run(async () => {
+                    await action("discard_draft", { id: composer.id, version: composer.version, confirmed: true });
+                    setComposer(null); setPreview(false); setNotice("Email draft removed.");
+                    await Promise.all([reloadConversation(), reloadList(), reloadSummary()]);
+                  });
+                }}>Remove email draft</button>}
                 {preview ? (
                   <>
                     <button

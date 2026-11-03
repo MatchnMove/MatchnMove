@@ -1,9 +1,12 @@
 import { escapeHtml, type SafeLead } from "@/lib/recruitment-policy";
 import { NZ_SERVICE_AREAS } from "@/lib/nz-regions";
+import { outreachEmailLayout, outreachSignatureHtml } from "@/lib/outreach-email-layout";
 
-export const MOVER_TEMPLATE_VERSION = "2026-11-03.v1";
+export const MOVER_TEMPLATE_VERSION = "2026-11-03.v2";
 export const moverTemplateKeys = ["MOVER_GENERAL", "MOVER_OPPORTUNITY", "MOVER_FOLLOWUP_1", "MOVER_FOLLOWUP_2", "MOVER_FINAL", "MOVER_REENGAGEMENT"] as const;
 export type MoverTemplateKey = typeof moverTemplateKeys[number];
+export const cleanerTemplateKeys = ["CLEANER_GENERAL", "CLEANER_OPPORTUNITY", "CLEANER_FOLLOWUP_1", "CLEANER_FOLLOWUP_2", "CLEANER_FINAL", "CLEANER_REENGAGEMENT"] as const;
+export type PartnerTemplateKey = MoverTemplateKey | typeof cleanerTemplateKeys[number];
 const about = `**About Match 'n Move**
 
 Match 'n Move is a New Zealand platform designed to connect people actively planning a move with professional moving companies that service their area. We're currently growing our mover network across the country, and we'd be pleased to have [Company Name] involved.
@@ -156,6 +159,40 @@ If you have any questions about how the platform works, simply reply to this ema
   },
 };
 
+// Preserve the sequence and approved commercial terms while adapting the service
+// language before company names are populated.
+function cleaningWording(value: string) {
+  return value.replaceAll("https://www.matchnmove.co.nz/mover/pricing", "https://www.matchnmove.co.nz/cleaner/partner")
+    .replaceAll("https://www.matchnmove.co.nz/mover/login", "https://www.matchnmove.co.nz/cleaner/register")
+    .replaceAll("people actively planning a move", "people looking for move-out and move-in cleaning")
+    .replaceAll("customers actively planning a move", "customers looking for move-out and move-in cleaning")
+    .replaceAll("customers planning a move", "customers looking for move-out and move-in cleaning")
+    .replaceAll("details of their move", "details of their cleaning request")
+    .replaceAll("requirements of the move", "requirements of the clean")
+    .replaceAll("professional moving", "professional cleaning")
+    .replaceAll("moving companies", "cleaning companies").replaceAll("moving company", "cleaning company")
+    .replaceAll("moving providers", "cleaning providers").replaceAll("moving provider", "cleaning provider")
+    .replaceAll("moving services", "cleaning services").replaceAll("moving enquiries", "cleaning enquiries")
+    .replaceAll("moving opportunities", "cleaning opportunities").replaceAll("moving lead", "cleaning lead")
+    .replaceAll("mover network", "cleaner network").replaceAll("our mover", "our cleaner")
+    .replaceAll("mover pricing", "cleaner pricing");
+}
+export const cleanerEmailTemplates = Object.fromEntries(moverTemplateKeys.map((key, index) => [cleanerTemplateKeys[index], {
+  ...moverEmailTemplates[key], subject: cleaningWording(moverEmailTemplates[key].subject), body: cleaningWording(moverEmailTemplates[key].body),
+}])) as Record<typeof cleanerTemplateKeys[number], { name: string; subject: string; body: string }>;
+// Cleaning requests do not currently carry permission for recruitment summaries.
+// This alternative introduces the opportunity model without inventing a job or
+// copying a moving customer's property, dates or contact details.
+cleanerEmailTemplates.CLEANER_OPPORTUNITY = {
+  name: "1B · Cleaning opportunities introduction",
+  subject: "Cleaning opportunities with Match 'n Move",
+  body: `I hope you're doing well.\n\nI'm reaching out from Match 'n Move to invite [Company Name] to receive relevant move-out and move-in cleaning enquiries in the areas your team services.\n\n**Cleaning opportunities for your team**\n\nCustomers can request cleaning through Match 'n Move. Relevant enquiries are made available to cleaning companies based on their service areas and the customer's requirements. Your team can review each opportunity and its price before choosing whether to access the customer's full contact details.\n\n${cleaningWording(about)}\n\nWe'd love to welcome [Company Name] and help your team get set up to receive relevant cleaning enquiries.\n\nIf you have any questions about the cleaning opportunities, pricing or registration, simply reply to this email and we'll be happy to help.`,
+};
+export const outreachEmailTemplates = { ...moverEmailTemplates, ...cleanerEmailTemplates };
+export function templateKeysForBusiness(businessType: string) {
+  return businessType === "CLEANING" ? cleanerTemplateKeys : moverTemplateKeys;
+}
+
 function name(value?: string | null) {
   const clean = value?.replace(/[\u0000-\u001f\u007f]/g, " ").trim();
   return clean && !/^(null|undefined|\[.*\])$/i.test(clean) ? clean : "";
@@ -178,7 +215,7 @@ W: https://www.matchnmove.co.nz/
 
 Plan the move. Book with confidence.`;
 export function moverSignatureHtml() {
-  return `<p style="margin:28px 0 16px">Kind regards,</p><table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr><td style="padding:0 0 12px;vertical-align:top"><img src="https://www.matchnmove.co.nz/logo-mark.png" alt="Match 'n Move logo" width="64" height="64" style="display:block;width:64px;height:64px;background:#ffffff;border:8px solid #ffffff;border-radius:8px"></td></tr><tr><td style="vertical-align:top;font:14px/1.7 Arial,Helvetica,sans-serif;color:#334155"><strong style="font-size:16px;color:#0f172a">The Match 'n Move Team</strong><br><a href="tel:+6421958000" style="color:#334155;text-decoration:none">P: +64 21 958 000 (Seth)</a><br><a href="tel:+642108721208" style="color:#334155;text-decoration:none">P: +64 210 872 1208 (Tiaan)</a><br>E: <a href="mailto:contact@matchnmove.co.nz" style="color:#0f766e">contact@matchnmove.co.nz</a><br>W: <a href="https://www.matchnmove.co.nz/" style="color:#0f766e">https://www.matchnmove.co.nz/</a></td></tr></table><p style="margin:16px 0 0;font-size:13px;color:#475569"><em>Plan the move. Book with confidence.</em></p>`;
+  return outreachSignatureHtml();
 }
 
 // Only the existing customer-authorised, allowlisted summary reaches this renderer.
@@ -198,10 +235,13 @@ export function approvedOpportunityRows(lead: SafeLead) {
 }
 
 export function renderMoverOutreachEmail(input: {
-  templateKey: MoverTemplateKey; companyName: string; contactName?: string | null;
+  templateKey: PartnerTemplateKey; companyName: string; contactName?: string | null;
   registrationUrl: string; unsubscribeUrl: string; lead?: SafeLead | null; personalNote?: string;
 }) {
-  const template = moverEmailTemplates[input.templateKey];
+  const template = outreachEmailTemplates[input.templateKey];
+  const cleaning = input.templateKey.startsWith("CLEANER_");
+  if (!template) throw new Error("Choose an approved email template.");
+  if (cleaning && input.lead) throw new Error("A moving summary cannot be included in a cleaning invitation.");
   if (input.templateKey === "MOVER_OPPORTUNITY" && !input.lead) throw new Error("An authorised moving summary is required.");
   for (const url of [input.registrationUrl, input.unsubscribeUrl]) {
     const parsed = new URL(url);
@@ -221,8 +261,9 @@ export function renderMoverOutreachEmail(input: {
       else if (token.startsWith("**")) result += `<strong>${inline(token.slice(2, -2))}</strong>`;
       else {
         const parts = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(token)!;
-        const url = parts[2].endsWith("/mover/login") ? input.registrationUrl : parts[2];
-        result += `<a href="${e(url)}" style="color:#0f766e;text-decoration:underline">${e(parts[1])}</a>`;
+        const registration = /\/(mover\/login|cleaner\/register)$/.test(parts[2]);
+        const url = registration ? input.registrationUrl : parts[2];
+        result += `<a href="${e(url)}" style="${registration ? "display:inline-block;background:#0f766e;color:#ffffff;padding:12px 20px;border-radius:6px;font-weight:bold;text-decoration:none" : "color:#0f766e;text-decoration:underline"}">${e(parts[1])}</a>`;
       }
       last = match.index! + token.length;
     }
@@ -235,15 +276,15 @@ export function renderMoverOutreachEmail(input: {
     return `<p style="margin:0 0 20px">${inline(block)}</p>`;
   }).join("");
   const plainBody = populate(template.body).replace("{{approvedLeadSummary}}", rows.map(([title, value]) => `- ${title}: ${value}`).join("\n"))
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_match, title: string, url: string) => url.endsWith("/mover/login") ? `${title}\nRegister: ${input.registrationUrl}` : `${title}\n${url}`)
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_match, title: string, url: string) => /\/(mover\/login|cleaner\/register)$/.test(url) ? `${title}\nRegister: ${input.registrationUrl}` : `${title}\n${url}`)
     .replaceAll("**", "");
   const disclaimer = input.templateKey === "MOVER_OPPORTUNITY"
     ? "Availability may change; this request is not reserved or guaranteed. Customer contact details are available only through authorised platform access."
     : "Enquiry volumes and bookings are not guaranteed.";
-  const footer = `<p style="margin:28px 0 0;padding-top:18px;border-top:1px solid #e2e8f0;color:#64748b;font-size:12px;line-height:1.6">${e(disclaimer)}<br><a href="${e(input.unsubscribeUrl)}" style="color:#475569">Unsubscribe from recruitment invitations</a>. You can also reply to request no further recruitment emails.</p>`;
+  const footer = `<p style="margin:0;color:#64748b;font-size:12px;line-height:1.6">${e(disclaimer)}<br><a href="${e(input.unsubscribeUrl)}" style="color:#475569">Unsubscribe from recruitment invitations</a>. You can also reply to request no further recruitment emails.</p>`;
   return {
     subject: populate(template.subject),
     text: [greeting, input.personalNote?.trim(), plainBody, moverSignatureText, disclaimer, `Unsubscribe: ${input.unsubscribeUrl}`, "You can also reply to request no further recruitment emails."].filter(Boolean).join("\n\n"),
-    html: `<!doctype html><html lang="en"><head><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"></head><body style="margin:0;background:#f5f7fa;color:#334155"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#f5f7fa"><tr><td align="center" style="padding:20px 12px"><table role="presentation" width="640" cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%;max-width:640px;background:#ffffff;border-top:4px solid #0f766e"><tr><td style="padding:28px 24px;font:16px/1.75 Arial,Helvetica,sans-serif;color:#334155"><p style="margin:0 0 20px">${e(greeting)}</p>${input.personalNote?.trim() ? `<p style="margin:0 0 20px">${e(input.personalNote.trim()).replaceAll("\n", "<br>")}</p>` : ""}${htmlBody}${moverSignatureHtml()}${footer}</td></tr></table></td></tr></table></body></html>`,
+    html: outreachEmailLayout({ businessType: cleaning ? "CLEANING" : "MOVING", title: input.templateKey.endsWith("GENERAL") || input.templateKey.endsWith("OPPORTUNITY") ? `You're invited to join our ${cleaning ? "cleaner" : "mover"} network.` : input.templateKey.endsWith("REENGAGEMENT") ? "Let's reconnect." : "Your next opportunity starts here.", preheader: `Join New Zealand's ${cleaning ? "cleaning" : "moving"} partner network. Free registration, with the choice of leads you access.`, body: `<p style="margin:0 0 20px">${e(greeting)}</p>${input.personalNote?.trim() ? `<p style="margin:0 0 20px">${e(input.personalNote.trim()).replaceAll("\n", "<br>")}</p>` : ""}${htmlBody}`, footer }),
   };
 }

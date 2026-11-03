@@ -4,10 +4,10 @@ import { prisma } from "@/lib/db";
 import { addAucklandCalendar, aucklandMidnight, aucklandParts } from "@/lib/recruitment-dates";
 import { activity, baseUrl, cancelFollowUps, checkActor, fail, locked, ownedProspect, settings, type Tx } from "@/lib/recruitment";
 import { contactBlockReason, secureToken, tokenHash, type RecruitmentActor, type SafeLead } from "@/lib/recruitment-policy";
-import { MOVER_TEMPLATE_VERSION, moverEmailTemplates, moverTemplateKeys, renderMoverOutreachEmail, type MoverTemplateKey } from "@/lib/mover-outreach-templates";
+import { MOVER_TEMPLATE_VERSION, outreachEmailTemplates, moverTemplateKeys, cleanerTemplateKeys, templateKeysForBusiness, renderMoverOutreachEmail, type PartnerTemplateKey } from "@/lib/mover-outreach-templates";
 
 export const openCampaignStatuses = ["DRAFT", "ACTIVE", "PAUSED", "REVIEW_DUE"];
-const followupKeys: Record<number, MoverTemplateKey> = { 1: "MOVER_FOLLOWUP_1", 2: "MOVER_FOLLOWUP_2", 3: "MOVER_FINAL", 4: "MOVER_REENGAGEMENT" };
+const followupKeys: Record<number, number> = { 1: 2, 2: 3, 3: 4, 4: 5 };
 
 export function opportunityEligible(lead: { moveDate: Date | null; createdAt: Date; recruitmentSharingAllowed?: boolean; sharingConsentAt?: Date | null }, now = new Date()) {
   if (lead.recruitmentSharingAllowed === false || lead.sharingConsentAt === null) return false;
@@ -35,7 +35,6 @@ async function eligibleProspect(tx: Tx, prospect: MoverProspect) {
   if (!prospect.email) fail("Record a valid company email before preparing outreach.");
   const blocked = contactBlockReason(prospect, Boolean(await tx.contactSuppression.findUnique({ where: { email: prospect.email } })));
   if (blocked) fail(blocked);
-  if (prospect.businessType !== "MOVING") fail("The approved mover sequence is only available to moving companies.");
   if (prospect.respondedAt) fail("A response has been received. Review the conversation; automated outreach cannot restart.");
   if (await tx.outreachMessage.count({ where: { prospectId: prospect.id, status: "NEEDS_REVIEW" } })) fail("A previous delivery outcome needs review before any further outreach.");
   if (prospect.registeredAt || prospect.moverCompanyId || prospect.cleanerCompanyId) fail("This company has started registration. Outreach has stopped.");
@@ -45,7 +44,7 @@ async function eligibleProspect(tx: Tx, prospect: MoverProspect) {
 
 export async function prepareMoverCampaignDraft(
   tx: Tx, actor: RecruitmentActor, prospect: MoverProspect, lead: SafeLead | null,
-  quoteRequestId: string | null, parentId?: string, startNew = false,
+  quoteRequestId: string | null, parentId?: string, startNew = false, initialTemplate?: PartnerTemplateKey,
 ) {
   await eligibleProspect(tx, prospect);
   let campaign = await tx.outreachCampaign.findFirst({ where: { prospectId: prospect.id }, orderBy: { createdAt: "desc" } });
@@ -73,19 +72,22 @@ export async function prepareMoverCampaignDraft(
     await activity(tx, prospect.id, actor.id, "outreach_campaign_created", { campaignId: campaign.id, explicitNewSequence: startNew });
   }
   const existing = await tx.outreachMessage.findFirst({ where: { campaignId: campaign.id, sequence: 0 } });
-  if (existing && existing.quoteRequestId === quoteRequestId && existing.attributionExpiresAt > new Date()) return existing;
-  if (existing?.status === "SENDING" || existing?.sentAt) fail("The initial invitation has already been sent or claimed.", 409);
-  const key: MoverTemplateKey = lead ? "MOVER_OPPORTUNITY" : "MOVER_GENERAL";
+  if (existing?.status === "DRAFT" && existing.quoteRequestId === quoteRequestId && existing.attributionExpiresAt > new Date() && existing.templateVersion === MOVER_TEMPLATE_VERSION && (!initialTemplate || existing.templateKey === initialTemplate)) return existing;
+  if (existing && !["DRAFT", "DISCARDED"].includes(existing.status)) fail("The initial invitation has already been sent, cancelled or claimed.", 409);
+  if (prospect.businessType === "CLEANING" && (lead || quoteRequestId)) fail("Moving request summaries cannot be used for cleaning outreach.");
+  const key: PartnerTemplateKey = initialTemplate || (prospect.businessType === "CLEANING" ? "CLEANER_GENERAL" : lead ? "MOVER_OPPORTUNITY" : "MOVER_GENERAL");
+  if (!(templateKeysForBusiness(prospect.businessType) as readonly string[]).slice(0, 2).includes(key) || (key === "MOVER_OPPORTUNITY" && !lead)) fail("Choose an invitation for this company's business type.");
   const draft = campaignDraft(prospect, actor, campaign.id, 0, key, lead, quoteRequestId);
+  if (existing?.status === "DISCARDED") await tx.partnerMessage.updateMany({ where: { outreachMessageId: existing.id, status: "DELETED" }, data: { outreachMessageId: null } });
   return existing ? tx.outreachMessage.update({ where: { id: existing.id }, data: draft }) : tx.outreachMessage.create({ data: draft });
 }
 
-function campaignDraft(prospect: MoverProspect, actor: RecruitmentActor, campaignId: string, sequence: number, templateKey: MoverTemplateKey, lead: SafeLead | null, quoteRequestId: string | null, scheduledAt?: Date) {
+function campaignDraft(prospect: MoverProspect, actor: RecruitmentActor, campaignId: string, sequence: number, templateKey: PartnerTemplateKey, lead: SafeLead | null, quoteRequestId: string | null, scheduledAt?: Date) {
   const registration = secureToken(), unsubscribe = secureToken();
   const rendered = renderMoverOutreachEmail({ templateKey, companyName: prospect.companyName, contactName: prospect.contactName, lead,
     registrationUrl: `${baseUrl()}/api/recruitment/attribution?token=${registration}`,
     unsubscribeUrl: `${baseUrl()}/recruitment/unsubscribe?token=${unsubscribe}` });
-  return { ...rendered, campaignId, prospectId: prospect.id, adminId: actor.id, quoteRequestId, sequence, introduction: "", templateKey,
+  return { ...rendered, status: "DRAFT", campaignId, prospectId: prospect.id, adminId: actor.id, quoteRequestId, sequence, introduction: "", templateKey,
     templateVersion: MOVER_TEMPLATE_VERSION, scheduledAt, attributionHash: tokenHash(registration),
     attributionExpiresAt: addAucklandCalendar(new Date(), { months: 4 }), unsubscribeHash: tokenHash(unsubscribe) };
 }
@@ -98,17 +100,19 @@ export async function prepareCampaignStep(tx: Tx, actor: RecruitmentActor, campa
   if (sequence === 4 ? campaign.status !== "REVIEW_DUE" || !campaign.revisitAt || campaign.revisitAt > new Date()
     : campaign.status !== "ACTIVE" || !campaign.nextDueAt || campaign.nextDueAt > new Date()) fail("This email is not due or outreach is paused.");
   const existing = await tx.outreachMessage.findFirst({ where: { campaignId, sequence } });
-  if (existing) return existing;
+  if (existing && existing.status !== "DISCARDED") return existing;
   const parent = await tx.outreachMessage.findFirst({ where: { campaignId, status: "SENT" }, orderBy: { sequence: "desc" } });
   if (!parent) fail("The initial invitation has not been sent.");
-  return tx.outreachMessage.create({ data: { ...campaignDraft(prospect, actor, campaignId, sequence, followupKeys[sequence], null, null, sequence === 4 ? campaign.revisitAt! : campaign.nextDueAt!), followUpToId: parent.id } });
+  const data = { ...campaignDraft(prospect, actor, campaignId, sequence, templateKeysForBusiness(prospect.businessType)[followupKeys[sequence]], null, null, sequence === 4 ? campaign.revisitAt! : campaign.nextDueAt!), followUpToId: parent.id };
+  if (existing?.status === "DISCARDED") await tx.partnerMessage.updateMany({ where: { outreachMessageId: existing.id, status: "DELETED" }, data: { outreachMessageId: null } });
+  return existing ? tx.outreachMessage.update({ where: { id: existing.id }, data }) : tx.outreachMessage.create({ data });
 }
 
 export async function verifyCampaignSend(tx: Tx, message: OutreachMessage, prospect: MoverProspect) {
   if (!message.campaignId) return;
   await eligibleProspect(tx, prospect);
   const campaign = await tx.outreachCampaign.findUniqueOrThrow({ where: { id: message.campaignId } });
-  if (message.templateVersion !== MOVER_TEMPLATE_VERSION || !moverTemplateKeys.includes(message.templateKey as MoverTemplateKey)) fail("Refresh this draft to the current approved template before sending.", 409);
+  if (message.templateVersion !== MOVER_TEMPLATE_VERSION || !(templateKeysForBusiness(prospect.businessType) as readonly string[]).includes(message.templateKey || "")) fail("Refresh this draft to the current approved template before sending.", 409);
   if (message.sequence === 0) {
     if (campaign.status !== "DRAFT") fail("The initial invitation has already been sent or cancelled.", 409);
   } else {
@@ -286,5 +290,5 @@ export async function processMoverOutreachCampaigns(limit = 10, synchroniseInbox
 export async function moverOutreachHealth() {
   const config = await settings();
   const mailbox = await prisma.partnerMailbox.findUnique({ where: { id: "support" } });
-  return { enabled: config.automaticFollowUpsEnabled, blocked: mailboxAutomationBlock(mailbox), templates: moverTemplateKeys.map(key => ({ key, version: MOVER_TEMPLATE_VERSION, ...moverEmailTemplates[key] })) };
+  return { enabled: config.automaticFollowUpsEnabled, blocked: mailboxAutomationBlock(mailbox), templates: [...moverTemplateKeys, ...cleanerTemplateKeys].map(key => ({ key, businessType: key.startsWith("CLEANER_") ? "CLEANING" : "MOVING", version: MOVER_TEMPLATE_VERSION, ...outreachEmailTemplates[key] })) };
 }

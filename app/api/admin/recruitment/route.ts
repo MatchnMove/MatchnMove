@@ -49,7 +49,9 @@ import { rateLimit } from "@/lib/rate-limit";
 import { isRecruitmentMutationRequest } from "@/lib/recruitment-request";
 import { businessTypes } from "@/lib/partner-business";
 import { manageCampaign, moverOutreachHealth, prepareMoverCampaignDraft } from "@/lib/mover-outreach-campaigns";
-import { moverEmailTemplates } from "@/lib/mover-outreach-templates";
+import { moverEmailTemplates, cleanerEmailTemplates, cleanerTemplateKeys } from "@/lib/mover-outreach-templates";
+import { companyEmailProgress } from "@/lib/outreach-progress";
+import { discardOutreachDraft, removeDirectoryCompany, restoreDirectoryCompany } from "@/lib/recruitment-removal";
 import { sendPasswordResetEmail } from "@/lib/mover-auth";
 import { contactFollowUp } from "@/lib/prospect-contacts";
 
@@ -171,6 +173,7 @@ export async function GET(req: NextRequest) {
       const missingEmail = { OR: [{ email: null }, { email: "" }] };
       const missingPhone = { OR: [{ phone: null }, { phone: "" }] };
       const filter: Prisma.MoverProspectWhereInput = {
+        removedAt: query.get("removed") === "1" ? { not: null } : null,
         ...scope,
         ...(query.get("businessType") ? { businessType: z.enum(businessTypes).parse(query.get("businessType")) } : {}),
         AND: contactFilter === "followup" ? [{ OR: [missingEmail, missingPhone] }]
@@ -207,7 +210,10 @@ export async function GET(req: NextRequest) {
       const [items, count] = await Promise.all([
         prisma.moverProspect.findMany({
           where: filter,
-          include: { assignedAdmin: { select: { id: true, name: true } } },
+          include: { assignedAdmin: { select: { id: true, name: true } },
+            messages: { select: { sequence: true, status: true, sentAt: true, templateKey: true }, orderBy: { createdAt: "desc" }, take: 100 },
+            outreachCampaigns: { select: { nextDueAt: true, status: true }, orderBy: { createdAt: "desc" }, take: 1 },
+          },
           orderBy:
             query.get("sort") === "name"
               ? { companyName: "asc" }
@@ -217,7 +223,7 @@ export async function GET(req: NextRequest) {
         }),
         prisma.moverProspect.count({ where: filter }),
       ]);
-      data = { items, count, page };
+      data = { items: items.map(({ messages, outreachCampaigns, ...company }) => ({ ...company, emailProgress: companyEmailProgress(messages, outreachCampaigns[0]?.nextDueAt, outreachCampaigns[0]?.status) })), count, page };
     } else if (view === "prospect") {
       const prospect = await prisma.moverProspect.findFirst({
         where: { id: query.get("id") || "", ...scope },
@@ -227,6 +233,8 @@ export async function GET(req: NextRequest) {
             where: actor.canViewLeads ? {} : { quoteRequestId: null },
             select: {
               id: true,
+              templateKey: true,
+              sequence: true,
               subject: true,
               status: true,
               sentAt: true,
@@ -289,6 +297,7 @@ export async function GET(req: NextRequest) {
         where: {
           ...scope,
           businessType: "MOVING",
+          removedAt: null,
           status: {
             notIn: [
               "REGISTERED",
@@ -325,6 +334,7 @@ export async function GET(req: NextRequest) {
         where: {
           prospect: scope,
           ...(!actor.canViewLeads ? { quoteRequestId: null } : {}),
+          ...(query.get("id") ? {} : { status: { not: "DISCARDED" } }),
           ...(messageStatus ? { status: messageStatus } : {}),
           ...(messageKind === "general" ? { quoteRequestId: null } : messageKind === "lead" && actor.canViewLeads ? { quoteRequestId: { not: null } } : {}),
           ...(query.get("id") ? { id: query.get("id")! } : {}),
@@ -342,7 +352,7 @@ export async function GET(req: NextRequest) {
         prisma.outreachMessage.count({ where: { ...messageScope, status: "SENT" } }),
         prisma.outreachMessage.count({ where: { ...messageScope, status: "NEEDS_REVIEW" } }),
       ]);
-      data = { template: moverEmailTemplates.MOVER_GENERAL.body, cleaningTemplate: config.cleaningIntroduction, senderIdentity: config.senderIdentity,
+      data = { template: moverEmailTemplates.MOVER_GENERAL.body, cleaningTemplate: cleanerEmailTemplates.CLEANER_GENERAL.body, cleaningOpportunityTemplate: cleanerEmailTemplates.CLEANER_OPPORTUNITY.body, senderIdentity: config.senderIdentity,
         sendingReady: config.sendingEnabled && await emailReady() && Boolean(config.senderIdentity.trim()),
         drafts, sent, needsReview };
     } else if (view === "tasks") {
@@ -530,9 +540,12 @@ export async function POST(req: NextRequest) {
         return { messages };
       }
       if (body.action === "prepare_general") {
-        const input = z.object({ prospectId: z.string().min(1) }).parse(body.data);
-        return prepareDraft(tx, actor, input.prospectId);
+        const input = z.object({ prospectId: z.string().min(1), templateKey: z.enum(cleanerTemplateKeys).optional() }).parse(body.data);
+        return prepareDraft(tx, actor, input.prospectId, null, undefined, input.templateKey);
       }
+      if (body.action === "remove_company") return removeDirectoryCompany(tx, actor, body.data);
+      if (body.action === "restore_company") return restoreDirectoryCompany(tx, actor, body.data);
+      if (body.action === "discard_draft") return discardOutreachDraft(tx, actor, body.data);
       if (body.action === "campaign") return manageCampaign(tx, actor, body.data);
       if (body.action === "start_mover_campaign") {
         const input = z.object({ prospectId: z.string(), confirmed: z.literal(true) }).parse(body.data);
