@@ -62,6 +62,8 @@ export async function prepareMoverCampaignDraft(
   }
   if (campaign && campaign.status !== "DRAFT") {
     if (!startNew || openCampaignStatuses.includes(campaign.status)) {
+      if (quoteRequestId)
+        fail(`${prospect.companyName} already has an outreach sequence. Review it in the Email station before preparing a new invitation.`, 409);
       const initial = await tx.outreachMessage.findFirst({ where: { campaignId: campaign.id, sequence: 0 } });
       if (initial) return initial;
       fail("Review the current sequence before starting another invitation.", 409);
@@ -72,11 +74,11 @@ export async function prepareMoverCampaignDraft(
     await activity(tx, prospect.id, actor.id, "outreach_campaign_created", { campaignId: campaign.id, explicitNewSequence: startNew });
   }
   const existing = await tx.outreachMessage.findFirst({ where: { campaignId: campaign.id, sequence: 0 } });
-  if (existing?.status === "DRAFT" && existing.quoteRequestId === quoteRequestId && existing.attributionExpiresAt > new Date() && existing.templateVersion === MOVER_TEMPLATE_VERSION && (!initialTemplate || existing.templateKey === initialTemplate)) return existing;
   if (existing && !["DRAFT", "DISCARDED"].includes(existing.status)) fail("The initial invitation has already been sent, cancelled or claimed.", 409);
   if (prospect.businessType === "CLEANING" && (lead || quoteRequestId)) fail("Moving request summaries cannot be used for cleaning outreach.");
   const key: PartnerTemplateKey = initialTemplate || (prospect.businessType === "CLEANING" ? "CLEANER_GENERAL" : lead ? "MOVER_OPPORTUNITY" : "MOVER_GENERAL");
   if (!(templateKeysForBusiness(prospect.businessType) as readonly string[]).slice(0, 2).includes(key) || (key === "MOVER_OPPORTUNITY" && !lead)) fail("Choose an invitation for this company's business type.");
+  if (existing?.status === "DRAFT" && existing.quoteRequestId === quoteRequestId && existing.attributionExpiresAt > new Date() && existing.templateVersion === MOVER_TEMPLATE_VERSION && (existing.templateKey === key || (!quoteRequestId && !initialTemplate))) return existing;
   const draft = campaignDraft(prospect, actor, campaign.id, 0, key, lead, quoteRequestId);
   if (existing?.status === "DISCARDED") await tx.partnerMessage.updateMany({ where: { outreachMessageId: existing.id, status: "DELETED" }, data: { outreachMessageId: null } });
   return existing ? tx.outreachMessage.update({ where: { id: existing.id }, data: draft }) : tx.outreachMessage.create({ data: draft });

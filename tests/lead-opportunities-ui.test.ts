@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { JSDOM } from "jsdom";
+import { renderMoverOutreachEmail } from "../lib/mover-outreach-templates";
 
-test("lead opportunities loads only the selected request's company suggestions", async (t) => {
+test("Lead Opportunities loads matches and opens the prepared previews for the selected request", async (t) => {
   const dom = new JSDOM("<div id='root'></div>", {
     url: "https://www.matchnmove.co.nz/admin/recruitment/leads",
   });
@@ -40,23 +41,59 @@ test("lead opportunities loads only the selected request's company suggestions",
   const first = { id: "first", origin: "Auckland", destination: "Northland", moveDate: "2026-11-18", bedrooms: "2", property: "house" };
   const second = { ...first, id: "second", origin: "Wellington", destination: "Manawatū-Whanganui" };
   const company = { id: "company", companyName: "North Shore Removals", email: "dispatch@example.invalid", status: "NEW", consentBasis: "EXPRESS", reasons: ["Services origin: Auckland"], requiresReview: false };
+  const otherCompany = { ...company, id: "other-company", companyName: "Harbour Movers", email: "harbour@example.invalid" };
+  const companies = [company, otherCompany];
+  const timestamp = "2026-11-15T08:00:00.000Z";
+  const drafts = companies.map(prospect => ({
+    ...renderMoverOutreachEmail({
+      templateKey: "MOVER_OPPORTUNITY",
+      companyName: prospect.companyName,
+      lead: { ...first, createdAt: timestamp, dateFlexible: false },
+      registrationUrl: "https://example.invalid/register",
+      unsubscribeUrl: "https://example.invalid/unsubscribe",
+    }),
+    id: `draft-${prospect.id}`,
+    prospectId: prospect.id,
+    prospect,
+    quoteRequestId: first.id,
+    templateKey: "MOVER_OPPORTUNITY",
+    templateVersion: "test",
+    sequence: 0,
+    status: "DRAFT",
+    introduction: "",
+    updatedAt: timestamp,
+    sentAt: null,
+  }));
   const requests: string[] = [];
-  globalThis.fetch = async (url) => {
+  const prepared: string[][] = [];
+  const navigated: string[] = [];
+  let returnWrongInvitation = false;
+  globalThis.fetch = async (url, options) => {
+    if (options?.method === "POST") {
+      const { action, data } = JSON.parse(String(options.body));
+      assert.equal(action, "prepare");
+      assert.equal(data.quoteRequestId, first.id);
+      prepared.push(data.prospectIds);
+      const messages = drafts.filter(draft => data.prospectIds.includes(draft.prospectId));
+      return Response.json({ messages: returnWrongInvitation ? messages.map(draft => ({ ...draft, quoteRequestId: null, templateKey: "MOVER_GENERAL" })) : messages });
+    }
     const query = new URL(String(url), dom.window.location.origin).searchParams;
     requests.push(query.toString());
     if (query.get("view") === "leads") return Response.json({ items: [first, second], count: 2 });
-    if (query.get("id") === first.id) return Response.json({ lead: first, items: [company], truncated: false });
+    if (query.get("view") === "messages") return Response.json(drafts.filter(draft => query.getAll("id").includes(draft.id)));
+    if (query.get("view") === "email_station") return Response.json({ sendingReady: true });
+    if (query.get("id") === first.id) return Response.json({ lead: first, items: companies, truncated: false });
     assert.equal(query.get("id"), second.id);
     return pendingSecond;
   };
   let finishSecond!: (response: Response) => void;
   const pendingSecond = new Promise<Response>((resolve) => { finishSecond = resolve; });
 
-  const router = { bfcacheId: "lead-opportunities", back() {}, forward() {}, refresh() {}, hmrRefresh() {}, replace() {}, push() {}, prefetch: async () => {} };
+  const router = { bfcacheId: "lead-opportunities", back() {}, forward() {}, refresh() {}, hmrRefresh() {}, replace() {}, push(url: string) { navigated.push(url); }, prefetch: async () => {} };
   const actor = { id: "owner", name: "Owner", role: "OWNER", canViewLeads: true, canSend: true } as const;
-  await React.act(async () => root.render(React.createElement(AppRouterContext.Provider, { value: router },
-    React.createElement(SearchParamsContext.Provider, { value: new URLSearchParams() },
-      React.createElement(RecruitmentWorkspace, { actor, section: "leads" }),
+  const render = async (section: string, search = "") => React.act(async () => root.render(React.createElement(AppRouterContext.Provider, { value: router },
+    React.createElement(SearchParamsContext.Provider, { value: new URLSearchParams(search) },
+      React.createElement(RecruitmentWorkspace, { actor, section }),
     ),
   )));
 
@@ -67,6 +104,7 @@ test("lead opportunities loads only the selected request's company suggestions",
     button.click();
   });
   const invitationButton = () => [...document.querySelectorAll("button")].find((button) => button.textContent?.startsWith("Prepare"));
+  await render("leads");
   assert.match(document.body.textContent!, /Moving requests/);
   await clickLead(first.origin);
   assert.match(document.body.textContent!, /North Shore Removals/);
@@ -83,4 +121,34 @@ test("lead opportunities loads only the selected request's company suggestions",
   assert.equal(document.querySelector('[role="alert"]')?.textContent, "Lead summary not found.");
   assert.doesNotMatch(document.body.textContent!, /North Shore Removals|No eligible companies found/);
   assert.deepEqual(requests, ["view=leads&page=1", "view=matches&id=first", "view=matches&id=second"]);
+
+  await clickLead(first.origin);
+  const [firstCompany, secondCompany] = [...document.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')];
+  await React.act(async () => firstCompany.click());
+  returnWrongInvitation = true;
+  await React.act(async () => invitationButton()?.click());
+  assert.match(document.querySelector('[role="alert"]')?.textContent ?? "", /selected moving request/);
+  assert.deepEqual(navigated, []);
+
+  returnWrongInvitation = false;
+  await React.act(async () => invitationButton()?.click());
+  assert.deepEqual(navigated, ["/admin/recruitment/messages?id=draft-company"]);
+  await React.act(async () => secondCompany.click());
+  await React.act(async () => invitationButton()?.click());
+  assert.deepEqual(prepared, [[company.id], [company.id], [company.id, otherCompany.id]]);
+  const review = new URL(navigated.at(-1)!, dom.window.location.origin);
+  assert.deepEqual(review.searchParams.getAll("id"), ["draft-company", "draft-other-company"]);
+
+  await render("messages", review.search);
+  assert.ok(requests.includes("view=messages&id=draft-company&id=draft-other-company"));
+  assert.match(document.body.textContent!, /North Shore Removals/);
+  assert.match(document.body.textContent!, /Harbour Movers/);
+  const preview = document.querySelector<HTMLIFrameElement>('iframe[title="Invitation preview for North Shore Removals"]');
+  assert.match(preview?.srcdoc ?? "", /Moving from:<\/strong> Auckland/);
+  assert.match(preview?.srcdoc ?? "", /Moving to:<\/strong> Northland/);
+  assert.match(document.querySelector("pre")?.textContent ?? "", /Preferred moving date: 2026-11-18/);
+  const openSecond = [...document.querySelectorAll("button")].find(button => button.textContent === "Preview Email");
+  assert.ok(openSecond);
+  await React.act(async () => openSecond.click());
+  assert.match(document.querySelector<HTMLIFrameElement>('iframe[title="Invitation preview for Harbour Movers"]')?.srcdoc ?? "", /Moving to:<\/strong> Northland/);
 });

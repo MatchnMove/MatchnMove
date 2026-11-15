@@ -1518,26 +1518,35 @@ function LeadCompanyMatches({
   const selectedIds = matches?.items
     .filter((company) => selected.includes(company.id) && validBusinessEmail(company.email))
     .map((company) => company.id) ?? [];
-  const [busy, setBusy] = useState(false);
+  const [pending, setPending] = useState<"prepare" | "withdraw" | null>(null);
   const [actionError, setActionError] = useState("");
   const router = useRouter();
 
   async function prepare() {
-    setBusy(true);
+    setPending("prepare");
     setActionError("");
     try {
-      await mutate("prepare", { quoteRequestId: leadId, prospectIds: selectedIds });
-      router.push("/admin/recruitment/messages");
+      const { messages } = await mutate<{ messages: Pick<Message, "id" | "status" | "quoteRequestId" | "templateKey">[] }>("prepare", {
+        quoteRequestId: leadId,
+        prospectIds: selectedIds,
+      });
+      if (messages.length !== selectedIds.length || messages.some(message =>
+        message.status !== "DRAFT" || message.quoteRequestId !== leadId || message.templateKey !== "MOVER_OPPORTUNITY"
+      )) {
+        throw new Error("Could not prepare a draft for the selected moving request.");
+      }
+      const query = new URLSearchParams(messages.map(message => ["id", message.id]));
+      router.push(`/admin/recruitment/messages?${query}`);
     } catch (error) {
       setActionError((error as Error).message);
     } finally {
-      setBusy(false);
+      setPending(null);
     }
   }
 
   async function withdraw() {
     if (!window.confirm("Withdraw recruitment permission for this lead and cancel unsent drafts?")) return;
-    setBusy(true);
+    setPending("withdraw");
     setActionError("");
     try {
       await mutate("withdraw_lead_permission", { id: leadId });
@@ -1545,7 +1554,7 @@ function LeadCompanyMatches({
     } catch (error) {
       setActionError((error as Error).message);
     } finally {
-      setBusy(false);
+      setPending(null);
     }
   }
 
@@ -1557,7 +1566,7 @@ function LeadCompanyMatches({
           {actor.role === "OWNER" && (
             <button
               className={secondaryClass}
-              disabled={busy}
+              disabled={Boolean(pending)}
               onClick={withdraw}
             >
               Withdraw summary permission
@@ -1565,11 +1574,10 @@ function LeadCompanyMatches({
           )}
           <button
             className={buttonClass}
-            disabled={busy || !selectedIds.length || selectedIds.length > 20}
+            disabled={Boolean(pending) || !selectedIds.length || selectedIds.length > 20}
             onClick={prepare}
           >
-            Prepare {selectedIds.length || ""} invitation
-            {selectedIds.length === 1 ? "" : "s"}
+            {pending === "prepare" ? "Preparing drafts…" : `Prepare ${selectedIds.length || ""} invitation${selectedIds.length === 1 ? "" : "s"}`}
           </button>
         </div>
       }
@@ -1635,8 +1643,11 @@ function LeadCompanyMatches({
 
 function Messages({ actor }: { actor: Actor }) {
   const search = useSearchParams();
-  const id = search.get("id");
-  return id ? <EmailMessageDetails key={id} actor={actor} id={id} /> : <EmailStationHome key={(search.get("company") || "") + ":" + (search.get("compose") || "")} actor={actor} />;
+  const ids = search.getAll("id").filter(Boolean);
+  const query = new URLSearchParams(ids.map(id => ["id", id])).toString();
+  return ids.length
+    ? <EmailMessageDetails key={query} actor={actor} query={query} batch={ids.length > 1} />
+    : <EmailStationHome key={(search.get("company") || "") + ":" + (search.get("compose") || "")} actor={actor} />;
 }
 
 function EmailStationHome({ actor }: { actor: Actor }) {
@@ -1650,14 +1661,24 @@ function StationComposer() {
   return <><State error={station.error} loading={station.loading} />{station.data && <GeneralEmailComposer station={station.data} />}</>;
 }
 
-function EmailMessageDetails({ actor, id }: { actor: Actor; id: string }) {
+function EmailMessageDetails({ actor, query, batch }: { actor: Actor; query: string; batch: boolean }) {
   const station = useData<EmailStationData>("view=email_station");
-  const { data, error, loading, load } = useData<Message[]>("view=messages&id=" + encodeURIComponent(id));
+  const { data, error, loading, load } = useData<Message[]>(`view=messages&${query}`);
   return <div className="space-y-5">
     <Link className="inline-flex items-center gap-1 text-sm font-bold text-teal-700" href="/admin/recruitment/messages"><ChevronLeft size={16} />Email station</Link>
     <State error={error || station.error} loading={loading} />
-    {data?.map(message => <EmailReview key={message.id + ":" + message.updatedAt} actor={actor} message={message} sendingReady={station.data?.sendingReady ?? false} onSaved={async () => { await Promise.all([load(), station.load()]); }} expanded />)}
-    {!loading && data?.length === 0 && <Empty title="Email not found" detail="Return to the Email station and select a company to review its emails." />}
+    {data?.map((message, index) => (
+      <EmailReview
+        key={`${message.id}:${message.updatedAt}`}
+        actor={actor}
+        message={message}
+        sendingReady={station.data?.sendingReady ?? false}
+        onSaved={async () => { await Promise.all([load(), station.load()]); }}
+        expanded={index === 0}
+        returnAfterDiscard={!batch}
+      />
+    ))}
+    {data?.length === 0 && <Empty title={batch ? "No emails found" : "Email not found"} detail="Return to the Email station and select a company to review its emails." />}
   </div>;
 }
 
@@ -1719,12 +1740,14 @@ function EmailReview({
   onSaved,
   expanded,
   sendingReady,
+  returnAfterDiscard,
 }: {
   actor: Actor;
   message: Message;
   onSaved: () => Promise<void>;
   expanded: boolean;
   sendingReady: boolean;
+  returnAfterDiscard: boolean;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(expanded);
@@ -1742,7 +1765,7 @@ function EmailReview({
         ...(name === "send" || name === "discard_draft" ? { confirmed: true } : { introduction: intro }),
       });
       await onSaved();
-      if (name === "discard_draft") router.push("/admin/recruitment/messages?status=DRAFT");
+      if (name === "discard_draft" && returnAfterDiscard) router.push("/admin/recruitment/messages?status=DRAFT");
     } catch (error) {
       setError((error as Error).message);
     } finally {

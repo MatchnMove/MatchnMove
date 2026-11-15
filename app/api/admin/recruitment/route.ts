@@ -342,15 +342,16 @@ export async function GET(req: NextRequest) {
     } else if (view === "messages") {
       const messageStatus = query.get("status") ? z.enum(["DRAFT", "SENT", "NEEDS_REVIEW", "CANCELLED", "SENDING"]).parse(query.get("status")) : undefined;
       const messageKind = query.get("kind") ? z.enum(["general", "lead"]).parse(query.get("kind")) : undefined;
+      const messageIds = z.array(z.string().min(1).max(100)).max(20).parse(query.getAll("id"));
       if (messageKind === "lead" && !actor.canViewLeads) fail("Lead summary access has not been authorised.", 403);
       data = await prisma.outreachMessage.findMany({
         where: {
           prospect: scope,
           ...(!actor.canViewLeads ? { quoteRequestId: null } : {}),
-          ...(query.get("id") ? {} : { status: { not: "DISCARDED" } }),
+          ...(messageIds.length === 1 ? {} : { status: { not: "DISCARDED" } }),
           ...(messageStatus ? { status: messageStatus } : {}),
           ...(messageKind === "general" ? { quoteRequestId: null } : messageKind === "lead" && actor.canViewLeads ? { quoteRequestId: { not: null } } : {}),
-          ...(query.get("id") ? { id: query.get("id")! } : {}),
+          ...(messageIds.length ? { id: { in: messageIds } } : {}),
         },
         include: { prospect: { select: { companyName: true, email: true } } },
         orderBy: { createdAt: "desc" },
@@ -542,7 +543,7 @@ export async function POST(req: NextRequest) {
         const input = z
           .object({
             prospectIds: z.array(z.string()).min(1).max(20),
-            quoteRequestId: z.string(),
+            quoteRequestId: z.string().min(1),
           })
           .parse(body.data);
         const messages = [];
