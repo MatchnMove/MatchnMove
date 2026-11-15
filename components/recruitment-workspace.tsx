@@ -1427,46 +1427,15 @@ function ProspectDetails({ actor, id }: { actor: Actor; id: string }) {
 
 function LeadOpportunities({ actor }: { actor: Actor }) {
   const search = useSearchParams();
-  const chosenId = search.get("lead");
-  const [leadId, setLeadId] = useState(chosenId || "");
-  const [selected, setSelected] = useState<string[]>(
-    search.get("prospectId") ? [search.get("prospectId")!] : [],
-  );
+  const [leadId, setLeadId] = useState(search.get("lead") || "");
   const [page, setPage] = useState(1);
   const { data, error, loading, load } = useData<{
     items: Lead[];
     count: number;
   }>(`view=leads&page=${page}`);
-  const { data: matches, error: matchError } = useData<{
-    lead: Lead;
-    items: (Prospect & {
-      score: number;
-      reasons: string[];
-      requiresReview: boolean;
-    })[];
-    truncated: boolean;
-  }>(leadId ? `view=matches&id=${encodeURIComponent(leadId)}` : "view=leads");
-  const [busy, setBusy] = useState(false);
-  const [actionError, setActionError] = useState("");
-  const router = useRouter();
-  async function prepare() {
-    setBusy(true);
-    setActionError("");
-    try {
-      await mutate("prepare", {
-        quoteRequestId: leadId,
-        prospectIds: selected,
-      });
-      router.push("/admin/recruitment/messages");
-    } catch (error) {
-      setActionError((error as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
   return (
     <div className="space-y-5">
-      <State error={error || actionError} loading={loading} />
+      <State error={error} loading={loading} />
       <p className="rounded-xl border border-teal-100 bg-teal-50 p-4 text-sm leading-6 text-teal-800">
         Customer-approved summaries only. Names, phone numbers, email addresses,
         street addresses and free-form notes remain private.
@@ -1477,10 +1446,7 @@ function LeadOpportunities({ actor }: { actor: Actor }) {
             {data.items.map((lead) => (
               <button
                 key={lead.id}
-                onClick={() => {
-                  setLeadId(lead.id);
-                  setSelected([]);
-                }}
+                onClick={() => setLeadId(lead.id)}
                 className={`rounded-xl border p-4 text-left ${leadId === lead.id ? "border-teal-600 bg-teal-50" : "border-slate-200 hover:border-teal-300"}`}
               >
                 <p className="font-bold">
@@ -1515,105 +1481,155 @@ function LeadOpportunities({ actor }: { actor: Actor }) {
         </div>
       </Panel>
       {leadId && (
-        <Panel
-          title="Suggested moving companies"
-          action={
-            <div className="flex flex-wrap gap-2">
-              {actor.role === "OWNER" && (
-                <button
-                  className={secondaryClass}
-                  disabled={busy}
-                  onClick={async () => {
-                    if (
-                      !window.confirm(
-                        "Withdraw recruitment permission for this lead and cancel unsent drafts?",
-                      )
-                    )
-                      return;
-                    setBusy(true);
-                    try {
-                      await mutate("withdraw_lead_permission", { id: leadId });
-                      setLeadId("");
-                      await load();
-                    } catch (error) {
-                      setActionError((error as Error).message);
-                    } finally {
-                      setBusy(false);
-                    }
-                  }}
-                >
-                  Withdraw summary permission
-                </button>
-              )}
-              <button
-                className={buttonClass}
-                disabled={busy || !selected.length || selected.length > 20}
-                onClick={prepare}
-              >
-                Prepare {selected.length || ""} invitation
-                {selected.length === 1 ? "" : "s"}
-              </button>
-            </div>
-          }
-        >
-          <State error={matchError} loading={!matches} />
-          <p className="mb-4 text-xs text-slate-500">
-            Preparing creates individual drafts. Review each email and approve
-            sending separately. Up to 20 drafts at a time.
-          </p>
-          {matches?.items?.length ? (
-            <ul className="divide-y divide-slate-100">
-              {matches.items.map((p) => (
-                <li key={p.id} className="py-4">
-                  <label className="flex items-start gap-3">
-                    <input
-                      className="mt-1"
-                      type="checkbox"
-                      checked={selected.includes(p.id)}
-                      disabled={!validBusinessEmail(p.email)}
-                      onChange={(e) =>
-                        setSelected(
-                          e.target.checked
-                            ? [...selected, p.id]
-                            : selected.filter((id) => id !== p.id),
-                        )
-                      }
-                    />
-                    <div className="flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-bold">{p.companyName}</span>
-                        <Badge
-                          value={
-                            p.requiresReview ? "REVIEW_REQUIRED" : p.status
-                          }
-                        />
-                      </div>
-                      <p className="mt-1 text-xs text-slate-500">
-                        {p.reasons.join(" · ")}
-                      </p>
-                      <p className="mt-2 text-xs text-slate-400">
-                        {p.email || "No email — manual contact follow-up required"} · Contact permission: {label(p.consentBasis)}
-                      </p>
-                    </div>
-                  </label>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <Empty
-              title="No eligible companies found"
-              detail="Add companies and record service coverage and contact permission. Suppressed and closed recruitments are excluded."
-            />
-          )}
-          {matches?.truncated && (
-            <p className="mt-3 text-xs text-amber-700">
-              Showing suggestions from the first 500 eligible companies. Review
-              service coverage before selecting.
-            </p>
-          )}
-        </Panel>
+        <LeadCompanyMatches
+          key={leadId}
+          actor={actor}
+          leadId={leadId}
+          prospectId={search.get("prospectId")}
+          onWithdrawn={async () => {
+            setLeadId((current) => (current === leadId ? "" : current));
+            await load();
+          }}
+        />
       )}
     </div>
+  );
+}
+
+function LeadCompanyMatches({
+  actor,
+  leadId,
+  prospectId,
+  onWithdrawn,
+}: {
+  actor: Actor;
+  leadId: string;
+  prospectId: string | null;
+  onWithdrawn: () => Promise<void>;
+}) {
+  const { data: matches, error, loading } = useData<{
+    items: (Prospect & {
+      reasons: string[];
+      requiresReview: boolean;
+    })[];
+    truncated: boolean;
+  }>(`view=matches&id=${encodeURIComponent(leadId)}`);
+  const [selected, setSelected] = useState(prospectId ? [prospectId] : []);
+  const selectedIds = matches?.items
+    .filter((company) => selected.includes(company.id) && validBusinessEmail(company.email))
+    .map((company) => company.id) ?? [];
+  const [busy, setBusy] = useState(false);
+  const [actionError, setActionError] = useState("");
+  const router = useRouter();
+
+  async function prepare() {
+    setBusy(true);
+    setActionError("");
+    try {
+      await mutate("prepare", { quoteRequestId: leadId, prospectIds: selectedIds });
+      router.push("/admin/recruitment/messages");
+    } catch (error) {
+      setActionError((error as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function withdraw() {
+    if (!window.confirm("Withdraw recruitment permission for this lead and cancel unsent drafts?")) return;
+    setBusy(true);
+    setActionError("");
+    try {
+      await mutate("withdraw_lead_permission", { id: leadId });
+      await onWithdrawn();
+    } catch (error) {
+      setActionError((error as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Panel
+      title="Suggested moving companies"
+      action={
+        <div className="flex flex-wrap gap-2">
+          {actor.role === "OWNER" && (
+            <button
+              className={secondaryClass}
+              disabled={busy}
+              onClick={withdraw}
+            >
+              Withdraw summary permission
+            </button>
+          )}
+          <button
+            className={buttonClass}
+            disabled={busy || !selectedIds.length || selectedIds.length > 20}
+            onClick={prepare}
+          >
+            Prepare {selectedIds.length || ""} invitation
+            {selectedIds.length === 1 ? "" : "s"}
+          </button>
+        </div>
+      }
+    >
+      <State error={error || actionError} loading={loading} />
+      <p className="mb-4 text-xs text-slate-500">
+        Preparing creates individual drafts. Review each email and approve
+        sending separately. Up to 20 drafts at a time.
+      </p>
+      {matches?.items.length ? (
+        <ul className="divide-y divide-slate-100">
+          {matches.items.map((p) => (
+            <li key={p.id} className="py-4">
+              <label className="flex items-start gap-3">
+                <input
+                  className="mt-1"
+                  type="checkbox"
+                  checked={selectedIds.includes(p.id)}
+                  disabled={!validBusinessEmail(p.email)}
+                  onChange={(e) =>
+                    setSelected(
+                      e.target.checked
+                        ? [...selected, p.id]
+                        : selected.filter((id) => id !== p.id),
+                    )
+                  }
+                />
+                <div className="flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-bold">{p.companyName}</span>
+                    <Badge
+                      value={
+                        p.requiresReview ? "REVIEW_REQUIRED" : p.status
+                      }
+                    />
+                  </div>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {p.reasons.join(" · ")}
+                  </p>
+                  <p className="mt-2 text-xs text-slate-400">
+                    {p.email || "No email — manual contact follow-up required"} · Contact permission: {label(p.consentBasis)}
+                  </p>
+                </div>
+              </label>
+            </li>
+          ))}
+        </ul>
+      ) : matches && (
+        <Empty
+          title="No eligible companies found"
+          detail="Add companies and record service coverage and contact permission. Suppressed and closed recruitments are excluded."
+        />
+      )}
+      {matches?.truncated && (
+        <p className="mt-3 text-xs text-amber-700">
+          Showing suggestions from the first 500 eligible companies. Review
+          service coverage before selecting.
+        </p>
+      )}
+    </Panel>
   );
 }
 
