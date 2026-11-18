@@ -1437,8 +1437,9 @@ function LeadOpportunities({ actor }: { actor: Actor }) {
     <div className="space-y-5">
       <State error={error} loading={loading} />
       <p className="rounded-xl border border-teal-100 bg-teal-50 p-4 text-sm leading-6 text-teal-800">
-        Customer-approved summaries only. Names, phone numbers, email addresses,
-        street addresses and free-form notes remain private.
+        Lead opportunity emails include the client&apos;s name, phone, email,
+        pickup and destination addresses, and moving details. Review the email
+        before approving it for the selected company.
       </p>
       <Panel title="Moving requests">
         {data?.items.length ? (

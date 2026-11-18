@@ -19,7 +19,7 @@ import { quoteSchema } from "@/lib/validators";
 import { getClientIp, rateLimit } from "@/lib/rate-limit";
 import { revalidateAboutPage } from "@/lib/public-cache";
 
-const CONSENT_VERSION = "2026-10-cleaning-property-v3";
+const CONSENT_VERSION = "2026-11-moving-contact-details-v4";
 
 function getBaseUrl(request: NextRequest) {
   return (

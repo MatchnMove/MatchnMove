@@ -1560,9 +1560,9 @@ export function QuoteForm() {
                 />
                 <span className="text-sm leading-6 text-slate-600">
                   Optional: allow Match &apos;n Move to invite relevant moving
-                  companies using a general summary of this request (regions,
-                  date and home size). Your name, contact details and exact
-                  addresses will remain private.{" "}
+                  companies by sharing your name, phone number, email, pickup
+                  and destination addresses, moving date and property details
+                  so they can contact you directly about your move.{" "}
                   <a
                     className="underline"
                     href="/privacy"

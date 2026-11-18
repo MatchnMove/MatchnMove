@@ -48,7 +48,10 @@ test("Lead Opportunities loads matches and opens the prepared previews for the s
     ...renderMoverOutreachEmail({
       templateKey: "MOVER_OPPORTUNITY",
       companyName: prospect.companyName,
-      lead: { ...first, createdAt: timestamp, dateFlexible: false },
+      lead: {
+        ...first, createdAt: timestamp, dateFlexible: false,
+        customer: { name: "Taylor Jones", email: "taylor@example.invalid", phone: "0211234567", fromAddress: "12 Example Street, Auckland, 1010", toAddress: "8 Sample Road, Whangārei, 0110" },
+      },
       registrationUrl: "https://example.invalid/register",
       unsubscribeUrl: "https://example.invalid/unsubscribe",
     }),
@@ -146,7 +149,10 @@ test("Lead Opportunities loads matches and opens the prepared previews for the s
   const preview = document.querySelector<HTMLIFrameElement>('iframe[title="Invitation preview for North Shore Removals"]');
   assert.match(preview?.srcdoc ?? "", /Moving from:<\/strong> Auckland/);
   assert.match(preview?.srcdoc ?? "", /Moving to:<\/strong> Northland/);
+  assert.match(preview?.srcdoc ?? "", /Client phone:<\/strong> 0211234567/);
+  assert.match(preview?.srcdoc ?? "", /Pickup address:<\/strong> 12 Example Street, Auckland, 1010/);
   assert.match(document.querySelector("pre")?.textContent ?? "", /Preferred moving date: 2026-11-18/);
+  assert.match(document.querySelector("pre")?.textContent ?? "", /Client email: taylor@example.invalid/);
   const openSecond = [...document.querySelectorAll("button")].find(button => button.textContent === "Preview Email");
   assert.ok(openSecond);
   await React.act(async () => openSecond.click());

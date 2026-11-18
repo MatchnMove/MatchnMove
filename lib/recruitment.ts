@@ -12,8 +12,8 @@ import {
   defaultCleaningIntroduction,
   manualStatuses,
   normalizeCompany,
-  recruitmentLeadSelect,
-  safeLeadSummary,
+  recruitmentEmailLeadSelect,
+  recruitmentEmailLead,
   scopeProspects,
   stoppedStatuses,
 } from "@/lib/recruitment-policy";
@@ -232,10 +232,10 @@ export async function prepareDraft(
   if (blocked) fail(blocked);
   const { prepareMoverCampaignDraft, opportunityEligible } = await import("@/lib/mover-outreach-campaigns");
   const quote = !followUpToId && quoteRequestId ? await tx.quoteRequest.findFirst({
-    where: { id: quoteRequestId, recruitmentSharingAllowed: true, sharingConsentAt: { not: null } }, select: recruitmentLeadSelect,
+    where: { id: quoteRequestId, recruitmentSharingAllowed: true, sharingConsentAt: { not: null } }, select: recruitmentEmailLeadSelect,
   }) : null;
   if (!followUpToId && quoteRequestId && (!quote || !opportunityEligible(quote))) fail("An authorised, current moving opportunity was not found.", 404);
-  return prepareMoverCampaignDraft(tx, actor, prospect, quote ? safeLeadSummary(quote) : null, followUpToId ? null : quoteRequestId, followUpToId, false, initialTemplate);
+  return prepareMoverCampaignDraft(tx, actor, prospect, quote ? recruitmentEmailLead(quote) : null, followUpToId ? null : quoteRequestId, followUpToId, false, initialTemplate);
 }
 
 export async function cancelFollowUps(tx: Tx, prospectId: string) {

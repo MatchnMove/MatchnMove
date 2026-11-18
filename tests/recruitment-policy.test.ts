@@ -81,7 +81,7 @@ test("normalisation catches company spelling separators and email casing", () =>
   );
   assert.equal(normalizeEmail(" Carli@Example.com "), "carli@example.com");
 });
-test("summaries and rendered invitations exclude all customer PII and arbitrary free-form fields", () => {
+test("summary projections omit client contact details and arbitrary customer fields", () => {
   const lead = safeLeadSummary(customer);
   const email = renderRecruitmentEmail({
     companyName: "A & B <Movers>",

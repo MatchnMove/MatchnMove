@@ -6,14 +6,14 @@ import { canCleanerAccessLeads } from "@/lib/cleaner-readiness";
 import type { PartnerBusinessType } from "@/lib/partner-business";
 import type { OutreachMessage } from "@prisma/client";
 import { classifyOutreachFailure, mailboxAutomationBlock, opportunityEligible, recordCampaignSent, verifyCampaignSend } from "@/lib/mover-outreach-campaigns";
-import { MOVER_TEMPLATE_VERSION, renderMoverOutreachEmail, type PartnerTemplateKey } from "@/lib/mover-outreach-templates";
+import { outreachTemplateVersion, renderMoverOutreachEmail, type PartnerTemplateKey } from "@/lib/mover-outreach-templates";
 import { SUPPORT_MAILBOX } from "@/lib/partner-inbox-policy";
 import {
   RecruitmentActor,
   contactBlockReason,
   renderRecruitmentEmail,
-  safeLeadSummary,
-  recruitmentLeadSelect,
+  recruitmentEmailLead,
+  recruitmentEmailLeadSelect,
   tokenHash,
 } from "@/lib/recruitment-policy";
 import {
@@ -74,19 +74,19 @@ export async function editDraft(tx: Tx, actor: RecruitmentActor, raw: unknown) {
   const config = await settings(tx);
   const rendered = message.templateKey || message.campaignId ? renderMoverOutreachEmail({
     templateKey: message.templateKey as PartnerTemplateKey, companyName: prospect.companyName, contactName: prospect.contactName,
-    personalNote: input.introduction, lead: quote ? safeLeadSummary(quote) : null, registrationUrl, unsubscribeUrl,
+    personalNote: input.introduction, lead: quote ? recruitmentEmailLead(quote) : null, registrationUrl, unsubscribeUrl,
   }) : renderRecruitmentEmail({
     companyName: prospect.companyName,
     businessType: prospect.businessType,
     introduction: input.introduction,
-    lead: quote ? safeLeadSummary(quote) : null,
+    lead: quote ? recruitmentEmailLead(quote) : null,
     registrationUrl,
     unsubscribeUrl,
     sender: config.senderIdentity || "Match 'n Move",
   });
   const result = await tx.outreachMessage.update({
     where: { id: message.id },
-    data: { introduction: input.introduction, ...rendered, ...(message.templateKey || message.campaignId ? { templateVersion: MOVER_TEMPLATE_VERSION } : {}) },
+    data: { introduction: input.introduction, ...rendered, ...(message.templateKey || message.campaignId ? { templateVersion: outreachTemplateVersion(message.templateKey) } : {}) },
   });
   await activity(tx, prospect.id, actor.id, "draft_updated", {
     messageId: message.id,
@@ -114,7 +114,7 @@ export async function verifySend(tx: Tx, actor: RecruitmentActor, messageId: str
     where: { id: messageId },
     include: {
       quoteRequest: {
-        select: { ...recruitmentLeadSelect, recruitmentSharingAllowed: true, sharingConsentAt: true },
+        select: { ...recruitmentEmailLeadSelect, recruitmentSharingAllowed: true, sharingConsentAt: true },
       },
     },
   });
@@ -142,7 +142,7 @@ export async function verifySend(tx: Tx, actor: RecruitmentActor, messageId: str
     message.quoteRequestId && (!message.quoteRequest?.recruitmentSharingAllowed ||
     !message.quoteRequest.sharingConsentAt)
   )
-    fail("Customer permission for this summary is no longer available.");
+    fail("Customer permission for this moving request is no longer available.");
   if ((message.templateKey || message.campaignId) && message.quoteRequest && !opportunityEligible(message.quoteRequest))
     fail("This moving opportunity is no longer current. Prepare a general invitation instead.");
   if (message.templateKey || message.campaignId) {
@@ -150,8 +150,8 @@ export async function verifySend(tx: Tx, actor: RecruitmentActor, messageId: str
     const unsubscribeUrl = message.text.match(/Unsubscribe: (https?:\/\/\S+)/)?.[1];
     if (!registrationUrl || !unsubscribeUrl) fail("Refresh this draft's invitation links before sending.");
     const current = renderMoverOutreachEmail({ templateKey: message.templateKey as PartnerTemplateKey, companyName: prospect.companyName, contactName: prospect.contactName,
-      lead: message.quoteRequest ? safeLeadSummary(message.quoteRequest) : null, personalNote: message.introduction, registrationUrl, unsubscribeUrl });
-    if (current.text !== message.text || current.subject !== message.subject) fail("Company or approved summary details changed. Save the draft and review its refreshed preview before sending.", 409);
+      lead: message.quoteRequest ? recruitmentEmailLead(message.quoteRequest) : null, personalNote: message.introduction, registrationUrl, unsubscribeUrl });
+    if (current.text !== message.text || current.subject !== message.subject) fail("Company or client details changed. Save the draft and review its refreshed preview before sending.", 409);
   }
   if (message.attributionExpiresAt < new Date())
     fail("This draft has expired. Ask the owner to review.");

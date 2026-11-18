@@ -63,7 +63,7 @@ export function contactBlockReason(
   return null;
 }
 
-// Explicit allowlist: never serialize arbitrary customer text, transcripts or addresses.
+// The list and matching views use this summary projection.
 export const recruitmentLeadSelect = {
   id: true,
   fromRegion: true,
@@ -117,6 +117,61 @@ export function safeLeadSummary(lead: LeadInput) {
   };
 }
 export type SafeLead = ReturnType<typeof safeLeadSummary>;
+export const recruitmentEmailLeadSelect = {
+  ...recruitmentLeadSelect,
+  name: true,
+  email: true,
+  phone: true,
+  fromAddress: true,
+  fromCity: true,
+  fromPostcode: true,
+  toAddress: true,
+  toCity: true,
+  toPostcode: true,
+} as const;
+type CustomerContact = {
+  name: string;
+  email: string;
+  phone: string;
+  fromAddress: string;
+  toAddress: string;
+};
+export type RecruitmentEmailLead = SafeLead & { customer?: CustomerContact };
+
+export function recruitmentEmailLead(lead: LeadInput & Partial<CustomerContact & {
+  fromCity: string;
+  fromPostcode: string;
+  toCity: string;
+  toPostcode: string;
+}>): RecruitmentEmailLead {
+  const address = (...parts: (string | undefined)[]) => parts
+    .map(part => part?.trim())
+    .filter(part => part && part.toLowerCase() !== "not provided")
+    .join(", ");
+  return {
+    ...safeLeadSummary(lead),
+    customer: {
+      name: lead.name?.trim() || "",
+      email: lead.email?.trim() || "",
+      phone: lead.phone?.trim() || "",
+      fromAddress: address(lead.fromAddress, lead.fromCity, lead.fromPostcode),
+      toAddress: address(lead.toAddress, lead.toCity, lead.toPostcode),
+    },
+  };
+}
+
+export function recruitmentContactRows(lead: RecruitmentEmailLead): Array<[string, string]> {
+  if (!lead.customer) return [];
+  const rows: Array<[string, string]> = [
+    ["Client name", lead.customer.name],
+    ["Client phone", lead.customer.phone],
+    ["Client email", lead.customer.email],
+    ["Pickup address", lead.customer.fromAddress],
+    ["Destination address", lead.customer.toAddress],
+  ];
+  return rows.filter(([, value]) => value.trim());
+}
+
 export function matchProspect(
   prospect: {
     operatingRegion: string | null;
@@ -186,7 +241,7 @@ export function renderRecruitmentEmail(input: {
   companyName: string;
   businessType?: PartnerBusinessType;
   introduction: string;
-  lead: SafeLead | null;
+  lead: RecruitmentEmailLead | null;
   registrationUrl: string;
   unsubscribeUrl: string;
   sender: string;
@@ -195,10 +250,13 @@ export function renderRecruitmentEmail(input: {
     ? `Join Match 'n Move: ${input.lead.origin} to ${input.lead.destination}`
     : "An invitation to join Match 'n Move";
   const details = input.lead
-    ? `${input.lead.origin} to ${input.lead.destination}\nMoving date: ${input.lead.moveDate}${input.lead.dateFlexible ? " (flexible)" : ""}\nProperty: ${input.lead.property}; bedrooms: ${input.lead.bedrooms}`
+    ? [
+        recruitmentContactRows(input.lead).map(([title, value]) => `${title}: ${value}`).join("\n"),
+        `${input.lead.origin} to ${input.lead.destination}\nMoving date: ${input.lead.moveDate}${input.lead.dateFlexible ? " (flexible)" : ""}\nProperty: ${input.lead.property}; bedrooms: ${input.lead.bedrooms}`,
+      ].filter(Boolean).join("\n")
     : "Free to join\nChoose your service areas\nReview lead pricing before opening customer details";
   const disclaimer = input.lead
-    ? "This is an invitation to join Match 'n Move. Availability may change; this request is not reserved or guaranteed. Customer contact details are available only through authorised platform access."
+    ? `This is an invitation to join Match 'n Move. Availability may change; this request is not reserved or guaranteed.${input.lead.customer ? " Contact the client using the details above to discuss their move." : " Customer contact details are available through authorised platform access."}`
     : `This is a general invitation to join Match 'n Move, not an offer of a specific ${input.businessType === "CLEANING" ? "cleaning" : "moving"} job. Enquiry volumes and bookings are not guaranteed.`;
   const text = [
     `Hi ${input.companyName},`,

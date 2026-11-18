@@ -235,7 +235,10 @@ test("mover campaign persistence, real SMTP, reply import and manual re-engageme
     assert.equal((await prisma.outreachMessage.findUniqueOrThrow({ where: { id: general.id } })).templateKey, "MOVER_GENERAL");
     await send(general);
     const sequenceBefore = await campaign(general.campaignId!);
-    assert.doesNotMatch(specific.text + specific.html, /Never shared customer|private-customer|0219999999|21 Private Street|9 Private Lane/);
+    for (const detail of [quote.name, quote.email, quote.phone, quote.fromAddress, quote.toAddress]) {
+      assert.ok(specific.text.includes(detail));
+      assert.ok(specific.html.includes(detail));
+    }
     await prisma.quoteRequest.update({ where: { id: quote.id }, data: { toRegion: "Otago" } });
     await assert.rejects(send(specific), /details changed/);
     const refreshed = await locked(tx => editDraft(tx, actor, { id: specific.id, updatedAt: specific.updatedAt.toISOString(), introduction: "" }));

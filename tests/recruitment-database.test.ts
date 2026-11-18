@@ -228,13 +228,13 @@ test(
       prepareDraft(tx, carli, prospect.id, quote.id),
     );
     await t.test(
-      "draft generation is idempotent, privacy-safe, editable and rejects stale updates",
+      "draft generation includes client details, is idempotent and rejects stale updates",
       async () => {
         const duplicate = await locked((tx) =>
           prepareDraft(tx, carli, prospect.id, quote.id),
         );
         assert.equal(draft.id, duplicate.id);
-        for (const privateValue of [
+        for (const clientDetail of [
           quote.name,
           quote.email,
           quote.phone,
@@ -242,9 +242,9 @@ test(
           quote.toAddress,
         ])
           assert.equal(
-            draft.html.includes(privateValue) ||
-              draft.text.includes(privateValue),
-            false,
+            draft.html.includes(clientDetail) &&
+              draft.text.includes(clientDetail),
+            true,
           );
         const updated = await locked((tx) =>
           editDraft(tx, carli, {

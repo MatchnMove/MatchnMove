@@ -2,12 +2,12 @@ import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
 import test from "node:test";
 import { JSDOM } from "jsdom";
-import { MOVER_TEMPLATE_VERSION, moverGreeting, moverTemplateKeys, cleanerTemplateKeys, renderMoverOutreachEmail } from "../lib/mover-outreach-templates";
+import { MOVER_TEMPLATE_VERSION, outreachTemplateVersion, moverGreeting, moverTemplateKeys, cleanerTemplateKeys, renderMoverOutreachEmail } from "../lib/mover-outreach-templates";
 import { addAucklandCalendar, aucklandParts } from "../lib/recruitment-dates";
 import { classifyOutreachFailure, explicitReplyOptOut, mailboxAutomationBlock, nextOutreachDate, opportunityEligible } from "../lib/mover-outreach-campaigns";
-import { safeLeadSummary } from "../lib/recruitment-policy";
+import { recruitmentEmailLead } from "../lib/recruitment-policy";
 
-const lead = safeLeadSummary({ id: "quote", fromRegion: "Auckland", toRegion: "Waikato", moveDate: new Date("2027-01-20T00:00:00Z"), dateFlexible: true, bedrooms: "3", fromPropertyType: "House", createdAt: new Date() });
+const lead = recruitmentEmailLead({ id: "quote", fromRegion: "Auckland", toRegion: "Waikato", moveDate: new Date("2027-01-20T00:00:00Z"), dateFlexible: true, bedrooms: "3", fromPropertyType: "House", createdAt: new Date(), name: "Taylor & <Jones>", email: "taylor@example.invalid", phone: "0211234567", fromAddress: "12 Example Street", fromCity: "Auckland", fromPostcode: "1010", toAddress: "8 Sample Road", toCity: "Hamilton", toPostcode: "3200" });
 const input = { companyName: "Example Movers", contactName: "Alex", registrationUrl: "https://www.matchnmove.co.nz/api/recruitment/attribution?token=test", unsubscribeUrl: "https://www.matchnmove.co.nz/recruitment/unsubscribe?token=test", lead };
 
 test("all six approved subjects, populated bodies, links and shared signatures render without placeholders", () => {
@@ -22,11 +22,12 @@ test("all six approved subjects, populated bodies, links and shared signatures r
     assert.equal(dom.window.document.querySelector('img[alt="Match \'n Move logo"]')?.getAttribute("src"), "https://www.matchnmove.co.nz/logo-mark.png");
     for (const href of ["tel:+6421958000", "tel:+642108721208", "mailto:contact@matchnmove.co.nz", "https://www.matchnmove.co.nz/mover/pricing", input.registrationUrl, input.unsubscribeUrl]) assert.ok([...dom.window.document.querySelectorAll("a")].some(link => link.getAttribute("href") === href), href);
     assert.equal(dom.window.document.querySelectorAll("script,iframe,form").length, 0);
-    if (index !== 1) assert.doesNotMatch(result.text, /Preferred moving date|Moving from:|Moving to:|may be relevant to Example Movers, based on/);
+    if (index !== 1) assert.doesNotMatch(result.text, /Preferred moving date|Moving from:|Moving to:|may be relevant to Example Movers, based on|Client phone:|taylor@example|Example Street|Sample Road/);
     dom.window.close();
   });
   assert.ok(existsSync("public/logo-mark.png"));
   assert.equal(MOVER_TEMPLATE_VERSION, "2026-11-03.v2");
+  assert.equal(outreachTemplateVersion("MOVER_OPPORTUNITY"), "2026-11-18.v3");
 });
 
 test("personalisation escapes markup and missing people use the approved team greeting", () => {
@@ -58,15 +59,23 @@ test("all six cleaner emails use the shared design and cleaning copy, pricing an
   assert.doesNotMatch(opportunity.text, /we have a cleaning opportunity|received a cleaning request|following details/i);
 });
 
-test("opportunity rendering rejects missing approval and omits unapproved or missing details", () => {
+test("opportunity rendering includes escaped client contact details and full addresses", () => {
   assert.throws(() => renderMoverOutreachEmail({ ...input, templateKey: "MOVER_OPPORTUNITY", lead: null }), /authorised moving summary/);
-  const result = renderMoverOutreachEmail({ ...input, templateKey: "MOVER_OPPORTUNITY", lead: { ...lead, origin: "21 Private Street", destination: "customer@example.com", bedrooms: "0211234567", property: "Customer private note", moveDate: "Date not provided" } });
+  const result = renderMoverOutreachEmail({ ...input, templateKey: "MOVER_OPPORTUNITY", lead: { ...lead, customer: undefined, origin: "21 Private Street", destination: "customer@example.com", bedrooms: "0211234567", property: "Customer private note", moveDate: "Date not provided" } });
   assert.doesNotMatch(result.text + result.html, /21 Private Street|customer@example|0211234567|Customer private note|Date not provided|Additional requirements:/);
   assert.match(result.text, /not reserved or guaranteed/);
   const good = renderMoverOutreachEmail({ ...input, templateKey: "MOVER_OPPORTUNITY" });
   assert.match(good.text, /Moving from: Auckland/);
   assert.match(good.text, /Preferred moving date: 2027-01-20 \(flexible\)/);
   assert.match(good.text, /Property size: 3 \/ House/);
+  assert.match(good.text, /Client name: Taylor & <Jones>/);
+  assert.match(good.html, /Taylor &amp; &lt;Jones&gt;/);
+  for (const content of [good.text, new JSDOM(good.html).window.document.body.textContent!]) {
+    assert.match(content, /Client phone: 0211234567/);
+    assert.match(content, /Client email: taylor@example.invalid/);
+    assert.match(content, /Pickup address: 12 Example Street, Auckland, 1010/);
+    assert.match(content, /Destination address: 8 Sample Road, Hamilton, 3200/);
+  }
 });
 
 test("outreach calendar handles Auckland DST, weekends, short and leap months", () => {

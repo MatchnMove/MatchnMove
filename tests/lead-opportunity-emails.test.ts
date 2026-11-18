@@ -19,7 +19,7 @@ test("a company can receive different lead emails after its invitation while its
   const campaign = { id: "campaign", status: "ACTIVE", nextDueAt: nextFollowUpAt };
   const quotes = new Map(["first", "second", "third"].map((id, index) => [id, {
     id, fromRegion: "Auckland", toRegion: ["Waikato", "Northland", "Otago"][index], moveDate: new Date(Date.now() + 14 * 86400000), dateFlexible: true, bedrooms: "3", fromPropertyType: "House", createdAt: new Date(),
-    recruitmentSharingAllowed: true, sharingConsentAt: new Date(), name: "Private customer", email: "private@example.invalid", phone: "0219999999", fromAddress: "21 Private Street", toAddress: "9 Private Lane",
+    recruitmentSharingAllowed: true, sharingConsentAt: new Date(), name: `Client ${id}`, email: `client-${id}@example.invalid`, phone: `021999999${index}`, fromAddress: `${21 + index} Private Street`, fromCity: "Auckland", fromPostcode: "1010", toAddress: `${9 + index} Private Lane`, toCity: "Hamilton", toPostcode: "3200", movingWhat: "INTERNAL CUSTOMER NOTE",
   }]));
   const invitation = { id: "invitation", prospectId: prospect.id, campaignId: campaign.id, sequence: 0, status: "SENT", templateKey: "MOVER_GENERAL", quoteRequestId: null, approvedAt: new Date() } as OutreachMessage;
   const messages = new Map<string, OutreachMessage>([[invitation.id, invitation]]);
@@ -50,8 +50,10 @@ test("a company can receive different lead emails after its invitation while its
     contactSuppression: { findUnique: async () => suppressed ? { email: prospect.email } : null },
     outreachCampaign: { findFirst: async () => campaign },
     quoteRequest: {
-      findFirst: async ({ where }: { where: { id: string; recruitmentSharingAllowed: boolean } }) => {
+      findFirst: async ({ where, select }: { where: { id: string; recruitmentSharingAllowed: boolean }; select: Record<string, boolean> }) => {
         assert.equal(where.recruitmentSharingAllowed, true);
+        for (const field of ["name", "email", "phone", "fromAddress", "toAddress", "fromCity", "toCity", "fromPostcode", "toPostcode"]) assert.equal(select[field], true, field);
+        assert.equal(select.movingWhat, undefined);
         const quote = quotes.get(where.id);
         return quote?.recruitmentSharingAllowed ? quote : null;
       },
@@ -94,7 +96,7 @@ test("a company can receive different lead emails after its invitation while its
   }));
   const send = (draft: OutreachMessage) => approveAndSend(actor, { id: draft.id, updatedAt: draft.updatedAt.toISOString(), confirmed: true });
 
-  const first = await prepareDraft(tx, actor, prospect.id, "first");
+  let first = await prepareDraft(tx, actor, prospect.id, "first");
   const second = await prepareDraft(tx, actor, prospect.id, "second");
   assert.notEqual(first.id, second.id);
   assert.equal(first.campaignId, null);
@@ -103,6 +105,11 @@ test("a company can receive different lead emails after its invitation while its
   assert.equal((await prepareDraft(tx, actor, prospect.id, "first")).id, first.id);
   assert.match(first.text, /Moving to: Waikato/);
   assert.match(second.text, /Moving to: Northland/);
+  messages.set(first.id, { ...first, introduction: "Keep this personal note.", templateVersion: "2026-11-03.v2", text: "Old summary", html: "<p>Old summary</p>" });
+  first = await prepareDraft(tx, actor, prospect.id, "first");
+  assert.equal(first.introduction, "Keep this personal note.");
+  assert.match(first.text, /Client phone: 0219999990/);
+  assert.match(first.text, /Pickup address: 21 Private Street, Auckland, 1010/);
   await verifyContactFrequency(tx, first);
   await assert.rejects(verifyContactFrequency(tx, { ...first, campaignId: campaign.id, templateKey: "MOVER_FOLLOWUP_1", quoteRequestId: null }), /last 24 hours/);
 
@@ -115,7 +122,16 @@ test("a company can receive different lead emails after its invitation while its
   assert.equal(sent.length, 2);
   assert.match(sent[0].text, /Moving to: Waikato/);
   assert.match(sent[1].text, /Moving to: Northland/);
-  assert.doesNotMatch(sent.map(mail => mail.text + mail.html).join(""), /Private customer|private@example|0219999999|21 Private Street|9 Private Lane/);
+  for (const [index, id] of ["first", "second"].entries()) {
+    const client = quotes.get(id)!;
+    for (const field of ["name", "email", "phone", "fromAddress", "toAddress"] as const) {
+      assert.ok(sent[index].text.includes(client[field]), field);
+      assert.ok(sent[index].html.includes(client[field]), field);
+    }
+    assert.doesNotMatch(sent[index].text + sent[index].html, /INTERNAL CUSTOMER NOTE/);
+  }
+  assert.doesNotMatch(sent[0].text, /client-second@example/);
+  assert.doesNotMatch(sent[1].text, /client-first@example/);
   assert.equal(prospect.nextFollowUpAt, campaign.nextDueAt);
   await assert.rejects(prepareDraft(tx, actor, prospect.id, "first"), /already has an email sent/);
   await assert.rejects(send(edited), /sending was already attempted/);
@@ -123,7 +139,7 @@ test("a company can receive different lead emails after its invitation while its
 
   prospect.respondedAt = new Date();
   const third = await prepareDraft(tx, actor, prospect.id, "third");
-  quotes.get("third")!.toRegion = "Canterbury";
+  quotes.get("third")!.phone = "0211234567";
   await assert.rejects(send(third), /details changed/);
   const refreshed = await editDraft(tx, actor, { id: third.id, updatedAt: third.updatedAt.toISOString(), introduction: "" });
   assert.equal((await send(refreshed)).ok, true);

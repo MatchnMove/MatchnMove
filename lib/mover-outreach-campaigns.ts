@@ -3,8 +3,8 @@ import type { MoverProspect, OutreachMessage } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { addAucklandCalendar, aucklandMidnight, aucklandParts } from "@/lib/recruitment-dates";
 import { activity, baseUrl, cancelFollowUps, checkActor, fail, locked, ownedProspect, settings, type Tx } from "@/lib/recruitment";
-import { contactBlockReason, secureToken, tokenHash, type RecruitmentActor, type SafeLead } from "@/lib/recruitment-policy";
-import { MOVER_TEMPLATE_VERSION, outreachEmailTemplates, moverTemplateKeys, cleanerTemplateKeys, templateKeysForBusiness, renderMoverOutreachEmail, type PartnerTemplateKey } from "@/lib/mover-outreach-templates";
+import { contactBlockReason, secureToken, tokenHash, type RecruitmentActor, type RecruitmentEmailLead } from "@/lib/recruitment-policy";
+import { outreachTemplateVersion, outreachEmailTemplates, moverTemplateKeys, cleanerTemplateKeys, templateKeysForBusiness, renderMoverOutreachEmail, type PartnerTemplateKey } from "@/lib/mover-outreach-templates";
 
 export const openCampaignStatuses = ["DRAFT", "ACTIVE", "PAUSED", "REVIEW_DUE"];
 const followupKeys: Record<number, number> = { 1: 2, 2: 3, 3: 4, 4: 5 };
@@ -43,7 +43,7 @@ async function eligibleProspect(tx: Tx, prospect: MoverProspect, manualOpportuni
 }
 
 export async function prepareMoverCampaignDraft(
-  tx: Tx, actor: RecruitmentActor, prospect: MoverProspect, lead: SafeLead | null,
+  tx: Tx, actor: RecruitmentActor, prospect: MoverProspect, lead: RecruitmentEmailLead | null,
   quoteRequestId: string | null, parentId?: string, startNew = false, initialTemplate?: PartnerTemplateKey,
 ) {
   const manualOpportunity = Boolean(lead && quoteRequestId && !parentId);
@@ -85,31 +85,31 @@ export async function prepareMoverCampaignDraft(
   if (prospect.businessType === "CLEANING" && (lead || quoteRequestId)) fail("Moving request summaries cannot be used for cleaning outreach.");
   const key: PartnerTemplateKey = initialTemplate || (prospect.businessType === "CLEANING" ? "CLEANER_GENERAL" : lead ? "MOVER_OPPORTUNITY" : "MOVER_GENERAL");
   if (!(templateKeysForBusiness(prospect.businessType) as readonly string[]).slice(0, 2).includes(key) || (key === "MOVER_OPPORTUNITY" && !lead)) fail("Choose an invitation for this company's business type.");
-  if (existing?.status === "DRAFT" && existing.quoteRequestId === quoteRequestId && existing.attributionExpiresAt > new Date() && existing.templateVersion === MOVER_TEMPLATE_VERSION && (existing.templateKey === key || (!quoteRequestId && !initialTemplate))) return existing;
+  if (existing?.status === "DRAFT" && existing.quoteRequestId === quoteRequestId && existing.attributionExpiresAt > new Date() && existing.templateVersion === outreachTemplateVersion(key) && (existing.templateKey === key || (!quoteRequestId && !initialTemplate))) return existing;
   const draft = campaignDraft(prospect, actor, campaign.id, 0, key, lead, quoteRequestId);
   if (existing?.status === "DISCARDED") await tx.partnerMessage.updateMany({ where: { outreachMessageId: existing.id, status: "DELETED" }, data: { outreachMessageId: null } });
   return existing ? tx.outreachMessage.update({ where: { id: existing.id }, data: draft }) : tx.outreachMessage.create({ data: draft });
 }
 
-async function prepareOpportunityDraft(tx: Tx, actor: RecruitmentActor, prospect: MoverProspect, lead: SafeLead, quoteRequestId: string, existing: OutreachMessage | null) {
+async function prepareOpportunityDraft(tx: Tx, actor: RecruitmentActor, prospect: MoverProspect, lead: RecruitmentEmailLead, quoteRequestId: string, existing: OutreachMessage | null) {
   if (prospect.businessType !== "MOVING") fail("Moving request summaries are for moving companies.");
   if (existing && !["DRAFT", "DISCARDED"].includes(existing.status))
     fail(`This moving opportunity already has an email ${existing.status === "SENT" ? "sent to" : "prepared for"} ${prospect.companyName}. Select a different moving request.`, 409);
-  if (existing?.status === "DRAFT" && existing.attributionExpiresAt > new Date() && existing.templateKey === "MOVER_OPPORTUNITY" && existing.templateVersion === MOVER_TEMPLATE_VERSION) return existing;
-  const draft = campaignDraft(prospect, actor, existing?.campaignId ?? null, 0, "MOVER_OPPORTUNITY", lead, quoteRequestId);
+  if (existing?.status === "DRAFT" && existing.attributionExpiresAt > new Date() && existing.templateKey === "MOVER_OPPORTUNITY" && existing.templateVersion === outreachTemplateVersion("MOVER_OPPORTUNITY")) return existing;
+  const draft = campaignDraft(prospect, actor, existing?.campaignId ?? null, 0, "MOVER_OPPORTUNITY", lead, quoteRequestId, undefined, existing?.introduction || "");
   if (existing?.status === "DISCARDED") await tx.partnerMessage.updateMany({ where: { outreachMessageId: existing.id, status: "DELETED" }, data: { outreachMessageId: null } });
   return existing
     ? tx.outreachMessage.update({ where: { id: existing.id }, data: draft })
     : tx.outreachMessage.create({ data: draft });
 }
 
-function campaignDraft(prospect: MoverProspect, actor: RecruitmentActor, campaignId: string | null, sequence: number, templateKey: PartnerTemplateKey, lead: SafeLead | null, quoteRequestId: string | null, scheduledAt?: Date) {
+function campaignDraft(prospect: MoverProspect, actor: RecruitmentActor, campaignId: string | null, sequence: number, templateKey: PartnerTemplateKey, lead: RecruitmentEmailLead | null, quoteRequestId: string | null, scheduledAt?: Date, personalNote = "") {
   const registration = secureToken(), unsubscribe = secureToken();
-  const rendered = renderMoverOutreachEmail({ templateKey, companyName: prospect.companyName, contactName: prospect.contactName, lead,
+  const rendered = renderMoverOutreachEmail({ templateKey, companyName: prospect.companyName, contactName: prospect.contactName, lead, personalNote,
     registrationUrl: `${baseUrl()}/api/recruitment/attribution?token=${registration}`,
     unsubscribeUrl: `${baseUrl()}/recruitment/unsubscribe?token=${unsubscribe}` });
-  return { ...rendered, status: "DRAFT", campaignId, prospectId: prospect.id, adminId: actor.id, quoteRequestId, sequence, introduction: "", templateKey,
-    templateVersion: MOVER_TEMPLATE_VERSION, scheduledAt, attributionHash: tokenHash(registration),
+  return { ...rendered, status: "DRAFT", campaignId, prospectId: prospect.id, adminId: actor.id, quoteRequestId, sequence, introduction: personalNote, templateKey,
+    templateVersion: outreachTemplateVersion(templateKey), scheduledAt, attributionHash: tokenHash(registration),
     attributionExpiresAt: addAucklandCalendar(new Date(), { months: 4 }), unsubscribeHash: tokenHash(unsubscribe) };
 }
 
@@ -132,7 +132,7 @@ export async function prepareCampaignStep(tx: Tx, actor: RecruitmentActor, campa
 export async function verifyCampaignSend(tx: Tx, message: OutreachMessage, prospect: MoverProspect) {
   if (!message.campaignId && !message.templateKey) return;
   await eligibleProspect(tx, prospect, !message.campaignId && message.templateKey === "MOVER_OPPORTUNITY");
-  if (message.templateVersion !== MOVER_TEMPLATE_VERSION || !(templateKeysForBusiness(prospect.businessType) as readonly string[]).includes(message.templateKey || "")) fail("Refresh this draft to the current approved template before sending.", 409);
+  if (message.templateVersion !== outreachTemplateVersion(message.templateKey) || !(templateKeysForBusiness(prospect.businessType) as readonly string[]).includes(message.templateKey || "")) fail("Refresh this draft to the current approved template before sending.", 409);
   if (!message.campaignId) {
     if (message.templateKey !== "MOVER_OPPORTUNITY" || !message.quoteRequestId) fail("Choose a moving opportunity before sending this email.");
     return;
@@ -327,5 +327,5 @@ export async function processMoverOutreachCampaigns(limit = 10, synchroniseInbox
 export async function moverOutreachHealth() {
   const config = await settings();
   const mailbox = await prisma.partnerMailbox.findUnique({ where: { id: "support" } });
-  return { enabled: config.automaticFollowUpsEnabled, blocked: mailboxAutomationBlock(mailbox), templates: [...moverTemplateKeys, ...cleanerTemplateKeys].map(key => ({ key, businessType: key.startsWith("CLEANER_") ? "CLEANING" : "MOVING", version: MOVER_TEMPLATE_VERSION, ...outreachEmailTemplates[key] })) };
+  return { enabled: config.automaticFollowUpsEnabled, blocked: mailboxAutomationBlock(mailbox), templates: [...moverTemplateKeys, ...cleanerTemplateKeys].map(key => ({ key, businessType: key.startsWith("CLEANER_") ? "CLEANING" : "MOVING", version: outreachTemplateVersion(key), ...outreachEmailTemplates[key] })) };
 }

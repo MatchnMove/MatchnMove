@@ -1,8 +1,11 @@
-import { escapeHtml, type SafeLead } from "@/lib/recruitment-policy";
+import { escapeHtml, recruitmentContactRows, type RecruitmentEmailLead } from "@/lib/recruitment-policy";
 import { NZ_SERVICE_AREAS } from "@/lib/nz-regions";
 import { outreachEmailLayout, outreachSignatureHtml } from "@/lib/outreach-email-layout";
 
 export const MOVER_TEMPLATE_VERSION = "2026-11-03.v2";
+export function outreachTemplateVersion(templateKey?: string | null) {
+  return templateKey === "MOVER_OPPORTUNITY" ? "2026-11-18.v3" : MOVER_TEMPLATE_VERSION;
+}
 export const moverTemplateKeys = ["MOVER_GENERAL", "MOVER_OPPORTUNITY", "MOVER_FOLLOWUP_1", "MOVER_FOLLOWUP_2", "MOVER_FINAL", "MOVER_REENGAGEMENT"] as const;
 export type MoverTemplateKey = typeof moverTemplateKeys[number];
 export const cleanerTemplateKeys = ["CLEANER_GENERAL", "CLEANER_OPPORTUNITY", "CLEANER_FOLLOWUP_1", "CLEANER_FOLLOWUP_2", "CLEANER_FINAL", "CLEANER_REENGAGEMENT"] as const;
@@ -62,6 +65,8 @@ I'm reaching out from Match 'n Move as we have a moving opportunity that may be 
 We've received a moving request through Match 'n Move with the following details:
 
 {{approvedLeadSummary}}
+
+You can call or email the client directly using the details above to discuss their move and arrange a quote.
 
 This opportunity may be a good fit for your team, and we'd like to invite [Company Name] to join Match 'n Move to access opportunities like this through our platform.
 
@@ -218,10 +223,8 @@ export function moverSignatureHtml() {
   return outreachSignatureHtml();
 }
 
-// Only the existing customer-authorised, allowlisted summary reaches this renderer.
-// Requirements/private notes have no separately approved field, so they are omitted.
-export function approvedOpportunityRows(lead: SafeLead) {
-  const rows: Array<[string, string]> = [];
+export function approvedOpportunityRows(lead: RecruitmentEmailLead) {
+  const rows = recruitmentContactRows(lead);
   const region = (value: string) => NZ_SERVICE_AREAS.some(area => area === value);
   if (region(lead.origin)) rows.push(["Moving from", lead.origin]);
   if (region(lead.destination)) rows.push(["Moving to", lead.destination]);
@@ -236,7 +239,7 @@ export function approvedOpportunityRows(lead: SafeLead) {
 
 export function renderMoverOutreachEmail(input: {
   templateKey: PartnerTemplateKey; companyName: string; contactName?: string | null;
-  registrationUrl: string; unsubscribeUrl: string; lead?: SafeLead | null; personalNote?: string;
+  registrationUrl: string; unsubscribeUrl: string; lead?: RecruitmentEmailLead | null; personalNote?: string;
 }) {
   const template = outreachEmailTemplates[input.templateKey];
   const cleaning = input.templateKey.startsWith("CLEANER_");
@@ -279,7 +282,7 @@ export function renderMoverOutreachEmail(input: {
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_match, title: string, url: string) => /\/(mover\/login|cleaner\/register)$/.test(url) ? `${title}\nRegister: ${input.registrationUrl}` : `${title}\n${url}`)
     .replaceAll("**", "");
   const disclaimer = input.templateKey === "MOVER_OPPORTUNITY"
-    ? "Availability may change; this request is not reserved or guaranteed. Customer contact details are available only through authorised platform access."
+    ? "Availability may change; this request is not reserved or guaranteed. Use the client details above to discuss this moving request directly."
     : "Enquiry volumes and bookings are not guaranteed.";
   const footer = `<p style="margin:0;color:#64748b;font-size:12px;line-height:1.6">${e(disclaimer)}<br><a href="${e(input.unsubscribeUrl)}" style="color:#475569">Unsubscribe from recruitment invitations</a>. You can also reply to request no further recruitment emails.</p>`;
   return {
