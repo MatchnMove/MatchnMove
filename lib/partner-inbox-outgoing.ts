@@ -23,7 +23,7 @@ import {
   settings,
   type Tx,
 } from "@/lib/recruitment";
-import { editDraft, verifySend } from "@/lib/recruitment-outreach";
+import { editDraft, verifyContactFrequency, verifySend } from "@/lib/recruitment-outreach";
 import { contactBlockReason } from "@/lib/recruitment-policy";
 import { discardOutreachDraft } from "@/lib/recruitment-removal";
 import {
@@ -174,7 +174,7 @@ export async function saveInboxDraft(actor: InboxActor, raw: unknown) {
       outreach = await editDraft(tx, actor, {
         id: record.id,
         updatedAt: record.updatedAt.toISOString(),
-        introduction: input.text || (record.campaignId ? "" : record.introduction),
+        introduction: input.text || (record.templateKey || record.campaignId ? "" : record.introduction),
       });
     } else if (existing?.outreachMessageId)
       fail(
@@ -438,19 +438,7 @@ export async function sendInboxDraft(
         })) >= verified.config.dailyLimit
       )
         fail("Outreach send limit reached.", 429);
-      if (
-        await tx.outreachMessage.count({
-          where: {
-            id: { not: verified.message.id },
-            prospectId: verified.prospect.id,
-            approvedAt: { gte: since },
-          },
-        })
-      )
-        fail(
-          "An invitation was already attempted for this company in the last 24 hours.",
-          409,
-        );
+      await verifyContactFrequency(tx, verified.message);
       const delivery = await tx.emailDelivery.upsert({
         where: { dedupeKey: `recruitment:${verified.message.id}` },
         create: {
@@ -668,7 +656,7 @@ export async function finishInboxOutreach(
     where: { id: prospect.id },
     data: {
       lastContactedAt: receivedAt,
-      nextFollowUpAt: message.campaignId ? null : config.autoTasks ? dueAt : null,
+      ...(message.templateKey && !message.campaignId ? {} : { nextFollowUpAt: message.campaignId ? null : config.autoTasks ? dueAt : null }),
       status:
         prospect.status === "NOT_CONTACTED" ? "CONTACTED" : prospect.status,
       version: { increment: 1 },
@@ -676,7 +664,7 @@ export async function finishInboxOutreach(
   });
   const { recordCampaignSent } = await import("@/lib/mover-outreach-campaigns");
   await recordCampaignSent(tx, message, receivedAt);
-  if (config.autoTasks && !message.campaignId)
+  if (config.autoTasks && !message.campaignId && !message.templateKey)
     await tx.recruitmentTask.upsert({
       where: { dedupeKey: `follow-up:${outreachId}` },
       update: {},

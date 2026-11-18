@@ -1809,7 +1809,7 @@ function EmailReview({
       }
     >
       <p className="text-sm font-semibold">{message.subject}</p>
-      <p className="mt-2 text-xs font-semibold text-teal-700">Email stage: {outreachStageName(message.sequence)} · {message.status === "SENT" ? `Sent ${date(message.sentAt)}` : label(message.status)}</p>
+      <p className="mt-2 text-xs font-semibold text-teal-700">Email stage: {!message.campaignId && message.templateKey === "MOVER_OPPORTUNITY" ? "Moving opportunity" : outreachStageName(message.sequence)} · {message.status === "SENT" ? `Sent ${date(message.sentAt)}` : label(message.status)}</p>
       {message.templateKey && <p className="mt-1 text-xs text-slate-500">{moverTemplateLabel(message.templateKey)} · version {message.templateVersion}</p>}
       <p className="mt-1 text-xs text-slate-500">
         To: {message.prospect?.email} · Sent: {date(message.sentAt)}
@@ -1818,7 +1818,7 @@ function EmailReview({
       {open && (
         <div className="mt-5 space-y-4">
           {message.status === "DRAFT" && (
-            <Field title={message.campaignId ? "Optional personal note for this email" : "Edit personal introduction"}>
+            <Field title={message.templateKey || message.campaignId ? "Optional personal note for this email" : "Edit personal introduction"}>
               <textarea
                 className={inputClass}
                 rows={4}
@@ -1832,7 +1832,7 @@ function EmailReview({
             <button className={secondaryClass} onClick={copy}>
               Copy Email
             </button>
-            {message.status === "SENT" && (!message.campaignId || !/(FINAL|REENGAGEMENT)$/.test(message.templateKey || "")) && (
+            {message.status === "SENT" && (message.campaignId ? !/(FINAL|REENGAGEMENT)$/.test(message.templateKey || "") : !message.templateKey) && (
               <button
                 className={secondaryClass}
                 disabled={busy}

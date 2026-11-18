@@ -31,11 +31,11 @@ export function mailboxAutomationBlock(mailbox: { address: string; encryptedRefr
   return null;
 }
 
-async function eligibleProspect(tx: Tx, prospect: MoverProspect) {
+async function eligibleProspect(tx: Tx, prospect: MoverProspect, manualOpportunity = false) {
   if (!prospect.email) fail("Record a valid company email before preparing outreach.");
   const blocked = contactBlockReason(prospect, Boolean(await tx.contactSuppression.findUnique({ where: { email: prospect.email } })));
   if (blocked) fail(blocked);
-  if (prospect.respondedAt) fail("A response has been received. Review the conversation; automated outreach cannot restart.");
+  if (prospect.respondedAt && !manualOpportunity) fail("A response has been received. Review the conversation; automated outreach cannot restart.");
   if (await tx.outreachMessage.count({ where: { prospectId: prospect.id, status: "NEEDS_REVIEW" } })) fail("A previous delivery outcome needs review before any further outreach.");
   if (prospect.registeredAt || prospect.moverCompanyId || prospect.cleanerCompanyId) fail("This company has started registration. Outreach has stopped.");
   const account = await tx.user.findUnique({ where: { email: prospect.email }, select: { role: true } });
@@ -46,8 +46,17 @@ export async function prepareMoverCampaignDraft(
   tx: Tx, actor: RecruitmentActor, prospect: MoverProspect, lead: SafeLead | null,
   quoteRequestId: string | null, parentId?: string, startNew = false, initialTemplate?: PartnerTemplateKey,
 ) {
-  await eligibleProspect(tx, prospect);
+  const manualOpportunity = Boolean(lead && quoteRequestId && !parentId);
+  await eligibleProspect(tx, prospect, manualOpportunity);
   let campaign = await tx.outreachCampaign.findFirst({ where: { prospectId: prospect.id }, orderBy: { createdAt: "desc" } });
+  if (lead && quoteRequestId && !parentId) {
+    const existing = await tx.outreachMessage.findFirst({
+      where: { prospectId: prospect.id, quoteRequestId, sequence: 0 },
+      orderBy: { createdAt: "desc" },
+    });
+    if (existing || campaign || prospect.respondedAt || await tx.outreachMessage.count({ where: { prospectId: prospect.id } }))
+      return prepareOpportunityDraft(tx, actor, prospect, lead, quoteRequestId, existing);
+  }
   if (parentId) {
     const parent = await tx.outreachMessage.findUnique({ where: { id: parentId } });
     if (!campaign || parent?.campaignId !== campaign.id || parent.status !== "SENT") fail("Choose a sent email in the current approved sequence.");
@@ -57,13 +66,11 @@ export async function prepareMoverCampaignDraft(
   }
   if (!campaign && !startNew) {
     // Existing outreach is never silently enrolled into automatic sending.
-    const legacy = await tx.outreachMessage.findFirst({ where: { prospectId: prospect.id, campaignId: null }, orderBy: { createdAt: "desc" } });
+    const legacy = await tx.outreachMessage.findFirst({ where: { prospectId: prospect.id, campaignId: null, templateKey: null }, orderBy: { createdAt: "desc" } });
     if (legacy) fail("This company has legacy outreach. Review its history and explicitly start a new sequence.", 409);
   }
   if (campaign && campaign.status !== "DRAFT") {
     if (!startNew || openCampaignStatuses.includes(campaign.status)) {
-      if (quoteRequestId)
-        fail(`${prospect.companyName} already has an outreach sequence. Review it in the Email station before preparing a new invitation.`, 409);
       const initial = await tx.outreachMessage.findFirst({ where: { campaignId: campaign.id, sequence: 0 } });
       if (initial) return initial;
       fail("Review the current sequence before starting another invitation.", 409);
@@ -84,7 +91,19 @@ export async function prepareMoverCampaignDraft(
   return existing ? tx.outreachMessage.update({ where: { id: existing.id }, data: draft }) : tx.outreachMessage.create({ data: draft });
 }
 
-function campaignDraft(prospect: MoverProspect, actor: RecruitmentActor, campaignId: string, sequence: number, templateKey: PartnerTemplateKey, lead: SafeLead | null, quoteRequestId: string | null, scheduledAt?: Date) {
+async function prepareOpportunityDraft(tx: Tx, actor: RecruitmentActor, prospect: MoverProspect, lead: SafeLead, quoteRequestId: string, existing: OutreachMessage | null) {
+  if (prospect.businessType !== "MOVING") fail("Moving request summaries are for moving companies.");
+  if (existing && !["DRAFT", "DISCARDED"].includes(existing.status))
+    fail(`This moving opportunity already has an email ${existing.status === "SENT" ? "sent to" : "prepared for"} ${prospect.companyName}. Select a different moving request.`, 409);
+  if (existing?.status === "DRAFT" && existing.attributionExpiresAt > new Date() && existing.templateKey === "MOVER_OPPORTUNITY" && existing.templateVersion === MOVER_TEMPLATE_VERSION) return existing;
+  const draft = campaignDraft(prospect, actor, existing?.campaignId ?? null, 0, "MOVER_OPPORTUNITY", lead, quoteRequestId);
+  if (existing?.status === "DISCARDED") await tx.partnerMessage.updateMany({ where: { outreachMessageId: existing.id, status: "DELETED" }, data: { outreachMessageId: null } });
+  return existing
+    ? tx.outreachMessage.update({ where: { id: existing.id }, data: draft })
+    : tx.outreachMessage.create({ data: draft });
+}
+
+function campaignDraft(prospect: MoverProspect, actor: RecruitmentActor, campaignId: string | null, sequence: number, templateKey: PartnerTemplateKey, lead: SafeLead | null, quoteRequestId: string | null, scheduledAt?: Date) {
   const registration = secureToken(), unsubscribe = secureToken();
   const rendered = renderMoverOutreachEmail({ templateKey, companyName: prospect.companyName, contactName: prospect.contactName, lead,
     registrationUrl: `${baseUrl()}/api/recruitment/attribution?token=${registration}`,
@@ -111,10 +130,14 @@ export async function prepareCampaignStep(tx: Tx, actor: RecruitmentActor, campa
 }
 
 export async function verifyCampaignSend(tx: Tx, message: OutreachMessage, prospect: MoverProspect) {
-  if (!message.campaignId) return;
-  await eligibleProspect(tx, prospect);
-  const campaign = await tx.outreachCampaign.findUniqueOrThrow({ where: { id: message.campaignId } });
+  if (!message.campaignId && !message.templateKey) return;
+  await eligibleProspect(tx, prospect, !message.campaignId && message.templateKey === "MOVER_OPPORTUNITY");
   if (message.templateVersion !== MOVER_TEMPLATE_VERSION || !(templateKeysForBusiness(prospect.businessType) as readonly string[]).includes(message.templateKey || "")) fail("Refresh this draft to the current approved template before sending.", 409);
+  if (!message.campaignId) {
+    if (message.templateKey !== "MOVER_OPPORTUNITY" || !message.quoteRequestId) fail("Choose a moving opportunity before sending this email.");
+    return;
+  }
+  const campaign = await tx.outreachCampaign.findUniqueOrThrow({ where: { id: message.campaignId } });
   if (message.sequence === 0) {
     if (campaign.status !== "DRAFT") fail("The initial invitation has already been sent or cancelled.", 409);
   } else {

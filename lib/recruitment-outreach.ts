@@ -4,6 +4,7 @@ import { sendViaSmtp, verifyAdminSmtpSender } from "@/lib/email";
 import { canMoverAccessLeads } from "@/lib/mover-lead-access";
 import { canCleanerAccessLeads } from "@/lib/cleaner-readiness";
 import type { PartnerBusinessType } from "@/lib/partner-business";
+import type { OutreachMessage } from "@prisma/client";
 import { classifyOutreachFailure, mailboxAutomationBlock, opportunityEligible, recordCampaignSent, verifyCampaignSend } from "@/lib/mover-outreach-campaigns";
 import { MOVER_TEMPLATE_VERSION, renderMoverOutreachEmail, type PartnerTemplateKey } from "@/lib/mover-outreach-templates";
 import { SUPPORT_MAILBOX } from "@/lib/partner-inbox-policy";
@@ -71,7 +72,7 @@ export async function editDraft(tx: Tx, actor: RecruitmentActor, raw: unknown) {
   if (!registrationUrl || !unsubscribeUrl)
     fail("Draft links are unavailable. Ask the owner to review.");
   const config = await settings(tx);
-  const rendered = message.campaignId ? renderMoverOutreachEmail({
+  const rendered = message.templateKey || message.campaignId ? renderMoverOutreachEmail({
     templateKey: message.templateKey as PartnerTemplateKey, companyName: prospect.companyName, contactName: prospect.contactName,
     personalNote: input.introduction, lead: quote ? safeLeadSummary(quote) : null, registrationUrl, unsubscribeUrl,
   }) : renderRecruitmentEmail({
@@ -85,7 +86,7 @@ export async function editDraft(tx: Tx, actor: RecruitmentActor, raw: unknown) {
   });
   const result = await tx.outreachMessage.update({
     where: { id: message.id },
-    data: { introduction: input.introduction, ...rendered, ...(message.campaignId ? { templateVersion: MOVER_TEMPLATE_VERSION } : {}) },
+    data: { introduction: input.introduction, ...rendered, ...(message.templateKey || message.campaignId ? { templateVersion: MOVER_TEMPLATE_VERSION } : {}) },
   });
   await activity(tx, prospect.id, actor.id, "draft_updated", {
     messageId: message.id,
@@ -120,7 +121,7 @@ export async function verifySend(tx: Tx, actor: RecruitmentActor, messageId: str
   if (!message) fail("Invitation not found.", 404);
   if (message.quoteRequestId && actor.role !== "OWNER" && !user.canViewRecruitmentLeads)
     fail("The owner must enable your lead-summary permission for this invitation.", 403);
-  if (!message.campaignId && !message.text.includes(config.senderIdentity))
+  if (!message.campaignId && !message.templateKey && !message.text.includes(config.senderIdentity))
     fail(
       "Sender details changed. Save the draft again and review the refreshed preview before sending.",
       409,
@@ -142,9 +143,9 @@ export async function verifySend(tx: Tx, actor: RecruitmentActor, messageId: str
     !message.quoteRequest.sharingConsentAt)
   )
     fail("Customer permission for this summary is no longer available.");
-  if (message.campaignId && message.quoteRequest && !opportunityEligible(message.quoteRequest))
+  if ((message.templateKey || message.campaignId) && message.quoteRequest && !opportunityEligible(message.quoteRequest))
     fail("This moving opportunity is no longer current. Prepare a general invitation instead.");
-  if (message.campaignId) {
+  if (message.templateKey || message.campaignId) {
     const registrationUrl = message.text.match(/Register: (https?:\/\/\S+)/)?.[1];
     const unsubscribeUrl = message.text.match(/Unsubscribe: (https?:\/\/\S+)/)?.[1];
     if (!registrationUrl || !unsubscribeUrl) fail("Refresh this draft's invitation links before sending.");
@@ -155,6 +156,21 @@ export async function verifySend(tx: Tx, actor: RecruitmentActor, messageId: str
   if (message.attributionExpiresAt < new Date())
     fail("This draft has expired. Ask the owner to review.");
   return { config, message, prospect: { ...prospect, email: prospect.email } };
+}
+
+export async function verifyContactFrequency(tx: Tx, message: Pick<OutreachMessage, "id" | "prospectId" | "campaignId" | "templateKey" | "quoteRequestId">) {
+  const manualOpportunity = !message.campaignId && message.templateKey === "MOVER_OPPORTUNITY" && message.quoteRequestId;
+  const duplicate = await tx.outreachMessage.findFirst({
+    where: {
+      prospectId: message.prospectId,
+      id: { not: message.id },
+      approvedAt: { gte: new Date(Date.now() - 24 * 3600000) },
+      ...(manualOpportunity ? { quoteRequestId: message.quoteRequestId } : {}),
+    },
+  });
+  if (duplicate) fail(manualOpportunity
+    ? "This moving opportunity has already had an email attempted for this company in the last 24 hours."
+    : "This company has already had an invitation attempted in the last 24 hours.", 409);
 }
 
 export async function approveAndSend(actor: RecruitmentActor, raw: unknown, automatic = false) {
@@ -192,14 +208,7 @@ export async function approveAndSend(actor: RecruitmentActor, raw: unknown, auto
     });
     if (recent >= config.dailyLimit)
       fail("Your rolling 24-hour send limit has been reached.", 429);
-    const duplicateContact = await tx.outreachMessage.findFirst({
-      where: { prospectId: prospect.id, id: { not: message.id }, approvedAt: { gte: today } },
-    });
-    if (duplicateContact)
-      fail(
-        "This company has already had an invitation attempted in the last 24 hours.",
-        409,
-      );
+    await verifyContactFrequency(tx, message);
     const deliveryData = {
         dedupeKey: `recruitment:${message.id}`,
         kind: "recruitment_invitation",
@@ -283,14 +292,14 @@ export async function approveAndSend(actor: RecruitmentActor, raw: unknown, auto
         where: { id: prospect.id },
         data: {
           lastContactedAt: now,
-          nextFollowUpAt: message.campaignId ? null : config.autoTasks ? dueAt : null,
+          ...(message.templateKey && !message.campaignId ? {} : { nextFollowUpAt: message.campaignId ? null : config.autoTasks ? dueAt : null }),
           status:
             prospect.status === "NOT_CONTACTED" ? "CONTACTED" : prospect.status,
           version: { increment: 1 },
         },
       });
       await recordCampaignSent(tx, message, now);
-      if (config.autoTasks && !message.campaignId)
+      if (config.autoTasks && !message.campaignId && !message.templateKey)
         await tx.recruitmentTask.upsert({
           where: { dedupeKey: `follow-up:${input.id}` },
           update: {},
@@ -333,7 +342,7 @@ export async function approveAndSend(actor: RecruitmentActor, raw: unknown, auto
       const message = await tx.outreachMessage.findUniqueOrThrow({
         where: { id: input.id },
       });
-      if (message.campaignId) {
+      if (message.templateKey || message.campaignId) {
         const classification = classifyOutreachFailure(error);
         const retry = automatic && classification === "RETRYABLE" && message.sendAttempts < 3;
         retryScheduled = retry;
@@ -345,7 +354,7 @@ export async function approveAndSend(actor: RecruitmentActor, raw: unknown, auto
           lastError: retry ? "Temporary SMTP rejection; the campaign worker has a bounded retry scheduled." : `Delivery ${classification.toLowerCase()}; automatic retry is blocked. Review the provider outcome.`,
           ...(retry ? { nextAttemptAt: new Date(Date.now() + (message.sendAttempts === 1 ? 5 : 15) * 60000) } : {}),
         } });
-        await tx.outreachCampaign.updateMany({ where: { id: message.campaignId, status: { in: ["ACTIVE", "DRAFT"] } }, data: {
+        if (message.campaignId) await tx.outreachCampaign.updateMany({ where: { id: message.campaignId, status: { in: ["ACTIVE", "DRAFT"] } }, data: {
           ...(!retry ? { status: classification === "PERMANENT" ? "STOPPED" : "PAUSED" } : {}),
           reason: retry ? "Temporary provider rejection; retry scheduled." : `Delivery ${classification.toLowerCase()}; owner review required.`,
         } });

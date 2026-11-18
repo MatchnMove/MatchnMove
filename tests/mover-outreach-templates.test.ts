@@ -6,7 +6,6 @@ import { MOVER_TEMPLATE_VERSION, moverGreeting, moverTemplateKeys, cleanerTempla
 import { addAucklandCalendar, aucklandParts } from "../lib/recruitment-dates";
 import { classifyOutreachFailure, explicitReplyOptOut, mailboxAutomationBlock, nextOutreachDate, opportunityEligible } from "../lib/mover-outreach-campaigns";
 import { safeLeadSummary } from "../lib/recruitment-policy";
-import { prepareDraft, type Tx } from "../lib/recruitment";
 
 const lead = safeLeadSummary({ id: "quote", fromRegion: "Auckland", toRegion: "Waikato", moveDate: new Date("2027-01-20T00:00:00Z"), dateFlexible: true, bedrooms: "3", fromPropertyType: "House", createdAt: new Date() });
 const input = { companyName: "Example Movers", contactName: "Alex", registrationUrl: "https://www.matchnmove.co.nz/api/recruitment/attribution?token=test", unsubscribeUrl: "https://www.matchnmove.co.nz/recruitment/unsubscribe?token=test", lead };
@@ -68,51 +67,6 @@ test("opportunity rendering rejects missing approval and omits unapproved or mis
   assert.match(good.text, /Moving from: Auckland/);
   assert.match(good.text, /Preferred moving date: 2027-01-20 \(flexible\)/);
   assert.match(good.text, /Property size: 3 \/ House/);
-});
-
-test("preparing a moving opportunity saves the selected lead's email and rejects an active sequence", async () => {
-  const prospect = { id: "prospect", companyName: "Example Movers", email: "mover@example.invalid", businessType: "MOVING", status: "NOT_CONTACTED", consentBasis: "EXPRESS", consentEvidence: "Recorded permission" };
-  const quote = { id: "quote", fromRegion: "Auckland", toRegion: "Waikato", moveDate: new Date(Date.now() + 86400000 * 7), dateFlexible: true, bedrooms: "3", fromPropertyType: "House", createdAt: new Date() };
-  const actor = { id: "owner", role: "OWNER", canSend: true, canViewLeads: true } as const;
-  const campaign = { id: "campaign", status: "DRAFT" };
-  let stored = { id: "draft", status: "DRAFT", templateKey: "MOVER_GENERAL", quoteRequestId: null as string | null };
-  let writes = 0;
-  const tx = {
-    moverProspect: { findFirst: async () => prospect },
-    user: { findUnique: async ({ where }: { where: { id?: string } }) => where.id ? { id: actor.id, adminRole: "OWNER", role: "ADMIN" } : null },
-    contactSuppression: { findUnique: async () => null },
-    quoteRequest: {
-      findFirst: async ({ where }: { where: object }) => {
-        assert.deepEqual(where, { id: quote.id, recruitmentSharingAllowed: true, sharingConsentAt: { not: null } });
-        return quote;
-      },
-    },
-    outreachCampaign: { findFirst: async () => campaign },
-    outreachMessage: {
-      count: async () => 0,
-      findFirst: async () => stored,
-      update: async ({ where, data }: { where: { id: string }; data: Partial<typeof stored> }) => {
-        assert.equal(where.id, stored.id);
-        writes++;
-        stored = { ...stored, ...data };
-        return stored;
-      },
-    },
-  } as unknown as Tx;
-
-  const draft = await prepareDraft(tx, actor, prospect.id, quote.id);
-  assert.equal(draft.id, "draft");
-  assert.equal(draft.status, "DRAFT");
-  assert.equal(draft.quoteRequestId, quote.id);
-  assert.equal(draft.templateKey, "MOVER_OPPORTUNITY");
-  assert.match(draft.text, /Moving from: Auckland/);
-  assert.match(draft.text, /Moving to: Waikato/);
-  assert.match(draft.html, /Property size:<\/strong> 3 \/ House/);
-  assert.equal((await prepareDraft(tx, actor, prospect.id, quote.id)).id, draft.id);
-  campaign.status = "ACTIVE";
-  stored = { ...stored, status: "SENT", templateKey: "MOVER_GENERAL", quoteRequestId: null };
-  await assert.rejects(prepareDraft(tx, actor, prospect.id, quote.id), /Example Movers already has an outreach sequence/);
-  assert.equal(writes, 1);
 });
 
 test("outreach calendar handles Auckland DST, weekends, short and leap months", () => {

@@ -221,14 +221,20 @@ test("mover campaign persistence, real SMTP, reply import and manual re-engageme
     assert.equal(accepted.length, before + 1);
   });
 
-  await t.test("initial alternatives share one Day 0 and customer permission, freshness and changed summaries are rechecked", async () => {
+  await t.test("different moving opportunities can be sent after an invitation and preserve its sequence", async () => {
     const mover = await company();
     const general = await locked(tx => prepareDraft(tx, actor, mover.id));
-    const quote = await prisma.quoteRequest.create({ data: { name: "Never shared customer", email: "private-customer@validation.invalid", phone: "0219999999", fromAddress: "21 Private Street", toAddress: "9 Private Lane", fromCity: "Auckland", toCity: "Hamilton", fromRegion: "Auckland", toRegion: "Waikato", fromPostcode: "1010", toPostcode: "3200", fromCountry: "NZ", toCountry: "NZ", fromPropertyType: "House", toPropertyType: "House", bedrooms: "3", moveDate: new Date(Date.now() + 14 * 86400000) } });
+    const quoteInput = { name: "Never shared customer", email: "private-customer@validation.invalid", phone: "0219999999", fromAddress: "21 Private Street", toAddress: "9 Private Lane", fromCity: "Auckland", toCity: "Hamilton", fromRegion: "Auckland", toRegion: "Waikato", fromPostcode: "1010", toPostcode: "3200", fromCountry: "NZ", toCountry: "NZ", fromPropertyType: "House", toPropertyType: "House", bedrooms: "3", moveDate: new Date(Date.now() + 14 * 86400000) };
+    const quote = await prisma.quoteRequest.create({ data: quoteInput });
     await assert.rejects(locked(tx => prepareDraft(tx, actor, mover.id, quote.id)), /authorised, current/);
     await prisma.quoteRequest.update({ where: { id: quote.id }, data: { recruitmentSharingAllowed: true, sharingConsentAt: new Date() } });
     const specific = await locked(tx => prepareDraft(tx, actor, mover.id, quote.id));
-    assert.equal(specific.id, general.id); assert.equal(specific.templateKey, "MOVER_OPPORTUNITY");
+    assert.notEqual(specific.id, general.id);
+    assert.equal(specific.campaignId, null);
+    assert.equal(specific.templateKey, "MOVER_OPPORTUNITY");
+    assert.equal((await prisma.outreachMessage.findUniqueOrThrow({ where: { id: general.id } })).templateKey, "MOVER_GENERAL");
+    await send(general);
+    const sequenceBefore = await campaign(general.campaignId!);
     assert.doesNotMatch(specific.text + specific.html, /Never shared customer|private-customer|0219999999|21 Private Street|9 Private Lane/);
     await prisma.quoteRequest.update({ where: { id: quote.id }, data: { toRegion: "Otago" } });
     await assert.rejects(send(specific), /details changed/);
@@ -236,9 +242,19 @@ test("mover campaign persistence, real SMTP, reply import and manual re-engageme
     assert.match(refreshed.text, /Moving to: Otago/);
     await prisma.quoteRequest.update({ where: { id: quote.id }, data: { moveDate: new Date("2020-01-01") } });
     await assert.rejects(send(refreshed), /no longer current/);
-    const replacement = await locked(tx => prepareDraft(tx, actor, mover.id));
-    assert.equal(replacement.id, general.id); assert.equal(replacement.templateKey, "MOVER_GENERAL");
+    await prisma.quoteRequest.update({ where: { id: quote.id }, data: { moveDate: quoteInput.moveDate } });
+    assert.equal((await send(refreshed)).ok, true);
+    const another = await prisma.quoteRequest.create({ data: { ...quoteInput, toRegion: "Northland", recruitmentSharingAllowed: true, sharingConsentAt: new Date() } });
+    const drafts = await Promise.all([1, 2].map(() => locked(tx => prepareDraft(tx, actor, mover.id, another.id))));
+    assert.equal(drafts[0].id, drafts[1].id);
+    assert.notEqual(drafts[0].id, specific.id);
+    assert.match(drafts[0].text, /Moving to: Northland/);
+    assert.equal((await send(drafts[0])).ok, true);
+    await assert.rejects(locked(tx => prepareDraft(tx, actor, mover.id, quote.id)), /already has an email sent/);
+    assert.deepEqual(await campaign(general.campaignId!), sequenceBefore);
+    assert.equal(await prisma.outreachCampaign.count({ where: { prospectId: mover.id } }), 1);
     assert.equal(await prisma.outreachMessage.count({ where: { campaignId: general.campaignId, sequence: 0 } }), 1);
+    assert.equal(await prisma.outreachMessage.count({ where: { prospectId: mover.id, campaignId: null, status: "SENT" } }), 2);
   });
 
   await t.test("explicit no-contact replies permanently suppress and temporary provider retries stop at three attempts", async () => {
