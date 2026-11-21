@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useState, useTransition } from "react";
-import { CheckCircle2, ChevronRight, LoaderCircle, ShieldCheck, Star, UserRound, UserRoundX, X } from "lucide-react";
+import { CheckCircle2, ChevronRight, LoaderCircle, Star, UserRound, UserRoundX, X } from "lucide-react";
 import { ReviewStars } from "@/components/review-stars";
 import { cx } from "@/lib/utils";
 
@@ -100,8 +100,7 @@ export function ReviewForm({
         <div className="rounded-[28px] border border-slate-200 bg-white/90 p-6 shadow-[0_24px_56px_-36px_rgba(15,23,42,0.35)] backdrop-blur sm:p-7">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <p className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">
-                <ShieldCheck className="h-4 w-4" />
+              <p className="section-label text-sky-700">
                 Verified customer review
               </p>
               <h1 className="mt-4 text-[clamp(2.1rem,6vw,4rem)] font-black leading-[0.94] tracking-[-0.06em] text-slate-950">

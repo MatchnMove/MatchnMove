@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, ShieldCheck } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { PublicMoversDirectory } from "@/components/public-movers-directory";
 import { SiteShell } from "@/components/site-shell";
 import { getPublicMovers } from "@/lib/public-movers";
@@ -32,8 +32,7 @@ export default async function MoversPage() {
           <div className="overflow-hidden rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.04))] p-4 shadow-[0_40px_100px_-52px_rgba(2,6,23,0.85)] backdrop-blur-xl sm:rounded-[34px] sm:p-8 lg:p-10">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
               <div className="max-w-3xl">
-                <p className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.06] px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-sky-100/80 sm:text-sm">
-                  <ShieldCheck className="h-4 w-4" />
+                <p className="section-label text-sky-100/80">
                   Moving companies
                 </p>
                 <h1 className="mt-4 max-w-[12ch] text-[clamp(2.05rem,10vw,5rem)] font-black leading-[0.98] tracking-[-0.035em] text-white sm:mt-5 sm:max-w-none sm:leading-[0.92] sm:tracking-[-0.06em]">

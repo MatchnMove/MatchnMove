@@ -1,16 +1,7 @@
 import { LEAD_PRICING } from "@/lib/lead-pricing";
 import type { Metadata } from "next";
 import Link from "next/link";
-import {
-  ArrowRight,
-  BadgeDollarSign,
-  Building2,
-  CheckCircle2,
-  FileText,
-  Route,
-  ShieldCheck,
-  Sparkles,
-} from "lucide-react";
+import { ArrowRight, BadgeDollarSign, Building2, CheckCircle2, FileText, Route, ShieldCheck, Sparkles } from "lucide-react";
 import { SiteShell } from "@/components/site-shell";
 import { createPageMetadata } from "@/lib/seo";
 
@@ -224,8 +215,7 @@ export default function MoverPricingPage() {
           <div className="overflow-hidden rounded-[34px] border border-slate-200 bg-[linear-gradient(135deg,#061525_0%,#0e2740_48%,#17344d_100%)] text-white shadow-[0_32px_100px_-45px_rgba(15,23,42,0.72)]">
             <div className="grid gap-8 px-6 py-8 sm:px-8 sm:py-10 xl:grid-cols-[minmax(0,1.1fr)_minmax(20rem,0.9fr)] xl:px-10 xl:py-12">
               <div>
-                <p className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-sky-100">
-                  <Sparkles className="h-4 w-4" />
+                <p className="section-label text-sky-100">
                   Mover pricing and invoicing
                 </p>
                 <h1 className="mt-5 max-w-[12ch] text-[clamp(2.7rem,7vw,5.2rem)] font-black leading-[0.9] tracking-[-0.07em] text-white">

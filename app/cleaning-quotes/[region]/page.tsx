@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, CheckCircle2, CircleHelp, Home, KeyRound, MapPinned, Sparkles } from "lucide-react";
+import { ArrowRight, CheckCircle2, CircleHelp, Home, KeyRound, Sparkles } from "lucide-react";
 import { SiteShell } from "@/components/site-shell";
 import { CLEANING_REGION_CONTENT } from "@/lib/cleaning-regions";
 import { NZ_SERVICE_AREA_LOCALITIES, NZ_SERVICE_AREAS } from "@/lib/nz-regions";
@@ -133,8 +133,7 @@ export default async function RegionalCleaningQuotesPage({
 
           <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.72fr)] lg:items-end">
             <div>
-              <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-sky-100">
-                <MapPinned className="h-4 w-4" />
+              <p className="section-label text-sky-100">
                 {region}, New Zealand
               </p>
               <h1 className="mt-5 max-w-[14ch] text-[clamp(2.5rem,8vw,5.2rem)] font-black leading-[0.95] tracking-[-0.05em]">

@@ -4,16 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  ArrowRight,
-  ChevronDown,
-  Mail,
-  Menu,
-  ShieldCheck,
-  Sparkles,
-  UserRound,
-  X,
-} from "lucide-react";
+import { ArrowRight, ChevronDown, Mail, Menu, ShieldCheck, UserRound, X } from "lucide-react";
 import {
   ReactNode,
   useCallback,
@@ -594,8 +585,7 @@ export function Footer() {
         <div className="container-shell">
           <div className="grid gap-8 border-b border-slate-300/70 pb-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-end lg:gap-12 lg:pb-12">
             <div className="max-w-[42rem]">
-              <p className="inline-flex items-center gap-2 rounded-full border border-sky-200/80 bg-white/55 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-sky-700 backdrop-blur sm:text-sm">
-                <Sparkles className="h-4 w-4" />
+              <p className="section-label text-sky-700">
                 Match &apos;n Move
               </p>
               <h2 className="mt-4 max-w-[13ch] text-[clamp(2rem,9vw,4.4rem)] font-black leading-[0.96] tracking-[-0.035em] text-slate-950 sm:max-w-[12ch] sm:leading-[0.92] sm:tracking-[-0.06em]">

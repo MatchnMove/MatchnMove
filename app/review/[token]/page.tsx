@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Clock3, ShieldCheck, Star } from "lucide-react";
+import { Clock3, Star } from "lucide-react";
 import { ReviewForm } from "@/components/review-form";
 import { SiteShell } from "@/components/site-shell";
 import { getReviewSurveyState } from "@/lib/reviews";
@@ -36,8 +36,7 @@ export default async function ReviewSurveyPage({
               <div className="overflow-hidden rounded-[30px] border border-slate-200 bg-[linear-gradient(145deg,#081a2b,#102845)] p-6 text-white shadow-[0_28px_80px_-48px_rgba(15,23,42,0.75)] sm:p-8">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                   <div>
-                    <p className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.08] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-sky-100">
-                      <ShieldCheck className="h-4 w-4" />
+                    <p className="section-label text-sky-100">
                       Secure one-time survey
                     </p>
                     <h1 className="mt-4 max-w-[12ch] text-[clamp(2.2rem,7vw,4.5rem)] font-black leading-[0.98] tracking-[-0.045em] text-white sm:max-w-[13ch]">

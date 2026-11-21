@@ -2,15 +2,7 @@
 
 import Link from "next/link";
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
-import {
-  ArrowRight,
-  ChevronDown,
-  Clock3,
-  MapPinned,
-  Search,
-  ShieldCheck,
-  Sparkles,
-} from "lucide-react";
+import { ArrowRight, ChevronDown, Clock3, MapPinned, Search, ShieldCheck } from "lucide-react";
 import { SiteShell } from "@/components/site-shell";
 import { SITE_EMAILS } from "@/lib/site-emails";
 
@@ -315,8 +307,7 @@ export default function FAQPage() {
 
         <div className="container-shell relative">
           <div className="mx-auto max-w-[22rem] text-center sm:max-w-4xl">
-            <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-sky-100 backdrop-blur sm:text-sm">
-              <Sparkles className="h-4 w-4" />
+            <p className="section-label text-sky-100">
               Helpful tips and answers
             </p>
             <h1 className="mt-4 text-[clamp(1.95rem,8.8vw,5.5rem)] font-black leading-[1] tracking-[-0.025em] text-white sm:mt-5 sm:leading-[0.92] sm:tracking-[-0.06em]">

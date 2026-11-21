@@ -1,6 +1,6 @@
 ﻿import Image from "next/image";
 import Link from "next/link";
-import { ArrowDown, Check, MapPin } from "lucide-react";
+import { ArrowDown, Check } from "lucide-react";
 import { HeroQuoteCard } from "@/src/components/hero/HeroQuoteCard";
 import { HeroTruckScene } from "@/src/components/hero/HeroTruckScene";
 import { HeroViewport } from "@/src/components/hero/HeroViewport";
@@ -26,10 +26,6 @@ export function Hero() {
       <HeroViewport className={styles.layout}>
         <div className={styles.content}>
           <div className={styles.copy}>
-            <p className={styles.eyebrow}>
-              <MapPin size={14} strokeWidth={1.8} /> YOUR NEXT CHAPTER STARTS
-              HERE
-            </p>
             <h1 id="home-title" className={styles.title}>
               Compare moving quotes.
               <br />

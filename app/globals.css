@@ -12,6 +12,10 @@ body {
   @apply rounded-xl border bg-white shadow-sm;
 }
 
+.section-label {
+  @apply text-sm font-medium leading-6;
+}
+
 /* Keep oversized black headings from clipping heavy glyphs or stacking too tightly. */
 :where(h1, h2, h3)[class*="font-black"][class*="text-[clamp"],
 :where(h1, h2, h3)[class*="font-black"][class*="text-3xl"],

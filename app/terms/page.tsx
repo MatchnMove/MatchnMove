@@ -1,12 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import {
-  ArrowRight,
-  FileCheck2,
-  ShieldCheck,
-  Scale,
-  Users,
-} from "lucide-react";
+import { ArrowRight, FileCheck2, ShieldCheck, Scale, Users } from "lucide-react";
 import { MobileSectionJump } from "@/components/mobile-section-jump";
 import { SiteShell } from "@/components/site-shell";
 import { createPageMetadata } from "@/lib/seo";
@@ -133,7 +127,7 @@ export default function TermsPage() {
           <div className="overflow-hidden rounded-[34px] border border-slate-200/80 bg-[linear-gradient(135deg,rgba(9,18,32,0.98),rgba(23,50,79,0.95))] px-6 py-7 text-white shadow-[0_30px_90px_-48px_rgba(15,23,42,0.58)] sm:px-8 sm:py-9 lg:px-12 lg:py-12">
             <div className="grid gap-8 lg:grid-cols-[minmax(0,1.08fr)_minmax(280px,0.72fr)] lg:items-end">
               <div className="max-w-3xl">
-                <p className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-sky-100 backdrop-blur sm:text-sm">
+                <p className="section-label text-sky-100">
                   Terms of Use
                 </p>
                 <h1 className="mt-5 text-[clamp(2.8rem,8vw,5.1rem)] font-black leading-[0.92] tracking-[-0.06em] text-white">

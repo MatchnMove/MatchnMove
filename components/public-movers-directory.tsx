@@ -1,7 +1,7 @@
 "use client";
 
 import { useDeferredValue, useState } from "react";
-import { Search, Sparkles, X } from "lucide-react";
+import { Search, X } from "lucide-react";
 import {
   PublicMoverCard,
   type PublicMoverCardData,
@@ -63,8 +63,7 @@ export function PublicMoversDirectory({ movers }: PublicMoversDirectoryProps) {
       <div className="rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.05))] p-4 shadow-[0_24px_60px_-44px_rgba(2,6,23,0.7)] backdrop-blur-xl sm:rounded-[30px] sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-2xl">
-            <p className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-100/80">
-              <Sparkles className="h-3.5 w-3.5" />
+            <p className="section-label text-sky-100/80">
               Search by service area
             </p>
             <p className="mt-3 text-sm leading-6 text-slate-300 sm:text-base sm:leading-7">

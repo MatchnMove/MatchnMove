@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, Sparkles } from "lucide-react";
+import { ArrowRight, CheckCircle2 } from "lucide-react";
 
 const benefits = [
   "Choose cleaning quotes near the end of the existing moving form",
@@ -14,8 +14,7 @@ export function CleaningQuotesSeoSection() {
         <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-[radial-gradient(circle_at_88%_14%,rgba(56,189,248,0.16),transparent_30%),linear-gradient(135deg,#f8fbff,#ffffff)] shadow-[0_28px_80px_-50px_rgba(15,23,42,0.35)] sm:rounded-[34px]">
           <div className="grid gap-7 p-6 sm:p-8 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.72fr)] lg:items-center lg:p-10">
             <div>
-              <p className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-sky-700">
-                <Sparkles className="h-4 w-4" />
+              <p className="section-label text-sky-700">
                 Optional move-out cleaning
               </p>
               <h2 className="mt-5 max-w-[17ch] text-[clamp(2rem,7vw,4.2rem)] font-black leading-[0.98] tracking-[-0.05em] text-slate-950">

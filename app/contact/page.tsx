@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { Mail, Phone, Send, Sparkles } from "lucide-react";
+import { Mail, Phone, Send } from "lucide-react";
 import { SiteShell } from "@/components/site-shell";
 import { trackAnalyticsEvent } from "@/lib/analytics";
 import { SITE_EMAILS, toMailto } from "@/lib/site-emails";
@@ -96,8 +96,7 @@ export default function ContactPage() {
 
         <div className="container-shell relative">
           <div className="mx-auto max-w-4xl text-center">
-            <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-sky-100 backdrop-blur sm:text-sm">
-              <Sparkles className="h-4 w-4" />
+            <p className="section-label text-sky-100">
               Match &apos;n Move support
             </p>
             <h1 className="mt-4 text-[clamp(2.15rem,10vw,5.25rem)] font-black leading-[0.98] tracking-[-0.035em] text-white sm:mt-5 sm:leading-[0.92] sm:tracking-[-0.05em]">

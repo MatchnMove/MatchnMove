@@ -48,7 +48,7 @@ export default function CaseStudiesPage() {
             <span>Case studies</span>
           </nav>
           <div className="mt-7 max-w-4xl">
-            <p className="inline-flex rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-200">
+            <p className="section-label text-emerald-200">
               Verified outcomes only
             </p>
             <h1 className="mt-5 text-[clamp(2.5rem,8vw,5.2rem)] font-black leading-[0.96] tracking-[-0.05em]">

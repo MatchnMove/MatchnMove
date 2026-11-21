@@ -1,16 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import {
-  ArrowRight,
-  Calculator,
-  CheckSquare2,
-  FileSearch,
-  Home,
-  MapPinned,
-  Route,
-  Sparkles,
-  WalletCards,
-} from "lucide-react";
+import { ArrowRight, Calculator, CheckSquare2, FileSearch, Home, MapPinned, Route, Sparkles, WalletCards } from "lucide-react";
 import { SiteShell } from "@/components/site-shell";
 import { resourceCards } from "@/lib/moving-resources";
 import {
@@ -75,8 +65,7 @@ export default function ResourcesPage() {
 
       <section className="relative overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(56,189,248,0.2),transparent_28%),radial-gradient(circle_at_85%_15%,rgba(34,197,94,0.16),transparent_24%),linear-gradient(145deg,#071525,#12345d)] py-12 text-white sm:py-16 lg:py-20">
         <div className="container-shell relative">
-          <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-200">
-            <Sparkles className="h-4 w-4" />
+          <p className="section-label text-emerald-200">
             Match &apos;n Move resources
           </p>
           <h1 className="mt-5 max-w-[14ch] text-[clamp(2.6rem,9vw,5.6rem)] font-black leading-[0.95] tracking-[-0.055em] text-white">

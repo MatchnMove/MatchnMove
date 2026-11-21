@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Calculator, Info } from "lucide-react";
+import { ArrowRight, Info } from "lucide-react";
 import { MovingCostCalculator } from "@/components/moving-cost-calculator";
 import { SiteShell } from "@/components/site-shell";
 import { absoluteUrl, createPageMetadata, SITE_NAME, SITE_URL } from "@/lib/seo";
@@ -68,8 +68,7 @@ export default function MovingCostCalculatorPage() {
             <span>Moving cost calculator</span>
           </nav>
           <div className="mt-7 max-w-4xl">
-            <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-200">
-              <Calculator className="h-4 w-4" />
+            <p className="section-label text-emerald-200">
               Free planning tool
             </p>
             <h1 className="mt-5 text-[clamp(2.5rem,8vw,5.2rem)] font-black leading-[0.96] tracking-[-0.05em]">

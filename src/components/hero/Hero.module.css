@@ -64,21 +64,6 @@
   z-index: 2;
   min-width: 0;
 }
-.eyebrow {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 28px;
-  font-size: 10px;
-  font-weight: 650;
-  letter-spacing: 0.17em;
-  line-height: 1.6;
-  color: #c7d2e2;
-}
-.eyebrow svg {
-  color: #b4c4df;
-  flex-shrink: 0;
-}
 .title {
   margin: 0;
   font-size: clamp(52px, 5.3vw, 76px);
@@ -230,11 +215,6 @@
     max-width: 480px;
     margin-inline: auto;
   }
-  .eyebrow {
-    font-size: 9px;
-    letter-spacing: 0.12em;
-    margin-bottom: 24px;
-  }
   .title {
     font-size: clamp(38px, 10vw, 58px);
     line-height: 1.12;
@@ -311,9 +291,6 @@
   }
   .title {
     font-size: 36px;
-  }
-  .eyebrow {
-    font-size: 8px;
   }
 }
 
